@@ -1,3 +1,14 @@
-source("helper_imputation.R")
+library(imputeFin)
+
+
+# generate or load data
+
+# create NAs
+
+# impute
+
+# performance measure
+
+# plots
 
 
