@@ -7,6 +7,6 @@
 ^README_cache$
 ^README_files$
 ^R_buildignore$
-^papers$
+^papers&packages$
 ^vignettes/ImputeFinancialTimeSeries-vignette_cache$
 ^vignettes/ImputeFinancialTimeSeries_files$
