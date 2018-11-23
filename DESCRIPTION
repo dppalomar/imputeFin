@@ -25,8 +25,8 @@ Depends:
 License: GPL-3 | file LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports:
-RoxygenNote: 6.1.0
+Imports: MASS, imputeTS
+RoxygenNote: 6.1.1
 Suggests:
 VignetteBuilder:
     knitr,
