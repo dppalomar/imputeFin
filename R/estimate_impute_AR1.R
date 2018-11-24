@@ -50,101 +50,96 @@
 #' estimation_result <- estimateAR1(y)
 #' 
 #' @export
-estimateAR1 <- function(y,  n_chain = 10, n_thin = 1, n_iteration = 100, K = 30,
-                        estimates_init = NA,  y_sample_init = NA) {
+estimateAR1 <- function(y, n_chain = 10, n_thin = 1, n_iteration = 100, K = 30,
+                        estimates_init = NULL, y_sample_init = NULL) {
  # find the missing blocks
   n <- length(y)                 # length of the time series
   index_obs <- which(!is.na(y))  # indexes of observed values
   delta_index_obs <- diff(index_obs)
-  index_tmp <- which( delta_index_obs>1)
+  index_tmp <- which(delta_index_obs > 1)
   n_block <- length(index_tmp)                             # number of missing blocks
   n_in_block <- delta_index_obs[index_tmp] - 1             # number of missing values in each block
   first_index_in_block <- index_obs[index_tmp] + 1         # index of the first missing value in each block
   last_index_in_block <- index_obs[index_tmp] + n_in_block # index of the last missing value in each block
-  previous_obs_before_block <- y[first_index_in_block - 1] # previous observed value before each block
-  next_obs_after_block <- y[last_index_in_block + 1]       # next observed value after each block
-  #browser()
+  previous_obs_before_block <- as.numeric(y[first_index_in_block - 1]) # previous observed value before each block
+  next_obs_after_block <- as.numeric(y[last_index_in_block + 1])       # next observed value after each block
   
  # initialize the estimates and some parameters
-  phi0 <- phi1 <- sigma2 <- nu <- gamma <- vector()
-  
-  if(any(is.na(estimates_init))){ # if no input for estimates_init, use Gaussian AR(1) estimates as the initialization
-    Gaussian_estimates = arima( y, order = c(1,0,0), include.mean = TRUE)
-    phi1[1] <- Gaussian_estimates$coef[1]
-    phi0[1] <- Gaussian_estimates$coef[2] * ( 1 - phi1[1] )
+  phi0 <- phi1 <- sigma2 <- nu <- gamma <- c()
+  if(is.null(estimates_init)) {  # if no input for estimates_init, use Gaussian AR(1) estimates as the initialization
+    Gaussian_estimates <- stats::arima(y, order = c(1, 0, 0), include.mean = TRUE)
+    phi1[1] <- Gaussian_estimates$coef["ar1"]
+    phi0[1] <- Gaussian_estimates$coef["intercept"] * (1-phi1[1])
     sigma2[1] <- Gaussian_estimates$sigma2
     nu[1] <- 3
-  }else{
-    phi0[1] <- estimates_init[1]
-    phi1[1] <- estimates_init[2]
-    sigma2[1] <- estimates_init[3]
-    nu[1] <- estimates_init[4]
+  } else {
+    phi0[1] <- estimates_init["phi0"]
+    phi1[1] <- estimates_init["phi1"]
+    sigma2[1] <- estimates_init["sigma2"]
+    nu[1] <- estimates_init["nu"]
   }
 
-  s1_approx <- s2_approx <- s3_approx <- s4_approx <- s5_approx <- s6_approx <- s7_approx <- 0 # approximations of the sufficient statistics  
-  if(any(is.na(y_sample_init))){ # if no input for y_sample_init, use imputed result generated from other package as initialization. 
+  s <- s_approx <- rep(0, 7)  # approximations of the sufficient statistics
+  if(is.null(y_sample_init))  # if no input for y_sample_init, use imputed result generated from package imputeTS as initialization
     y_sample_init <- imputeTS::na.kalman(y)
-  }
-  y_samples <- y_sample_init %*% t(rep(1, n_chain))
-  tau_samples <- matrix(nrow = n, ncol = n_chain)
-  # browser()
-  
-  for( k in 1:n_iteration){
+
+  y_samples <- matrix(y_sample_init, n, n_chain)
+  tau_samples <- matrix(NA, n, n_chain)
+  for (k in 1:n_iteration) {
     # draw realizations of the missing values from their posterior distribution
-    for ( j in 1:n_chain ) {
-      sample <- samplingLatentVariables( y_sample_init = y_samples[ ,j], n_thin, n_block, n_in_block,
+    for (j in 1:n_chain) {
+      sample <- samplingLatentVariables(y_sample_init = y_samples[, j], n_thin, n_block, n_in_block,
                                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
-                                        phi0[k], phi1[k], sigma2[k], nu[k] )
-      y_samples[ ,j] <- sample$y
-      tau_samples[ , j] <- sample$tau
+                                        phi0[k], phi1[k], sigma2[k], nu[k])
+      y_samples[, j] <- sample$y
+      tau_samples[, j] <- sample$tau
     }
 
     # approximate the sufficient statistics
-    if (k <= K){
+    if (k <= K)
       gamma[k] <- 1
-    } else {
+    else
       gamma[k] <- 1/(k - K)
-    }
-    s1 <- sum( log(tau_samples[2:n,]) - tau_samples[2:n,] )/n_chain
-    s2 <- sum( tau_samples[2:n,] * y_samples[2:n,]^2)/n_chain
-    s3 <- sum( tau_samples[2:n,] )/n_chain
-    s4 <- sum( tau_samples[2:n,] * y_samples[1:(n-1),]^2)/n_chain
-    s5 <- sum( tau_samples[2:n,] * y_samples[2:n,])/n_chain
-    s6 <- sum( tau_samples[2:n,] * y_samples[2:n,] * y_samples[1:(n - 1),])/n_chain
-    s7 <- sum( tau_samples[2:n,] * y_samples[1:(n-1),])/n_chain
-    
-    s1_approx <- s1_approx + gamma[k] * (s1 - s1_approx)  
-    s2_approx <- s2_approx + gamma[k] * (s2 - s2_approx) 
-    s3_approx <- s3_approx + gamma[k] * (s3 - s3_approx)  
-    s4_approx <- s4_approx + gamma[k] * (s4 - s4_approx) 
-    s5_approx <- s5_approx + gamma[k] * (s5 - s5_approx)  
-    s6_approx <- s6_approx + gamma[k] * (s6 - s6_approx) 
-    s7_approx <- s7_approx + gamma[k] * (s7 - s7_approx)  
-    
+    s[1] <- sum(log(tau_samples[2:n,]) - tau_samples[2:n,] )/n_chain
+    s[2] <- sum(tau_samples[2:n,] * y_samples[2:n,]^2)/n_chain
+    s[3] <- sum(tau_samples[2:n,] )/n_chain
+    s[4] <- sum(tau_samples[2:n,] * y_samples[1:(n-1),]^2)/n_chain
+    s[5] <- sum(tau_samples[2:n,] * y_samples[2:n,])/n_chain
+    s[6] <- sum(tau_samples[2:n,] * y_samples[2:n,] * y_samples[1:(n - 1),])/n_chain
+    s[7] <- sum(tau_samples[2:n,] * y_samples[1:(n-1),])/n_chain
+    s_approx <- s_approx + gamma[k] * (s - s_approx)
+
     # update the estimates
-    phi1[k+1] <- ( s3_approx * s6_approx - s5_approx * s7_approx ) / ( s3_approx * s4_approx -  s7_approx^2 )
-    phi0[k+1] <- (s5_approx - phi1[k+1] * s7_approx ) / s3_approx
-    sigma2[k+1] <- (s2_approx + phi0[k+1]^2 * s3_approx + phi1[k+1]^2 * s4_approx - 2 * phi0[k+1] * s5_approx
-                  +  - 2 * phi1[k+1] * s6_approx + 2 * phi0[k+1] * phi1[k+1] * s7_approx) / (n-1)
+    phi1[k+1] <- ( s_approx[3] * s_approx[6] - s_approx[5] * s_approx[7] ) / ( s_approx[3] * s_approx[4] -  s_approx[7]^2 )
+    phi0[k+1] <- (s_approx[5] - phi1[k+1] * s_approx[7] ) / s_approx[3]
+    sigma2[k+1] <- (s_approx[2] + phi0[k+1]^2 * s_approx[3] + phi1[k+1]^2 * s_approx[4] - 2 * phi0[k+1] * s_approx[5]
+                    - 2 * phi1[k+1] * s_approx[6] + 2 * phi0[k+1] * phi1[k+1] * s_approx[7]) / (n-1)
     
-    surrogateNu <- function( nu ){
-      f_nu <- sum ( 0.5 * nu * s1_approx
-                   +  ( 0.5 * nu * log( 0.5 * nu )  - lgamma (0.5 * nu) ) * (n - 1) )
-      return( -f_nu )
-    }
-    optimation_result <- optimize ( surrogateNu, c(1e-6, 1e6) )
+    fn_surrogate_nu <- function(nu, n, s_approx1)
+      return(-sum(0.5*nu*s_approx1 +  (0.5*nu*log(0.5*nu) - lgamma(0.5*nu)) * (n - 1)))
+  
+    optimation_result <- optimize(fn_surrogate_nu, c(1e-6, 1e6), n, s_approx[1])
     nu[k+1] <- optimation_result$minimum
+    
+    # # check convergence on parameters and objective function
+    # werr <- sum(abs(w_next - wk)) / max(1, sum(abs(wk)))
+    # ferr <- abs(fun_next - fun_k) / max(1, abs(fun_k))
+    # if (k > 1 && (werr < wtol || ferr < ftol))
+    #   break    
   }
   
   return(list("phi0" = phi0[k + 1],
-               "phi1" = phi1[k + 1],
-               "sigma2" = sigma2[k + 1],
-               "nu" = nu[k + 1],
-               "phi0_iterate" = phi0,
-               "phi1_iterate" = phi1,
-               "sigma2_iterate" = sigma2, 
-               "nu_iterate" = nu))
+              "phi1" = phi1[k + 1],
+              "sigma2" = sigma2[k + 1],
+              "nu" = nu[k + 1],
+              "n_iter" = k + 1,
+              "phi0_iterate" = phi0,
+              "phi1_iterate" = phi1,
+              "sigma2_iterate" = sigma2, 
+              "nu_iterate" = nu))
 }
+
+
 
 #' @title Imputate Missing Values in  Incomplete Student's t AR(1) Time Series 
 #'
@@ -190,7 +185,7 @@ estimateAR1 <- function(y,  n_chain = 10, n_thin = 1, n_iteration = 100, K = 30,
 #' imputation_result <- imputeAR1( y, n_sample = 2, parameters = c(phi0, phi1, sigma2, nu) ) # if the parameters are unknown
 #' 
 #' @export
-imputeAR1 <- function(y, n_sample, n_burn = 100, n_thin = 50, parameters = NA) {
+imputeAR1 <- function(y, n_sample = 1, n_burn = 100, n_thin = 50, parameters = NA) {
   # if the parameters are known, then estimate the parameters.
   if(any(is.na(parameters))){
     estimation_result <- estimateAR1(y)
@@ -207,7 +202,7 @@ imputeAR1 <- function(y, n_sample, n_burn = 100, n_thin = 50, parameters = NA) {
 
   # impute the missing y and generate complete data sets
     y_imputed <-  imputeMissingValues(y, n_sample, n_burn, n_thin, y_sample_init = na.kalman(y),
-                                     phi0, phi1, sigma2, nu)
+                                      phi0, phi1, sigma2, nu)
     return(y_imputed)
 }
 

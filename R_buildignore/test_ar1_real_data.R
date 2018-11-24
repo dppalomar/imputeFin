@@ -5,38 +5,64 @@ library(xts)
 library(quantmod)
 
 # download data from YahooFinance
-hsi_price <- Ad(getSymbols("^HSI", from = "2018-01-01", to = "2018-6-30", auto.assign = FALSE))
-y <- as.vector(hsi_price)
+#y_orig <- log(Ad(getSymbols("^HSI", from = "2018-01-01", to = "2018-6-30", auto.assign = FALSE)))
+y_orig <- log(Ad(getSymbols("^GSPC", from = "2012-01-01", to = "2015-07-08", auto.assign = FALSE)))
+T <- nrow(y_orig)
 
-# creat NA's
-miss_percentage <- 0.2
-n <- length(y)
-n_miss <- floor(miss_percentage * n)
-index_miss <- sample(2:(n - 1), n_miss, FALSE)
-index_miss <- sort(index_miss)
-y[index_miss] <- NA
-index_obs <- setdiff(1:n, index_miss)
+# create NA's
+miss_pct <- 0.2
+n_miss <- floor(miss_pct*T)
+# block of consecutive NAs
+idx_miss <- round(T/2) + 1:n_miss
+y_missing <- y_orig
+y_missing[idx_miss] <- NA
+# # random pattern of NAs
+# idx_miss <- sample(2:(T-1), n_miss)
+# idx_miss <- sort(idx_miss)
+# y_missing[idx_miss] <- NA
+idx_obs <- setdiff(1:T, idx_miss)
 
 # estimate the parameters from this incomplete time series
-estimation_result <- estimateAR1(y,  n_chain = 10, n_thin = 1, n_iteration = 100, K = 30,
-                     estimates_init = NA,  y_sample_init = NA) 
-# plot the estimates versus iteration
-layout(matrix(c(1, 2, 3, 4)), heights = c(1,1,1,1))
+estimation_result <- estimateAR1(y_missing)
+
+# plot convergence of estimates versus iteration
+layout(matrix(c(1, 2, 3, 4)), heights = c(1, 1, 1, 1))
 par(mar=c(4, 5, 0.1, 0.5))
-k= 101
-plot(1:k,estimation_result$phi0_iterate, pch=19, cex = 0.8,  cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ", type='o', col = "green",   ylab = expression(phi[0]))
-plot(1:k,estimation_result$phi1_iterate,  pch=19, cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ",type='o', col = "green", lty = 1,  ylab = expression(phi[1]))
-plot(1:k,estimation_result$sigma2_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ",type='o', col = "green",    ylab = expression(sigma^2) )
-plot(1:k,estimation_result$nu_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2,  type='o',col = "green",  xlab ="Iteration k", ylab = expression(nu) )
+k <- estimation_result$n_iter
+plot(1:k, estimation_result$phi0_iterate, pch=19, cex = 0.8,  cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ", type='o', col = "blue",   ylab = expression(phi[0]))
+plot(1:k, estimation_result$phi1_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ",type='o', col = "blue", lty = 1,  ylab = expression(phi[1]))
+plot(1:k, estimation_result$sigma2_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ",type='o', col = "blue",    ylab = expression(sigma^2) )
+plot(1:k, estimation_result$nu_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2,  type='o',col = "blue",  xlab ="Iteration k", ylab = expression(nu) )
 
 # impute the missing values and generate n_sample complete time series
-y_imputed <- imputeAR1( y, n_sample = 1, n_burn = 200, n_thin = 50) 
-hsi_price_imputed = xts(x = y_imputed, order.by = index(hsi_price))
+y_imputed <- imputeAR1(as.vector(y_missing), n_sample = 4, n_burn = 200, n_thin = 100)  #use: num_imputations
+y_imputed <- xts(y_imputed, index(y_missing))
 
-# plot the imputed data set
-layout(1, heights = 1)
-par(mar=c(4, 5, 4, 5))
-plot(hsi_price_imputed, type = 'o', pch = 19, main = 'Heng Seng Index')
-points(hsi_price_imputed[index_miss],  col = "red", cex = 0.95,  pch=19)
-addLegend(legend.loc = "topright", legend.names = c("observed values", "imputed values"), pch = c(19, 19),  col = c("black","red"))
+# # plot the imputed data set
+# layout(1, heights = 1)
+# par(mar=c(4, 5, 4, 5))
+# plot(y_imputed, type = 'o', pch = 19, main = 'Heng Seng Index')
+# points(y_imputed[idx_miss],  col = "red", cex = 0.95,  pch=19)
+# addLegend(legend.loc = "topright", legend.names = c("observed values", "imputed values"), pch = c(19, 19),  col = c("black","red"))
+
+
+
+
+idx_miss_bis <- (min(idx_miss)-1):(max(idx_miss)+1)
+#setEPS()
+#postscript("~/Downloads/SCM_eigenvalues_histogram.eps", width=12, height=8)
+par(mfrow=c(2,2))
+#plot 1
+{ plot(y_missing, main="Imputation or true?")
+  lines(y_orig[idx_miss_bis, 1], col="blue", lwd=2) }
+#plot 2
+{ plot(y_missing, main="Imputation or true?")
+  lines(y_imputed[idx_miss_bis, 2], col="blue", lwd=2) }
+#plot 3
+{ plot(y_missing, main="Imputation or true?")
+  lines(y_imputed[idx_miss_bis, 3], col="blue", lwd=2) }
+#plot 4
+{ plot(y_missing, main="Imputation or true?")
+  lines(y_imputed[idx_miss_bis, 4], col="blue", lwd=2) }
+#dev.off()
 
