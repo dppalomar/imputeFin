@@ -5,17 +5,17 @@ author: |
   | Hong Kong University of Science and Technology (HKUST)
 date: "`r Sys.Date()`"
 output:
+  bookdown::pdf_document2:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
   bookdown::html_document2:
     base_format: prettydoc::html_pretty
     theme: tactile
     highlight: vignette
     fig_caption: yes
     number_sections: no
-    toc: yes
-    toc_depth: 2
-  bookdown::pdf_document2:
-    fig_caption: yes
-    number_sections: yes
     toc: yes
     toc_depth: 2
 header-includes:
@@ -180,11 +180,11 @@ res
 # Usage for grading students in a course
 If an instructor wants to evaluate the students of a course in their portfolio design, it can also be done very easily. It suffices to ask each student to submit a .R script (named `LASTNAME-firstname-STUDENTNUMBER-XXXX.R`) containing the portfolio function called exactly `portfolio_fun()` as well as any other auxiliary functions that it may require (needless to say that the required packages should be loaded in that script with `library()`). Then the instructor can put all those files in a folder and evaluate all of them at once.
 ```{r, cache=TRUE}
-res_all_students <- multiplePortfolioBacktest(folder_path = "folder_path", 
+# res_all_students <- multiplePortfolioBacktest(folder_path = "folder_path", 
                                               prices =  prices[1:3])
-res_all_students$performance_summary
-res_all_students$cpu_time_average
-res_all_students$failure_ratio
+#res_all_students$performance_summary
+#res_all_students$cpu_time_average
+#res_all_students$failure_ratio
 ```
 
 Now we can rank the different portfolios/students based on a weighted combination of the rank percentiles (termed scores) of the performance measures:

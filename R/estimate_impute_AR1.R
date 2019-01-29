@@ -2,7 +2,7 @@
 #'
 #' @description Estimate the parameters of a Student's t AR(1) model from a time series with missing values
 #'
-#' @param y a vector consisting of real numbers and NA's. It is a time series with missing values. The first and last one should not be NA.
+#' @param y a xts object indicating time series with missing values. The first and last one should not be NA.
 #' @param n_chain a positive integer indicating the number of the parallel Markov chains used.
 #' @param n_thin  a positive integer indicating the sampling period of the Gibbs sampling. Every n_thin-th samples is used. This is aimed to reduce the dependence of the samples.
 #' @param n_iteration a positive integer indicating the number of the iterations.
@@ -24,30 +24,34 @@
 #' library(MASS)
 #' library(imputeTS)
 #' 
-#' # generate a complete Student's t AR(1) time series
+#' #generate a complete Student's t AR(1) time series
 #' phi0 <- 1
 #' phi1 <- 0.5 
 #' sigma2 <- 0.01 
 #' nu <- 1
-#' n <- 300
-#' n_miss <- 30 
+#' n <- 200
+#' n_miss <- 25 
 #' n_drop <- 100
 #' n_total <- n + n_drop
-#' y <- vector(length = n_total)
+#' data <- vector(length = n_total)
 #' epsilon <- vector(length = n_total - 1)# innovations
-#' y[1] <- 0
+#' data[1] <- 0
 #' for (i in 2:n_total) {
 #'   epsilon[i-1] <- rt(1, nu) * sqrt(sigma2)
-#'   y[i] <- phi0 + phi1 * y[i-1] + epsilon[i-1]
+#'   data[i] <- phi0 + phi1 * data[i-1] + epsilon[i-1]
 #' }
-#' y <- y[(n_drop + 1):n_total] # drop the first n_drop to reduce the influence of initial point
+#' data <- data[(n_drop + 1):n_total] # drop the first n_drop to reduce the influence of initial point
+#' dates <- seq(as.Date("2016-01-01"), length = n, by = "days") 
+#' y_orig <- xts(data,  dates)
 #' 
-#' # generate missing values
-#' index_miss <- sample(2:(n - 1), n_miss, FALSE)
-#' y[index_miss] <- NA
+#' #creat missing values
+#' index_miss <- sample( 2:(n - 1), n_miss, FALSE)
+#' index_miss <- sort(index_miss)
+#' y_miss <- y_orig
+#' y_miss[index_miss] <- NA
 #' 
 #' # estimate the parameters from this incomplete time series
-#' estimation_result <- estimateAR1(y)
+#' estimation_result <- estimateAR1(y_miss)
 #' 
 #' @export
 estimateAR1 <- function(y, n_chain = 10, n_thin = 1, n_iteration = 100, K = 30,
@@ -61,7 +65,7 @@ estimateAR1 <- function(y, n_chain = 10, n_thin = 1, n_iteration = 100, K = 30,
   n_in_block <- delta_index_obs[index_tmp] - 1             # number of missing values in each block
   first_index_in_block <- index_obs[index_tmp] + 1         # index of the first missing value in each block
   last_index_in_block <- index_obs[index_tmp] + n_in_block # index of the last missing value in each block
-  previous_obs_before_block <- as.numeric(y[first_index_in_block - 1]) # previous observed value before each block
+  previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] ) # previous observed value before each block
   next_obs_after_block <- as.numeric(y[last_index_in_block + 1])       # next observed value after each block
   
  # initialize the estimates and some parameters
@@ -145,44 +149,47 @@ estimateAR1 <- function(y, n_chain = 10, n_thin = 1, n_iteration = 100, K = 30,
 #'
 #' @description Estimate the parameters of the Student's t AR(1) model from a time series with missing values and impute the missing values based on the estimates
 #'
-#' @param y a vector consisting of real numbers and NA's. It indicates a time series with missing values.
+#' @param y a xts object indicating time series with missing values. The first and last one should not be NA.
 #' @param n_sample a positive integer indicating the number of imputations.
 #' @param n_burn a positive integer controling the length of the burn-in period of the Gibb sampling. The first (n_burn * n_thin) samples generated will be ignored.
 #' @param n_thin a positive integer indicating the sampling period of Gibbs sampling. After then burn-in perid, every n_thin-th sample is used. This is aimed to reduce the dependence of the samples.
 #' @param parameters a vector consisting the paramters of the Student's t AR(1) if known. 
 #' @return 
-#' \item{\code{y_imputed}  }{real matrix, each column is a imputed complete time series}
+#' \item{\code{y_imputed}  }{a xts object, each column is a imputed complete time series}
 #' @author Junyan Liu and Daniel P. Palomar
 #' @examples
 #' library(imputeFin)
 #' library(MASS)
 #' library(imputeTS)
 #' 
-#' # generate a complete Student's t AR(1) time series
 #' phi0 <- 1
 #' phi1 <- 0.5 
 #' sigma2 <- 0.01 
 #' nu <- 1
-#' n <- 300
-#' n_miss <- 30 
+#' n <- 200
+#' n_miss <- 25 
 #' n_drop <- 100
 #' n_total <- n + n_drop
-#' y <- vector(length = n_total)
+#' data <- vector(length = n_total)
 #' epsilon <- vector(length = n_total - 1)# innovations
-#' y[1] <- 0
+#' data[1] <- 0
 #' for (i in 2:n_total) {
 #'   epsilon[i-1] <- rt(1, nu) * sqrt(sigma2)
-#'   y[i] <- phi0 + phi1 * y[i-1] + epsilon[i-1]
+#'   data[i] <- phi0 + phi1 * data[i-1] + epsilon[i-1]
 #' }
-#' y <- y[(n_drop + 1):n_total] # drop the first n_drop to reduce the influence of initial point
+#' data <- data[(n_drop + 1):n_total] # drop the first n_drop to reduce the influence of initial point
+#' dates <- seq(as.Date("2016-01-01"), length = n, by = "days") 
+#' y_orig <- xts(data,  dates)
 #' 
-#' # generate missing values
-#' index_miss <- sample(2:(n - 1), n_miss, FALSE)
-#' y[index_miss] <- NA
+#' # creat missing values
+#' index_miss <- sample( 2:(n - 1), n_miss, FALSE)
+#' index_miss <- sort(index_miss)
+#' y_miss <- y_orig
+#' y_miss[index_miss] <- NA
 #' 
 #' # impute the missing values and generate n_sample complete time series
-#' imputation_result <- imputeAR1( y, n_sample = 2) # if the parameters are unknown
-#' imputation_result <- imputeAR1( y, n_sample = 2, parameters = c(phi0, phi1, sigma2, nu) ) # if the parameters are unknown
+#' y_imputed <- imputeAR1( y_miss, n_sample = 1) # if the parameters are unknown
+#' y_imputed <- imputeAR1(y_miss, n_sample = 1, parameters = c(phi0, phi1, sigma2, nu)) # if the parameters are unknown
 #' 
 #' @export
 imputeAR1 <- function(y, n_sample = 1, n_burn = 100, n_thin = 50, parameters = NA) {
@@ -273,7 +280,7 @@ samplingLatentVariables <- function( y_sample_init, n_thin, n_block, n_in_block,
 }
 
 # impute y_miss and generate complete time series y's  via Gibbs sampling.
-#   y: a vector consisting real number's and NA's, indicating time series with missing values.
+#   y: a xts object indicating time series with missing values. The first and last one should not be NA.
 #   n_sample: the number of complete time series that need to be generated.
 #   n_burn:  a positive integer controling the length of the burn-in period of the Gibb sampling. The first (n_burn * n_thin) samples generated will be ignored.
 #   n_thin:  a positive integer indicating the sampling period of Gibbs sampling. After then burn-in perid, every n_thin-th sample is used. This is aimed to reduce the dependence of the samples.
@@ -294,13 +301,13 @@ imputeMissingValues <- function(y, n_sample, n_burn, n_thin, y_sample_init,
   n_in_block <- delta_index_obs[index_tmp] - 1             # number of missing values in each block
   first_index_in_block <- index_obs[index_tmp] + 1         # index of the first missing value in each block
   last_index_in_block <- index_obs[index_tmp] + n_in_block # index of the last missing value in each block
-  previous_obs_before_block <- y[first_index_in_block - 1] # previous observed value before each block
-  next_obs_after_block <- y[last_index_in_block + 1]       # next observed value after each block
+  previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] ) # previous observed value before each block
+  next_obs_after_block <- as.numeric( y[last_index_in_block + 1] )       # next observed value after each block
   
   if(any(is.na(y_sample_init))){
     y_sample_init <- imputeTS::na.kalman(y)
   }
-  y_tmp <- y_sample_init
+  y_tmp <- as.numeric( y_sample_init)
   y_imputed <- matrix(nrow = n, ncol = n_sample)
   
   # burn-in period
@@ -317,5 +324,6 @@ imputeMissingValues <- function(y, n_sample, n_burn, n_thin, y_sample_init,
                                       phi0, phi1, sigma2, nu) 
     y_imputed[ ,j] <- sample$y
   }
+  y_imputed <- xts(y_imputed, index(y))
   return( y_imputed )
 }

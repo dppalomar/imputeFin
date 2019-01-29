@@ -1,0 +1,10 @@
+base
+knitr
+zoo
+xts
+foreach
+iterators
+snow
+doSNOW
+portfolioBacktest
+CVXR

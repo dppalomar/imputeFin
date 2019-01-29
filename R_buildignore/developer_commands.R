@@ -24,3 +24,4 @@ library(imputeFin)
 # Documentation
 devtools::document()  #to generate all documentation via roxygen
 ?XXX
+

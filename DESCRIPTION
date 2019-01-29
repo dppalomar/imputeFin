@@ -25,7 +25,7 @@ Depends:
 License: GPL-3 | file LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports: MASS, imputeTS
+Imports: MASS, imputeTS, xts
 RoxygenNote: 6.1.1
 Suggests:
 VignetteBuilder:

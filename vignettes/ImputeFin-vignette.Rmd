@@ -1,0 +1,127 @@
+---
+title: "Imputation for AR Time Series"
+author: |
+  | Junyan Liu and Daniel P. Palomar
+  | Hong Kong University of Science and Technology (HKUST)
+date: "`r Sys.Date()`"
+output:
+  bookdown::pdf_document2:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+  bookdown::html_document2:
+    base_format: prettydoc::html_pretty
+    theme: tactile
+    highlight: vignette
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_depth: 2
+header-includes:
+  \allowdisplaybreaks
+indent: yes
+csl: ieee.csl
+bibliography: refs.bib
+vignette: >
+  %\VignetteIndexEntry{imputation AR time series}
+  %\VignetteKeyword{imputation, AR time series}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r, echo = FALSE}
+library(knitr)
+opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.align = "center",
+  fig.retina = 2,
+  out.width = "75%",
+  dpi = 96
+)
+knit_hooks$set(pngquant = hook_pngquant)
+#Help on bookdown: https://bookdown.org/yihui/bookdown/
+#rmarkdown::render("vignettes/PortfolioBacktest-vignette.Rmd", "all")
+#rmarkdown::render("vignettes/PortfolioBacktest-vignette.Rmd", "bookdown::html_document2")
+#rmarkdown::render("vignettes/PortfolioBacktest-vignette.Rmd", "bookdown::pdf_document2")
+#tools::compactPDF("vignettes/PortfolioBacktest-vignette.pdf", gs_quality = "ebook")
+```
+
+-----------
+> This vignette illustrates the usage of the package `imputeFin` for imputation of missing Values in  incomplete AR time series. 
+
+# Installation
+The package can currently be installed from [GitHub](https://github.com/dppalomar/imputeFin):
+```{r, eval = FALSE}
+# install.packages("devtools")
+devtools::install_github("dppalomar/imputeFin")
+# Getting help
+library(imputeFin)
+help(package = "imputeFin")
+package?imputeFin
+?imputeFin
+```
+
+# Usage of the package
+## Estimation and imputation for univariate incomplete time series
+We start by loading the package.
+```{r, message = FALSE}
+library(MASS)
+library(imputeTS)
+library(xts)
+library(imputeFin)
+
+```
+
+We download the adjusted price of S&P 500 index from 2012-01-01 to 2015-07-08, and compute the log prices. We delete some log prices to generate missing values.
+
+```{r, message = FALSE}
+library(quantmod)
+y_orig <- log(Ad(getSymbols("^GSPC", from = "2012-01-01", to = "2015-07-08", auto.assign = FALSE)))
+T <- nrow(y_orig)
+miss_pct <- 0.2 # the percentage of missing values
+n_miss <- floor(miss_pct*T)
+idx_miss <- round(T/2) + 1:n_miss
+y_miss <- y_orig
+y_miss[idx_miss] <- NA
+idx_obs <- setdiff(1:T, idx_miss)
+```
+
+Then we use the function estimateAR1() to estimate the parameters of AR(1) model from this incomplete time series.
+
+```{r, message = FALSE}
+library(tictoc)
+tic("parameter estimation")
+estimation_result <- estimateAR1(y_miss)
+toc()
+estimation_result$phi0
+estimation_result$phi1
+estimation_result$sigma2
+estimation_result$nu
+```
+
+Next, we use the function imputeAR1() to impute the missing values in the incomplete time series.
+ 
+```{r}
+# we generate n_sample = 2 imputed time series
+tic("imputation of missing values with unknown parameters")
+y_imputed_unknown <- imputeAR1(y_miss, n_sample = 2, n_burn = 200, n_thin = 100)
+toc()
+
+idx_miss_bis <- (min(idx_miss)-1):(max(idx_miss)+1)
+{plot(y_miss, main="original")
+lines(y_orig[idx_miss_bis, 1], col="blue", lwd=2)}#plot the original time series
+{plot(y_miss, main="Imputed")
+lines(y_imputed_unknown[idx_miss_bis, 1], col="blue", lwd=2)}#plot the first imputed time series
+{plot(y_miss, main="Imputed")
+lines(y_imputed_unknown[idx_miss_bis, 2], col="blue", lwd=2)}#plot the second imputed time series
+
+# if we have already known the parameters, then we can use this information when doing the imputation.
+parameters_estimate = c(estimation_result$phi0, estimation_result$phi1, 
+                        estimation_result$sigma2, estimation_result$nu)
+tic("imputation of missing values with known parameters")
+y_imputed_known <- imputeAR1(y_miss, n_sample = 2, n_burn = 200, n_thin = 100, 
+                             parameters = parameters_estimate)
+toc()
+```

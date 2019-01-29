@@ -3,6 +3,7 @@ library(MASS)
 library(imputeTS)
 library(xts)
 library(quantmod)
+library(tictoc)
 
 # download data from YahooFinance
 #y_orig <- log(Ad(getSymbols("^HSI", from = "2018-01-01", to = "2018-6-30", auto.assign = FALSE)))
@@ -23,7 +24,13 @@ y_missing[idx_miss] <- NA
 idx_obs <- setdiff(1:T, idx_miss)
 
 # estimate the parameters from this incomplete time series
+tic("parameter estimation")
 estimation_result <- estimateAR1(y_missing)
+toc()
+estimation_result$phi0
+estimation_result$phi1
+estimation_result$sigma2
+estimation_result$nu
 
 # plot convergence of estimates versus iteration
 layout(matrix(c(1, 2, 3, 4)), heights = c(1, 1, 1, 1))
@@ -35,8 +42,8 @@ plot(1:k, estimation_result$sigma2_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.
 plot(1:k, estimation_result$nu_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2,  type='o',col = "blue",  xlab ="Iteration k", ylab = expression(nu) )
 
 # impute the missing values and generate n_sample complete time series
-y_imputed <- imputeAR1(as.vector(y_missing), n_sample = 4, n_burn = 200, n_thin = 100)  #use: num_imputations
-y_imputed <- xts(y_imputed, index(y_missing))
+y_imputed <- imputeAR1(y_missing, n_sample = 4, n_burn = 200, n_thin = 100)  #use: num_imputations
+
 
 # # plot the imputed data set
 # layout(1, heights = 1)
