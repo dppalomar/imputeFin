@@ -4,10 +4,11 @@
 \alias{imputeAR1}
 \title{Imputate Missing Values in  Incomplete Student's t AR(1) Time Series}
 \usage{
-imputeAR1(y, n_sample, n_burn = 100, n_thin = 50, parameters = NA)
+imputeAR1(y, n_sample = 1, n_burn = 100, n_thin = 50,
+  parameters = NA)
 }
 \arguments{
-\item{y}{a vector consisting of real numbers and NA's. It indicates a time series with missing values.}
+\item{y}{a xts object indicating time series with missing values. The first and last one should not be NA.}
 
 \item{n_sample}{a positive integer indicating the number of imputations.}
 
@@ -18,7 +19,7 @@ imputeAR1(y, n_sample, n_burn = 100, n_thin = 50, parameters = NA)
 \item{parameters}{a vector consisting the paramters of the Student's t AR(1) if known.}
 }
 \value{
-\item{\code{y_imputed}  }{real matrix, each column is a imputed complete time series}
+\item{\code{y_imputed}  }{a xts object, each column is a imputed complete time series}
 }
 \description{
 Estimate the parameters of the Student's t AR(1) model from a time series with missing values and impute the missing values based on the estimates
@@ -28,31 +29,34 @@ library(imputeFin)
 library(MASS)
 library(imputeTS)
 
-# generate a complete Student's t AR(1) time series
 phi0 <- 1
 phi1 <- 0.5 
 sigma2 <- 0.01 
 nu <- 1
-n <- 300
-n_miss <- 30 
+n <- 200
+n_miss <- 25 
 n_drop <- 100
 n_total <- n + n_drop
-y <- vector(length = n_total)
+data <- vector(length = n_total)
 epsilon <- vector(length = n_total - 1)# innovations
-y[1] <- 0
+data[1] <- 0
 for (i in 2:n_total) {
   epsilon[i-1] <- rt(1, nu) * sqrt(sigma2)
-  y[i] <- phi0 + phi1 * y[i-1] + epsilon[i-1]
+  data[i] <- phi0 + phi1 * data[i-1] + epsilon[i-1]
 }
-y <- y[(n_drop + 1):n_total] # drop the first n_drop to reduce the influence of initial point
+data <- data[(n_drop + 1):n_total] # drop the first n_drop to reduce the influence of initial point
+dates <- seq(as.Date("2016-01-01"), length = n, by = "days") 
+y_orig <- xts(data,  dates)
 
-# generate missing values
-index_miss <- sample(2:(n - 1), n_miss, FALSE)
-y[index_miss] <- NA
+# creat missing values
+index_miss <- sample( 2:(n - 1), n_miss, FALSE)
+index_miss <- sort(index_miss)
+y_miss <- y_orig
+y_miss[index_miss] <- NA
 
 # impute the missing values and generate n_sample complete time series
-imputation_result <- imputeAR1( y, n_sample = 2) # if the parameters are unknown
-imputation_result <- imputeAR1( y, n_sample = 2, parameters = c(phi0, phi1, sigma2, nu) ) # if the parameters are unknown
+y_imputed <- imputeAR1( y_miss, n_sample = 1) # if the parameters are unknown
+y_imputed <- imputeAR1(y_miss, n_sample = 1, parameters = c(phi0, phi1, sigma2, nu)) # if the parameters are unknown
 
 }
 \author{

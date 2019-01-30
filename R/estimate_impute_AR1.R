@@ -77,10 +77,10 @@ estimateAR1 <- function(y, n_chain = 10, n_thin = 1, n_iteration = 100, K = 30,
     sigma2[1] <- Gaussian_estimates$sigma2
     nu[1] <- 3
   } else {
-    phi0[1] <- estimates_init["phi0"]
-    phi1[1] <- estimates_init["phi1"]
-    sigma2[1] <- estimates_init["sigma2"]
-    nu[1] <- estimates_init["nu"]
+    phi0[1] <- estimates_init[["phi0"]]
+    phi1[1] <- estimates_init[["phi1"]]
+    sigma2[1] <- estimates_init[["sigma2"]]
+    nu[1] <- estimates_init[["nu"]]
   }
 
   s <- s_approx <- rep(0, 7)  # approximations of the sufficient statistics
@@ -98,6 +98,11 @@ estimateAR1 <- function(y, n_chain = 10, n_thin = 1, n_iteration = 100, K = 30,
       y_samples[, j] <- sample$y
       tau_samples[, j] <- sample$tau
     }
+    # # Daniel: implement loop above in parallel
+    # lmd <- t(sapply(1:n_chain, FUN = function(k) {
+    #   Ut <- eigen(cov(X[-c(t0[k]:t1[k]), ]), symmetric = TRUE)$vectors
+    #   colMeans((X[c(t0[k]:t1[k]), , drop = FALSE] %*% Ut)^2)
+    # }))
 
     # approximate the sufficient statistics
     if (k <= K)
@@ -276,7 +281,7 @@ samplingLatentVariables <- function( y_sample_init, n_thin, n_block, n_in_block,
       y_tmp[ first_index_in_block[d] : last_index_in_block[d]] <- MASS::mvrnorm  ( n = 1, mu = mu_d, Sigma = sigma_d )
     }
   }
-  return( list('y' = y_tmp, 'tau' = tau_tmp))
+  return(list('y' = y_tmp, 'tau' = tau_tmp))
 }
 
 # impute y_miss and generate complete time series y's  via Gibbs sampling.
@@ -304,9 +309,8 @@ imputeMissingValues <- function(y, n_sample, n_burn, n_thin, y_sample_init,
   previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] ) # previous observed value before each block
   next_obs_after_block <- as.numeric( y[last_index_in_block + 1] )       # next observed value after each block
   
-  if(any(is.na(y_sample_init))){
+  if (any(is.na(y_sample_init)))
     y_sample_init <- imputeTS::na.kalman(y)
-  }
   y_tmp <- as.numeric( y_sample_init)
   y_imputed <- matrix(nrow = n, ncol = n_sample)
   
@@ -318,12 +322,12 @@ imputeMissingValues <- function(y, n_sample, n_burn, n_thin, y_sample_init,
     y_tmp <- sample$y
   }
   # sample every n_thin-th sample
-  for ( j in 1:n_sample ) {
+  for (j in 1:n_sample) {
     sample <- samplingLatentVariables(y_tmp, n_thin, n_block, n_in_block,
                                       first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
                                       phi0, phi1, sigma2, nu) 
-    y_imputed[ ,j] <- sample$y
+    y_imputed[, j] <- sample$y
   }
   y_imputed <- xts(y_imputed, index(y))
-  return( y_imputed )
+  return(y_imputed)
 }

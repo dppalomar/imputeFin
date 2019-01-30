@@ -5,11 +5,6 @@ author: |
   | Hong Kong University of Science and Technology (HKUST)
 date: "`r Sys.Date()`"
 output:
-  bookdown::pdf_document2:
-    fig_caption: yes
-    number_sections: yes
-    toc: yes
-    toc_depth: 2
   bookdown::html_document2:
     base_format: prettydoc::html_pretty
     theme: tactile
@@ -18,13 +13,18 @@ output:
     number_sections: no
     toc: yes
     toc_depth: 2
+  bookdown::pdf_document2:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
 header-includes:
   \allowdisplaybreaks
 indent: yes
 csl: ieee.csl
 bibliography: refs.bib
 vignette: >
-  %\VignetteIndexEntry{imputation AR time series}
+  %\VignetteIndexEntry{Imputation AR time series}
   %\VignetteKeyword{imputation, AR time series}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
@@ -42,10 +42,10 @@ opts_chunk$set(
 )
 knit_hooks$set(pngquant = hook_pngquant)
 #Help on bookdown: https://bookdown.org/yihui/bookdown/
-#rmarkdown::render("vignettes/PortfolioBacktest-vignette.Rmd", "all")
-#rmarkdown::render("vignettes/PortfolioBacktest-vignette.Rmd", "bookdown::html_document2")
-#rmarkdown::render("vignettes/PortfolioBacktest-vignette.Rmd", "bookdown::pdf_document2")
-#tools::compactPDF("vignettes/PortfolioBacktest-vignette.pdf", gs_quality = "ebook")
+#rmarkdown::render("vignettes/ImputeFin-vignette.Rmd", "all")
+#rmarkdown::render("vignettes/ImputeFin-vignette.Rmd", "bookdown::html_document2")
+#rmarkdown::render("vignettes/ImputeFin-vignette.Rmd", "bookdown::pdf_document2")
+#tools::compactPDF("vignettes/ImputeFin-vignette.pdf", gs_quality = "ebook")
 ```
 
 -----------
@@ -65,18 +65,15 @@ package?imputeFin
 
 # Usage of the package
 ## Estimation and imputation for univariate incomplete time series
-We start by loading the package.
+We start by loading the package:
 ```{r, message = FALSE}
-library(MASS)
-library(imputeTS)
-library(xts)
 library(imputeFin)
-
 ```
 
 We download the adjusted price of S&P 500 index from 2012-01-01 to 2015-07-08, and compute the log prices. We delete some log prices to generate missing values.
 
 ```{r, message = FALSE}
+library(xts)
 library(quantmod)
 y_orig <- log(Ad(getSymbols("^GSPC", from = "2012-01-01", to = "2015-07-08", auto.assign = FALSE)))
 T <- nrow(y_orig)
@@ -88,7 +85,7 @@ y_miss[idx_miss] <- NA
 idx_obs <- setdiff(1:T, idx_miss)
 ```
 
-Then we use the function estimateAR1() to estimate the parameters of AR(1) model from this incomplete time series.
+Then we use the function `estimateAR1()` to estimate the parameters of AR(1) model from this incomplete time series.
 
 ```{r, message = FALSE}
 library(tictoc)
@@ -110,8 +107,8 @@ y_imputed_unknown <- imputeAR1(y_miss, n_sample = 2, n_burn = 200, n_thin = 100)
 toc()
 
 idx_miss_bis <- (min(idx_miss)-1):(max(idx_miss)+1)
-{plot(y_miss, main="original")
-lines(y_orig[idx_miss_bis, 1], col="blue", lwd=2)}#plot the original time series
+{ plot(y_miss, main = "original")
+  lines(y_orig[idx_miss_bis, 1], col="blue", lwd=2) }  # plot the original time series
 {plot(y_miss, main="Imputed")
 lines(y_imputed_unknown[idx_miss_bis, 1], col="blue", lwd=2)}#plot the first imputed time series
 {plot(y_miss, main="Imputed")
