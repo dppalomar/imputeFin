@@ -25,7 +25,7 @@ idx_obs <- setdiff(1:T, idx_miss)
 
 # estimate the parameters from this incomplete time series
 tic("parameter estimation")
-estimation_result <- estimateAR1(y_missing)
+estimation_result <- estimateAR1t(y_missing, output_iterates = TRUE)
 toc()
 estimation_result$phi0
 estimation_result$phi1
@@ -35,14 +35,14 @@ estimation_result$nu
 # plot convergence of estimates versus iteration
 layout(matrix(c(1, 2, 3, 4)), heights = c(1, 1, 1, 1))
 par(mar=c(4, 5, 0.1, 0.5))
-k <- estimation_result$n_iter
-plot(1:k, estimation_result$phi0_iterate, pch=19, cex = 0.8,  cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ", type='o', col = "blue",   ylab = expression(phi[0]))
-plot(1:k, estimation_result$phi1_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ",type='o', col = "blue", lty = 1,  ylab = expression(phi[1]))
-plot(1:k, estimation_result$sigma2_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ",type='o', col = "blue",    ylab = expression(sigma^2) )
-plot(1:k, estimation_result$nu_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2,  type='o',col = "blue",  xlab ="Iteration k", ylab = expression(nu) )
+n_iter <- length(estimation_result$phi0_iterate)
+plot(1:n_iter, estimation_result$phi0_iterate, pch=19, cex = 0.8,  cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ", type='o', col = "blue",   ylab = expression(phi[0]))
+plot(1:n_iter, estimation_result$phi1_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ",type='o', col = "blue", lty = 1,  ylab = expression(phi[1]))
+plot(1:n_iter, estimation_result$sigma2_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ",type='o', col = "blue",    ylab = expression(sigma^2) )
+plot(1:n_iter, estimation_result$nu_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2,  type='o',col = "blue",  xlab ="Iteration k", ylab = expression(nu) )
 
 # impute the missing values and generate n_sample complete time series
-y_imputed <- imputeAR1(y_missing, n_sample = 4, n_burn = 200, n_thin = 100)  #use: num_imputations
+y_imputed <- imputeAR1t(y_missing, n_sample = 4, n_burn = 200, n_thin = 100)  #use: num_imputations
 
 
 # # plot the imputed data set
