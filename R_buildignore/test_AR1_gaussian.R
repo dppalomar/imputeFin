@@ -1,7 +1,6 @@
 library(imputeFin)
 library(xts)
 
-source("estimate_impute_AR1_Gaussian.R")
 phi0 <- 0
 phi1 <- 1
 sigma2 <- 0.01 
@@ -10,19 +9,17 @@ n_miss <- 20
 n_drop <- 100
 n_total <- n + n_drop
 data <- vector(length = n_total)
-epsilon <- vector(length = n_total - 1)# innovations
+epsilon <- vector(length = n_total)  # innovations
 data[1] <- 0
 for (i in 2:n_total) {
   epsilon[i-1] <- rnorm(1, 0, sqrt(sigma2)) 
-  data[i] <- phi0 + phi1 * data[i-1] + epsilon[i-1]
+  data[i] <- phi0 + phi1 * data[i-1] + epsilon[i]
 }
-data <- data[(n_drop + 1):n_total] # drop the first n_drop to reduce the influence of initial point
-dates <- seq(as.Date("2016-01-01"), length = n, by = "days") 
-y_orig <- xts(data,  dates)
+data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influence of initial point
+y_orig <- xts(data,  seq(as.Date("2016-01-01"), length = n, by = "days"))
 
 # creat missing values
-index_miss <- sample( 2:(n - 1), n_miss, FALSE)
-index_miss <- sort(index_miss)
+index_miss <- sample(2:(n - 1), n_miss)
 y <- y_orig
 y[index_miss] <- NA
 

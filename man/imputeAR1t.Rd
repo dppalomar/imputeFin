@@ -30,7 +30,6 @@ Estimate the parameters of the Student's t AR(1) model from a time series with m
 }
 \examples{
 library(imputeFin)
-library(MASS)
 library(xts)
 phi0 <- 1
 phi1 <- 0.5 

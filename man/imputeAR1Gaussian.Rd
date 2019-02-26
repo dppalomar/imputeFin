@@ -26,7 +26,6 @@ Estimate the parameters of the Gaussian AR(1) model from a time series with miss
 }
 \examples{
 library(imputeFin)
-library(MASS)
 library(xts)
 phi0 <- 1
 phi1 <- 0.5 
