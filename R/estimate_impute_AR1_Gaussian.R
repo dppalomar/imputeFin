@@ -50,7 +50,7 @@
 #' estimation_result <- estimateAR1Gaussian(y)
 #' @import xts
 #' @export
-estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, stop_crt = 1e-10,  
+estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, stop_crt = 1e-10,  
                                 max_iteration = 1000, output_iterates = FALSE) {
   # find the missing blocks
   n <- length(y)  # length of the time series
@@ -69,9 +69,9 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, stop_
   
 
   # objective function, the observed data log-likelihood
-  obj = function(phi0, phi1, sigma2){
+  obj <- function(phi0, phi1, sigma2) {
     sum_phi1 <- sum2_phi1 <- c()
-    for ( i in 1:(n_obs -1) ) {
+    for (i in 1:(n_obs -1)) {
       sum_phi1[i] <- sum(phi1^(0:(delta_index_obs[i] - 1)))
       sum2_phi1[i] <- sum(phi1^((0:(delta_index_obs[i] - 1))*2 ))
     }
@@ -82,7 +82,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, stop_
   
   # initialize the estimates
   phi0 <- phi1 <- sigma2 <- f <- c()
-  estimation_heuristic = EstimateAR1GaussianHeuristic(y, index_miss, random_walk, zero_mean)
+  estimation_heuristic <- EstimateAR1GaussianHeuristic(y, index_miss, random_walk, zero_mean)
   phi1[1] <- estimation_heuristic$phi1
   phi0[1] <- estimation_heuristic$phi0
   sigma2[1] <- estimation_heuristic$sigma2
@@ -106,7 +106,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, stop_
     
 
     # update the estimates
-    if (random_walk == FALSE & zero_mean == FALSE) {
+    if (!random_walk && !zero_mean) {
       phi1[k+1] <- (s_yy1 - s_y * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
       phi0[k+1] <- (s_y - phi1[k +1] * s_y1) / (n - 1)
     } else if (random_walk == TRUE & zero_mean == FALSE){
@@ -126,11 +126,11 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, stop_
     f[k+1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
     
     # stop when the iterates do not change much
-    if(abs(f[k + 1] - f[k]) / max(1, abs(f[k]))<stop_crt)
+    if(abs(f[k + 1] - f[k]) / max(1, abs(f[k])) < stop_crt)
       break
   }
   
-  if(output_iterates == TRUE){
+  if (output_iterates == TRUE) {
     return(list("phi0" = phi0[k + 1],
                 "phi1" = phi1[k + 1],
                 "sigma2" = sigma2[k + 1],
@@ -138,7 +138,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, stop_
                 "phi1_iterate" = phi1,
                 "sigma2_iterate" = sigma2,
                 "f_iterate" = f))
-  }else{
+  } else {
     return(list("phi0" = phi0[k + 1],
                 "phi1" = phi1[k + 1],
                 "sigma2" = sigma2[k + 1]))
@@ -292,12 +292,12 @@ condMeanCov <- function(y_obs, index_obs, n,  n_block, n_in_block,
 
 
 # a heuristic method to compute the parameters of Gaussian AR(1) model from incomplete time series.
-EstimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = FALSE) {
+EstimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = TRUE) {
   index_miss_tmp <- c(0, index_miss, length(y) + 1)
   delta_index_miss_tmp <- diff(index_miss_tmp)
-  index_tmp <- which(delta_index_miss_tmp > 2)
-  n_obs_block <- length(index_tmp)  # number of observation blocks with more than 1 sample.
-  n_in_obs_block <- delta_index_miss_tmp[index_tmp] - 1  # number of observed samples in each qualified observation block
+  idx_deltaidx_miss <- which(delta_index_miss_tmp > 2)
+  n_obs_block <- length(iindex_tmp)  # number of observation blocks with more than 1 sample.
+  n_in_obs_block <- delta_index_miss_tmp[iindex_tmp] - 1  # number of observed samples in each qualified observation block
   m <- 1
   y_obs2 <- y_obs1 <- c()
   for (i in 1:n_obs_block) {

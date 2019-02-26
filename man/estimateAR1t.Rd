@@ -40,7 +40,6 @@ Estimate the parameters of a Student's t AR(1) model from a time series with mis
 }
 \examples{
 library(imputeFin)
-library(MASS)
 library(xts)
 # generate a complete Student's t AR(1) time series
 phi0 <- 0
