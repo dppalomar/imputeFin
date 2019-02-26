@@ -1,7 +1,6 @@
 library(imputeFin)
 library(xts)
 
-source("estimate_impute_AR1_Gaussian.R")
 phi0 <- 0
 phi1 <- 1
 sigma2 <- 0.01 
