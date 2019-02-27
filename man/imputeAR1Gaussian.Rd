@@ -5,7 +5,7 @@
 \title{Imputate Missing Values in  Incomplete Gaussian AR(1) Time Series}
 \usage{
 imputeAR1Gaussian(y, n_sample = 1, param = NULL, random_walk = FALSE,
-  zero_mean = FALSE)
+  zero_mean = TRUE)
 }
 \arguments{
 \item{y}{a xts object indicating time series with missing values. The first and last one should not be NA.}
@@ -47,7 +47,7 @@ dates <- seq(as.Date("2016-01-01"), length = n, by = "days")
 y_orig <- xts(data,  dates)
 
 # creat missing values
-index_miss <- sample( 2:(n - 1), n_miss, FALSE)
+index_miss <- sample(2:(n - 1), n_miss, FALSE)
 index_miss <- sort(index_miss)
 y <- y_orig
 y[index_miss] <- NA

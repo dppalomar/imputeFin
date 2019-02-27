@@ -5,7 +5,7 @@
 \title{Imputate Missing Values in  Incomplete Student's t AR(1) Time Series}
 \usage{
 imputeAR1t(y, n_sample = 1, param = NULL, random_walk = FALSE,
-  zero_mean = FALSE, n_burn = 100, n_thin = 50)
+  zero_mean = TRUE, n_burn = 100, n_thin = 50)
 }
 \arguments{
 \item{y}{a xts object indicating time series with missing values. The first and last one should not be NA.}

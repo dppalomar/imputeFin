@@ -4,8 +4,8 @@
 \alias{estimateAR1t}
 \title{Fit Student's t AR(1) Models to Time Series with Missing values}
 \usage{
-estimateAR1t(y, random_walk = FALSE, zero_mean = FALSE, n_chain = 10,
-  n_thin = 1, n_iteration = 100, K = 30, output_iterates = FALSE)
+estimateAR1t(y, random_walk = FALSE, zero_mean = TRUE, n_chain = 10,
+  n_thin = 1, n_iter = 100, K = 30, output_iterates = FALSE)
 }
 \arguments{
 \item{y}{a xts object indicating time series with missing values. The first and last one should not be NA.}
@@ -18,7 +18,7 @@ estimateAR1t(y, random_walk = FALSE, zero_mean = FALSE, n_chain = 10,
 
 \item{n_thin}{a positive integer indicating the sampling period of the Gibbs sampling (default \code{1}). Every n_thin-th samples is used. This is aimed to reduce the dependence of the samples.}
 
-\item{n_iteration}{a positive integer indicating the number of the iterations (default \code{100}).}
+\item{n_iter}{a positive integer indicating the number of the iterations (default \code{100}).}
 
 \item{K}{a positive number controlling the values the step sizes (default \code{30}).}
 
