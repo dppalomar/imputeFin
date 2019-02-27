@@ -5,9 +5,9 @@ library(xts)
 phi0 <- 0
 phi1 <- 1
 sigma2 <- 0.01 
-n <- 300
-n_miss <- 30 
-n_drop <- 100
+n <- 3000
+n_miss <- 0.3*n
+n_drop <- 10
 n_total <- n + n_drop
 data <- vector(length = n_total)
 epsilon <- vector(length = n_total)  # innovations
@@ -47,3 +47,4 @@ par(mar=c(4, 5, 4, 5))
 plot(1:n, y_imputed, type = 'o', pch = 19,  ylab = 'y')
 points(index_miss, y_imputed[index_miss, 1], col = 'red', pch = 19)
 legend( x="topright", col = c("black", "red"), pch = c(19, 19), legend = c("observed values", "imputed values"))
+

@@ -56,7 +56,6 @@
 #' @export
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol = 1e-10,  
                                 maxiter = 1000, output_iterates = FALSE) {
-
   if (NCOL(y) == 1)
     y <- as.vector(y)
   else {
@@ -94,7 +93,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
   
   # initialize the estimates
   phi0 <- phi1 <- sigma2 <- f <- c()
-  estimation_heuristic <- EstimateAR1GaussianHeuristic(y, index_miss, random_walk, zero_mean)
+  estimation_heuristic <- estimateAR1GaussianHeuristic(y, index_miss, random_walk, zero_mean)
   phi1[1] <- estimation_heuristic$phi1
   phi0[1] <- estimation_heuristic$phi0
   sigma2[1] <- estimation_heuristic$sigma2
@@ -109,11 +108,14 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
     cond_mean_y <- condMeanCov$cond_mean_y
     cond_cov_y <- condMeanCov$cond_cov_y
     # computation of sufficient statistics
-    s_y2 <- sum(cond_mean_y[2:n])
-    s_y1 <- sum(cond_mean_y[1:(n - 1)])
-    s_y2y2 <- sum(diag(cond_cov_y[2:n, 2:n]) + cond_mean_y[2:n]^2)
-    s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
-    s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
+    s_y2 <- sum(cond_mean_y[-1])
+    s_y1 <- sum(cond_mean_y[-n])
+    s_y2y2 <- sum(diag(cond_cov_y)[-1] + cond_mean_y[-1]^2)
+    #slow version: s_y2y2 <- sum(diag(cond_cov_y[2:n, 2:n]) + cond_mean_y[2:n]^2)
+    s_y1y1 <- sum(diag(cond_cov_y)[-n]  + cond_mean_y[-n]^2)
+    #slow version: s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
+    s_y2y1 <- sum(diag1(cond_cov_y) + cond_mean_y[-1] * cond_mean_y[-n])
+    #slow version: s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
 
     # M-step (update the estimates
     if (!random_walk && !zero_mean) {
@@ -152,6 +154,15 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
     return(list("phi0" = phi0[k + 1],
                 "phi1" = phi1[k + 1],
                 "sigma2" = sigma2[k + 1]))
+}
+
+
+#
+# Extracts the diagonal on top of the main diagonal
+#
+diag1 <- function(X) {
+  m <- min(dim(X))
+  X[1 + dim(X)[1L] + 0L:(m - 2L) * (dim(X)[1L] + 1)]  # main diag: x[1 + 0L:(m - 1L) * (dim(x)[1L] + 1)]
 }
 
 

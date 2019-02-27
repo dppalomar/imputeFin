@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimate_impute_AR1_Gaussian.R
 \name{estimateAR1Gaussian}
 \alias{estimateAR1Gaussian}
-\title{Fit Gaussian AR(1) Models to Time Series with Missing values}
+\title{Fit Gaussian AR(1) Model to Time Series with Missing Values}
 \usage{
 estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = TRUE,
   ftol = 1e-10, maxiter = 1000, output_iterates = FALSE)
@@ -64,6 +64,11 @@ y[index_miss] <- NA
 
 # estimate the parameters from this incomplete time series
 estimation_result <- estimateAR1Gaussian(y)
+
+}
+\references{
+W. James and C. Stein, “Estimation with quadratic loss”, in Proceedings of the Fourth Berkeley 
+Symposium on Mathematical Statistics and Probability, vol. 1, 1961, pp. 361–379.
 }
 \author{
 Junyan Liu and Daniel P. Palomar
