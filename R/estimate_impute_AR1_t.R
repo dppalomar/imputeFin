@@ -7,7 +7,7 @@
 #' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown. The default value is FALSE.
 #' @param n_chain a positive integer indicating the number of the parallel Markov chains used (default \code{10}).
 #' @param n_thin  a positive integer indicating the sampling period of the Gibbs sampling (default \code{1}). Every n_thin-th samples is used. This is aimed to reduce the dependence of the samples.
-#' @param n_iteration a positive integer indicating the number of the iterations (default \code{100}).
+#' @param n_iter a positive integer indicating the number of the iterations (default \code{100}).
 #' @param K a positive number controlling the values the step sizes (default \code{30}).
 #' @param output_iterates logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.
 #' @return A list containing the following elements:
@@ -53,17 +53,17 @@
 #' estimation_result <- estimateAR1t(y)
 #' @import xts
 #' @export
-estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, n_chain = 10, n_thin = 1, 
-                         n_iteration = 100, K = 30, output_iterates = FALSE) {
+estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, n_chain = 10, n_thin = 1, 
+                         n_iter = 100, K = 30, output_iterates = FALSE) {
   # find the missing blocks
   n <- length(y)  # length of the time series
   index_obs <- which(!is.na(y))  # indexes of observed values
   delta_index_obs <- diff(index_obs)
-  index_tmp <- which(delta_index_obs > 1)
-  n_block <- length(index_tmp)  # number of missing blocks
-  n_in_block <- delta_index_obs[index_tmp] - 1  # number of missing values in each block
-  first_index_in_block <- index_obs[index_tmp] + 1  # index of the first missing value in each block
-  last_index_in_block <- index_obs[index_tmp] + n_in_block  # index of the last missing value in each block
+  index_delta_index_obs <- which(delta_index_obs > 1)
+  n_block <- length(index_delta_index_obs)  # number of missing blocks
+  n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
+  first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
+  last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
   previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] )  # previous observed value before each block
   next_obs_after_block <- as.numeric(y[last_index_in_block + 1])  # next observed value after each block
   
@@ -81,7 +81,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, n_chain = 10
   tau_samples <- matrix(NA, n, n_chain)
   s <- s_approx <- rep(0, 7)  # approximations of the sufficient statistics
   
-  for (k in 1:n_iteration) {
+  for (k in 1:n_iter) {
     # draw realizations of the missing values from their posterior distribution
     for (j in 1:n_chain) {
       sample <- samplingLatentVariables(y_sample_init = y_samples[, j], n_thin, n_block, n_in_block,
@@ -111,13 +111,13 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, n_chain = 10
     s_approx <- s_approx + gamma[k] * (s - s_approx)
     
     # update the estimates
-    if (random_walk == FALSE & zero_mean == FALSE) {
+    if (!random_walk && !zero_mean) {
       phi1[k+1] <- ( s_approx[3] * s_approx[6] - s_approx[5] * s_approx[7] ) / ( s_approx[3] * s_approx[4] -  s_approx[7]^2 )
       phi0[k+1] <- (s_approx[5] - phi1[k+1] * s_approx[7] ) / s_approx[3]
-    } else if (random_walk == TRUE & zero_mean == FALSE){
+    } else if (random_walk && !zero_mean){
       phi1[k+1] <- 1
       phi0[k+1] <- (s_approx[5] -  s_approx[7] ) / s_approx[3]
-    } else if (random_walk == FALSE & zero_mean == TRUE){
+    } else if (!random_walk && zero_mean){
       phi1[k+1] <- s_approx[6] / s_approx[4] 
       phi0[k+1] <- 0
     } else{
@@ -128,11 +128,11 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, n_chain = 10
     sigma2[k+1] <- (s_approx[2] + phi0[k+1]^2 * s_approx[3] + phi1[k+1]^2 * s_approx[4] - 2 * phi0[k+1] * s_approx[5]
                     - 2 * phi1[k+1] * s_approx[6] + 2 * phi0[k+1] * phi1[k+1] * s_approx[7]) / (n - 1)
     
-    fn_surrogate_nu <- function(nu, n, s_approx1)
+    f_nu <- function(nu, n, s_approx1)
       return(-sum(0.5 * nu * s_approx1 +  (0.5 * nu * log(0.5 * nu) - lgamma(0.5 * nu)) * (n - 1)))
     
-    optimation_result <- optimize(fn_surrogate_nu, c(1e-6, 1e6), n, s_approx[1])
-    nu[k+1] <- optimation_result$minimum
+    optimation_result <- optimize(f_nu, c(1e-6, 1e6), n, s_approx[1])
+    nu[k + 1] <- optimation_result$minimum
     
     # # check convergence on parameters and objective function
     # werr <- sum(abs(w_next - wk)) / max(1, sum(abs(wk)))
@@ -141,7 +141,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, n_chain = 10
     #   break    
   }
   
-  if(output_iterates == TRUE){
+  if(output_iterates){
     return(list("phi0" = phi0[k + 1],
                 "phi1" = phi1[k + 1],
                 "sigma2" = sigma2[k + 1],
@@ -212,7 +212,8 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, n_chain = 10
 #' y_imputed <- imputeAR1t(y_miss, n_sample = 3, param) # if the parameters are unknown
 #' @import  xts
 #' @export
-imputeAR1t <- function(y, n_sample = 1, param = NULL,  random_walk = FALSE, zero_mean = FALSE,  n_burn = 100, n_thin = 50) {
+imputeAR1t <- function(y, n_sample = 1, param = NULL,  random_walk = FALSE, zero_mean = TRUE,  n_burn = 100, n_thin = 50) {
+  
   # if the parameters are unknown, then estimate the parameters.
   if(any(is.null(param))){
     estimation_result <- estimateAR1t(y, random_walk, zero_mean, output_iterates = FALSE)
@@ -227,19 +228,15 @@ imputeAR1t <- function(y, n_sample = 1, param = NULL,  random_walk = FALSE, zero
     nu <- param$nu
   }
   
-  #  result_Gaussian <- imputeAR1Gaussian(y, n_sample = 1, param = NULL, random_walk, zero_mean)
-  #  y_imputed <-  imputeMissingValues(y, n_sample, n_burn, n_thin, y_sample_init = result_Gaussian$cond_mean_y,
-  #                                    phi0, phi1, sigma2, nu)
-  #  return(y_imputed)
   # impute the missing y and generate complete data sets
   n <- length(y)               # length of the time series
   index_obs <- which( !is.na(y))# indexes of observed values
   delta_index_obs <- diff(index_obs)
-  index_tmp <- which( delta_index_obs>1)
-  n_block <- length(index_tmp)                             # number of missing blocks
-  n_in_block <- delta_index_obs[index_tmp] - 1             # number of missing values in each block
-  first_index_in_block <- index_obs[index_tmp] + 1         # index of the first missing value in each block
-  last_index_in_block <- index_obs[index_tmp] + n_in_block # index of the last missing value in each block
+  index_delta_index_obs <- which( delta_index_obs>1)
+  n_block <- length(index_delta_index_obs)                             # number of missing blocks
+  n_in_block <- delta_index_obs[index_delta_index_obs] - 1             # number of missing values in each block
+  first_index_in_block <- index_obs[index_delta_index_obs] + 1         # index of the first missing value in each block
+  last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block # index of the last missing value in each block
   previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] ) # previous observed value before each block
   next_obs_after_block <- as.numeric( y[last_index_in_block + 1] )       # next observed value after each block
   
@@ -309,6 +306,7 @@ samplingLatentVariables <- function( y_sample_init, n_thin, n_block, n_in_block,
       mu2 <- mu_cd[n_in_d_block + 1]
       
       sigma_cd <- matrix( nrow = n_in_d_block + 1, ncol = n_in_d_block + 1)
+      
       for(i in 1 : (n_in_d_block + 1) ){
         if(i == 1){ sigma_cd[1, 1] <- sigma2/tau_tmp[ first_index_in_block[d] ]
         } else {

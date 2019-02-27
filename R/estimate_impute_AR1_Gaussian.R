@@ -5,8 +5,8 @@
 #' @param y a xts object indicating time series with missing values. The first and last one should not be NA.
 #' @param random_walk logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE. 
 #' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown. The default value is FALSE.
-#' @param stop_crt a positive number controlling the stopping criterion (default \code{1e-8}).
-#' @param max_iteration a positive integer indicating the maximum number of iterations allowed (default \code{1000}).
+#' @param ftol a positive number controlling the stopping criterion (default \code{1e-8}).
+#' @param maxiter a positive integer indicating the maximum number of iterations allowed (default \code{1000}).
 #' @param output_iterates logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.
 #' @return A list containing the following elements:
 #' \item{\code{phi0}}{real number, the estimate for phi0}
@@ -50,8 +50,8 @@
 #' estimation_result <- estimateAR1Gaussian(y)
 #' @import xts
 #' @export
-estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, stop_crt = 1e-10,  
-                                max_iteration = 1000, output_iterates = FALSE) {
+estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol = 1e-10,  
+                                maxiter = 1000, output_iterates = FALSE) {
   # find the missing blocks
   n <- length(y)  # length of the time series
   index_obs <- which(!is.na(y))  # indexes of observed values
@@ -59,11 +59,11 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, stop_c
   n_obs <- length(index_obs)
   y_obs <- as.numeric( y[index_obs])  # observed values
   delta_index_obs <- diff(index_obs)
-  index_tmp_obs <- which(delta_index_obs > 1)
-  n_block <- length(index_tmp_obs)  # number of missing blocks
-  n_in_block <- delta_index_obs[index_tmp_obs] - 1  # number of missing values in each block
-  first_index_in_block <- index_obs[index_tmp_obs] + 1  # index of the first missing value in each block
-  last_index_in_block <- index_obs[index_tmp_obs] + n_in_block  # index of the last missing value in each block
+  index_delta_index_obs <- which(delta_index_obs > 1)
+  n_block <- length(index_delta_index_obs)  # number of missing blocks
+  n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
+  first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
+  last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
   previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] )  # previous observed value before each block
   next_obs_after_block <- as.numeric(y[last_index_in_block + 1])  # next observed value after each block
   
@@ -75,7 +75,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, stop_c
       sum_phi1[i] <- sum(phi1^(0:(delta_index_obs[i] - 1)))
       sum2_phi1[i] <- sum(phi1^((0:(delta_index_obs[i] - 1))*2 ))
     }
-    f <- (-sum((y_obs[2:n_obs] - phi1^delta_index_obs * y_obs[1:(n_obs-1)] - phi0 * sum_phi1)^2 / (2 * sum2_phi1 * sigma2 ))
+    f <- (-sum((y_obs[2:n_obs] - phi1^delta_index_obs * y_obs[1:(n_obs - 1)] - phi0 * sum_phi1)^2 / (2 * sum2_phi1 * sigma2))
            -0.5 * (n_obs - 1) * log(sigma2) - 0.5 * sum(log(sum2_phi1)))
     return(f)
   }
@@ -88,49 +88,49 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, stop_c
   sigma2[1] <- estimation_heuristic$sigma2
   f[1] <- obj(phi0[1], phi1[1], sigma2[1])
 
-  for (k in 1:max_iteration) {
+  for (k in 1:maxiter) {
    
     # computation of mean and covaraince of y conditional on all the observed data
-    condMeanCov <- condMeanCov(y_obs, index_obs, n,  n_block, n_in_block, 
+    condMeanCov <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
                                first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
                                phi0[k], phi1[k], sigma2[k])
     cond_mean_y <- condMeanCov$cond_mean_y
     cond_cov_y <- condMeanCov$cond_cov_y
     
     # compuatation of sufficient statistics
-    s_y <- sum(cond_mean_y[2:n])
+    s_y2 <- sum(cond_mean_y[2:n])
     s_y1 <- sum(cond_mean_y[1:(n - 1)])
-    s_yy <- sum(diag(cond_cov_y[2:n, 2:n]) + cond_mean_y[2:n]^2)
-    s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n-1)]^2)
-    s_yy1 <- sum(diag(cond_cov_y[1:(n -1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n-1)])
+    s_y2y2 <- sum(diag(cond_cov_y[2:n, 2:n]) + cond_mean_y[2:n]^2)
+    s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
+    s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
     
 
     # update the estimates
     if (!random_walk && !zero_mean) {
-      phi1[k+1] <- (s_yy1 - s_y * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
-      phi0[k+1] <- (s_y - phi1[k +1] * s_y1) / (n - 1)
-    } else if (random_walk == TRUE & zero_mean == FALSE){
-      phi1[k+1] <- 1
-      phi0[k+1] <- (s_y - s_y1) / (n - 1)
-    } else if (random_walk == FALSE & zero_mean == TRUE){
-      phi1[k+1] <- s_yy1 / s_y1y1 
-      phi0[k+1] <- 0
+      phi1[k + 1] <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
+      phi0[k + 1] <- (s_y2 - phi1[k +1] * s_y1) / (n - 1)
+    } else if (random_walk && !zero_mean){
+      phi1[k + 1] <- 1
+      phi0[k + 1] <- (s_y2 - s_y1) / (n - 1)
+    } else if (!random_walk && zero_mean){
+      phi1[k + 1] <- s_y2y1 / s_y1y1 
+      phi0[k + 1] <- 0
     } else{
-      phi1[k+1] <- 1
-      phi0[k+1] <- 0
+      phi1[k + 1] <- 1
+      phi0[k + 1] <- 0
     }
-    sigma2[k+1] <- (( s_yy + (n - 1) * phi0[k + 1]^2 + phi1[k + 1]^2 * s_y1y1 
-                      - 2 * phi0[k + 1] * s_y - 2 * phi1[k + 1] * s_yy1 + 2 * phi0[k + 1] * phi1[k + 1] * s_y1 ) / (n - 1))
+    sigma2[k + 1] <- (( s_y2y2 + (n - 1) * phi0[k + 1]^2 + phi1[k + 1]^2 * s_y1y1 
+                      - 2 * phi0[k + 1] * s_y2 - 2 * phi1[k + 1] * s_y2y1 + 2 * phi0[k + 1] * phi1[k + 1] * s_y1 ) / (n - 1))
     
     # computation of the objective function
-    f[k+1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
+    f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
     
     # stop when the iterates do not change much
-    if(abs(f[k + 1] - f[k]) / max(1, abs(f[k])) < stop_crt)
+    if(abs(f[k + 1] - f[k]) < ftol * abs(f[k]))
       break
   }
   
-  if (output_iterates == TRUE) {
+  if (output_iterates) {
     return(list("phi0" = phi0[k + 1],
                 "phi1" = phi1[k + 1],
                 "sigma2" = sigma2[k + 1],
@@ -182,7 +182,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, stop_c
 #' y_orig <- xts(data,  dates)
 #' 
 #' # creat missing values
-#' index_miss <- sample( 2:(n - 1), n_miss, FALSE)
+#' index_miss <- sample(2:(n - 1), n_miss, FALSE)
 #' index_miss <- sort(index_miss)
 #' y <- y_orig
 #' y[index_miss] <- NA
@@ -196,9 +196,9 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, stop_c
 #' y_imputed <- imputeAR1Gaussian(y_miss, n_sample = 3, param) # if the parameters are unknown
 #' @import xts
 #' @export
-imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE, zero_mean = FALSE) {
+imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE, zero_mean = TRUE) {
    # if the parameters are unknown, then estimate the parameters.
-  if(any(is.null(param))){
+  if (any(is.null(param))) {
     estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
     phi0 <- estimation_result$phi0
     phi1 <- estimation_result$phi1
@@ -215,11 +215,11 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
   n_obs <- length(index_obs)
   y_obs <- as.numeric( y[index_obs])  # observed values
   delta_index_obs <- diff(index_obs)
-  index_tmp_obs <- which(delta_index_obs > 1)
-  n_block <- length(index_tmp_obs)  # number of missing blocks
-  n_in_block <- delta_index_obs[index_tmp_obs] - 1  # number of missing values in each block
-  first_index_in_block <- index_obs[index_tmp_obs] + 1  # index of the first missing value in each block
-  last_index_in_block <- index_obs[index_tmp_obs] + n_in_block  # index of the last missing value in each block
+  index_delta_index_obs <- which(delta_index_obs > 1)
+  n_block <- length(index_delta_index_obs)  # number of missing blocks
+  n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
+  first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
+  last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
   previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] )  # previous observed value before each block
   next_obs_after_block <- as.numeric(y[last_index_in_block + 1])  # next observed value after each block
   
@@ -248,7 +248,7 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
 
 # compute the conditional mean and covariance matrix of y given the observed data and current estimates
 
-condMeanCov <- function(y_obs, index_obs, n,  n_block, n_in_block, 
+condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block, 
                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
                         phi0, phi1, sigma2) {
   
@@ -293,18 +293,20 @@ condMeanCov <- function(y_obs, index_obs, n,  n_block, n_in_block,
 
 # a heuristic method to compute the parameters of Gaussian AR(1) model from incomplete time series.
 EstimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = TRUE) {
-  index_miss_tmp <- c(0, index_miss, length(y) + 1)
-  delta_index_miss_tmp <- diff(index_miss_tmp)
-  idx_deltaidx_miss <- which(delta_index_miss_tmp > 2)
-  n_obs_block <- length(iindex_tmp)  # number of observation blocks with more than 1 sample.
-  n_in_obs_block <- delta_index_miss_tmp[iindex_tmp] - 1  # number of observed samples in each qualified observation block
-  m <- 1
+  index_miss_p <- c(0, index_miss, length(y) + 1)
+  delta_index_miss_p <- diff(index_miss_p)
+  index_delta_index_miss_p <- which(delta_index_miss_p > 2)
+  n_obs_block <- length(index_delta_index_miss_p)  # number of observation blocks with more than 1 sample.
+  n_in_obs_block <- delta_index_miss_p[index_delta_index_miss_p] - 1  # number of observed samples in each qualified observation block
+  
+  m <- 0
   y_obs2 <- y_obs1 <- c()
   for (i in 1:n_obs_block) {
-    y_obs1[m:(m + n_in_obs_block[i] - 2)] <- as.numeric( y[(index_miss_tmp[index_tmp[i]] + 1):(index_miss_tmp[index_tmp[i] + 1] - 2)])
-    y_obs2[m:(m + n_in_obs_block[i] - 2)] <- as.numeric( y[(index_miss_tmp[index_tmp[i]] + 2):(index_miss_tmp[index_tmp[i] + 1] - 1)])
-    m <- m +  n_in_obs_block[i] - 1
+    y_obs1[(m + 1):(m + n_in_obs_block[i] - 1)] <- as.numeric( y[(index_miss_p[index_delta_index_miss_p[i]] + 1):(index_miss_p[index_delta_index_miss_p[i] + 1] - 2)])
+    y_obs2[(m + 1):(m + n_in_obs_block[i] - 1)] <- as.numeric( y[(index_miss_p[index_delta_index_miss_p[i]] + 2):(index_miss_p[index_delta_index_miss_p[i] + 1] - 1)])
+    m <- m + n_in_obs_block[i] - 1
   }
+  n_y_obs1 = m
   
   s_y_obs1 = sum(y_obs1)
   s_y_obs2 = sum(y_obs2)
@@ -314,21 +316,21 @@ EstimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zer
   
 
   # compute the estimates
-  if (random_walk == FALSE & zero_mean == FALSE) {
-    phi1<- (s_y_obs2_y_obs1 - s_y_obs2 * s_y_obs1 / (m - 1)) / (s_y_obs1_square - s_y_obs1 * s_y_obs1 / (m - 1)) 
-    phi0 <- (s_y_obs2 - phi1 * s_y_obs1) / (m - 1)
-  } else if (random_walk == TRUE & zero_mean == FALSE){
+  if (!random_walk && !zero_mean) {
+    phi1 <- (s_y_obs2_y_obs1 - s_y_obs2 * s_y_obs1 / n_y_obs1) / (s_y_obs1_square - s_y_obs1 * s_y_obs1 / n_y_obs1) 
+    phi0 <- (s_y_obs2 - phi1 * s_y_obs1) / (n_y_obs1 - 1)
+  } else if (random_walk && !zero_mean){
     phi1 <- 1
-    phi0 <- (s_y_obs2 - phi1 * s_y_obs1) / (m - 1)
-  } else if (random_walk == FALSE & zero_mean == TRUE){
+    phi0 <- (s_y_obs2 - phi1 * s_y_obs1) / (n_y_obs1 - 1)
+  } else if (!random_walk && zero_mean){
     phi1 <- s_y_obs2_y_obs1 / s_y_obs1_square 
     phi0 <- 0
   } else{
     phi1 <- 1
     phi0 <- 0
   }
-  sigma2 <- (( s_y_obs2_square + (m - 1) * phi0^2 + phi1^2 * s_y_obs1_square 
-               - 2 * phi0 * s_y_obs2 - 2 * phi1 * s_y_obs2_y_obs1 + 2 * phi0 * phi1 * s_y_obs1 ) / (m - 1))
+  sigma2 <- (( s_y_obs2_square + (n_y_obs1 - 1) * phi0^2 + phi1^2 * s_y_obs1_square 
+               - 2 * phi0 * s_y_obs2 - 2 * phi1 * s_y_obs2_y_obs1 + 2 * phi0 * phi1 * s_y_obs1 ) / (n_y_obs1 - 1))
   
   return(list("phi0" = phi0,
               "phi1" = phi1,
