@@ -126,7 +126,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
     f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
     
     # stop when the iterates do not change much
-    if(abs(f[k + 1] - f[k]) < ftol * abs(f[k]))
+    if(abs(f[k + 1] - f[k]) <= ftol * (abs(f[k + 1]) + abs(f[k]))) 
       break
   }
   
