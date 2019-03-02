@@ -5,7 +5,7 @@ library(xts)
 phi0 <- 0
 phi1 <- 1
 sigma2 <- 0.01 
-n <- 10000
+n <- 500000
 n_miss <- 0.3*n
 n_drop <- 10
 n_total <- n + n_drop
@@ -51,6 +51,7 @@ profvis({
     index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
     n_obs <- length(index_obs)
     y_obs <- as.numeric(y[index_obs])  # observed values
+    browser()
     delta_index_obs <- diff(index_obs)
     index_delta_index_obs <- which(delta_index_obs > 1)
     n_block <- length(index_delta_index_obs)  # number of missing blocks
@@ -63,7 +64,7 @@ profvis({
     
     # objective function, the observed data log-likelihood
     obj <- function(phi0, phi1, sigma2) {
-      sum_phi1 <- sum2_phi1 <- c()
+      sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
       for (i in 1:(n_obs-1)) {
         sum_phi1[i] <- sum(phi1^(0:(delta_index_obs[i] - 1)))
         sum2_phi1[i] <- sum(phi1^((0:(delta_index_obs[i] - 1))*2))
@@ -84,18 +85,16 @@ profvis({
     for (k in 1:maxiter) {
       # E-step
       # computation of mean and covariance of y conditional on all the observed data
-      condMeanCov <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
-                                 first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                                 phi0[k], phi1[k], sigma2[k])
-      cond_mean_y <- condMeanCov$cond_mean_y
-      cond_cov_y <- condMeanCov$cond_cov_y
+      cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                          first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                          phi0[k], phi1[k], sigma2[k], full_cov = FALSE)
       # computation of sufficient statistics
-      s_y2 <- sum(cond_mean_y[-1])
-      s_y1 <- sum(cond_mean_y[-n])
-      s_y2y2 <- sum(diag(cond_cov_y)[-1] + cond_mean_y[-1]^2)
-      s_y1y1 <- sum(diag(cond_cov_y)[-n]  + cond_mean_y[-n]^2)
-      s_y2y1 <- sum(diag1(cond_cov_y) + cond_mean_y[-1] * cond_mean_y[-n])
-
+      s_y2 <- sum(cond$mean_y[-1])
+      s_y1 <- sum(cond$mean_y[-n])
+      s_y2y2 <- sum(cond$cov_y_diag[-1] + cond$mean_y[-1]^2)  #slow version: s_y2y2 <- sum(diag(cond_cov_y[2:n, 2:n]) + cond_mean_y[2:n]^2)
+      s_y1y1 <- sum(cond$cov_y_diag[-n]  + cond$mean_y[-n]^2)  #slow version: s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
+      s_y2y1 <- sum(cond$cov_y_diag1 + cond$mean_y[-1] * cond$mean_y[-n])  #slow version: s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
+      
       # M-step (update the estimates
       if (!random_walk && !zero_mean) {
         phi1[k + 1] <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 

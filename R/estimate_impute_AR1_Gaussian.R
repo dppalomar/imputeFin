@@ -68,7 +68,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
   index_obs <- which(!is.na(y))  # indexes of observed values
   index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
   n_obs <- length(index_obs)
-  y_obs <- as.numeric(y[index_obs])  # observed values
+  y_obs <- y[index_obs]  # observed values
   delta_index_obs <- diff(index_obs)
   index_delta_index_obs <- which(delta_index_obs > 1)
   n_block <- length(index_delta_index_obs)  # number of missing blocks
@@ -76,12 +76,12 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
   first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
   last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
   previous_obs_before_block <- as.numeric(y[first_index_in_block - 1] )  # previous observed value before each block
-  next_obs_after_block <- as.numeric(y[last_index_in_block + 1])  # next observed value after each block
+  next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
   
 
   # objective function, the observed data log-likelihood
   obj <- function(phi0, phi1, sigma2) {
-    sum_phi1 <- sum2_phi1 <- c()
+    sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
     for (i in 1:(n_obs-1)) {
       sum_phi1[i] <- sum(phi1^(0:(delta_index_obs[i] - 1)))
       sum2_phi1[i] <- sum(phi1^((0:(delta_index_obs[i] - 1))*2))
@@ -102,21 +102,16 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
   for (k in 1:maxiter) {
     # E-step
     # computation of mean and covariance of y conditional on all the observed data
-    condMeanCov <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
-                               first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                               phi0[k], phi1[k], sigma2[k])
-    cond_mean_y <- condMeanCov$cond_mean_y
-    cond_cov_y <- condMeanCov$cond_cov_y
+    cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                        phi0[k], phi1[k], sigma2[k], full_cov = FALSE)
     # computation of sufficient statistics
-    s_y2 <- sum(cond_mean_y[-1])
-    s_y1 <- sum(cond_mean_y[-n])
-    s_y2y2 <- sum(diag(cond_cov_y)[-1] + cond_mean_y[-1]^2)
-    #slow version: s_y2y2 <- sum(diag(cond_cov_y[2:n, 2:n]) + cond_mean_y[2:n]^2)
-    s_y1y1 <- sum(diag(cond_cov_y)[-n]  + cond_mean_y[-n]^2)
-    #slow version: s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
-    s_y2y1 <- sum(diag1(cond_cov_y) + cond_mean_y[-1] * cond_mean_y[-n])
-    #slow version: s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
-
+    s_y2 <- sum(cond$mean_y[-1])
+    s_y1 <- sum(cond$mean_y[-n])
+    s_y2y2 <- sum(cond$cov_y_diag[-1] + cond$mean_y[-1]^2)  #slow version: s_y2y2 <- sum(diag(cond_cov_y[2:n, 2:n]) + cond_mean_y[2:n]^2)
+    s_y1y1 <- sum(cond$cov_y_diag[-n]  + cond$mean_y[-n]^2)  #slow version: s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
+    s_y2y1 <- sum(cond$cov_y_diag1 + cond$mean_y[-1] * cond$mean_y[-n])  #slow version: s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
+    
     # M-step (update the estimates
     if (!random_walk && !zero_mean) {
       phi1[k + 1] <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
@@ -142,18 +137,15 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
       break
   }
   
-  if (output_iterates)
-    return(list("phi0" = phi0[k + 1],
-                "phi1" = phi1[k + 1],
-                "sigma2" = sigma2[k + 1],
-                "phi0_iterate" = phi0,
-                "phi1_iterate" = phi1,
-                "sigma2_iterate" = sigma2,
-                "f_iterate" = f))
-  else
-    return(list("phi0" = phi0[k + 1],
-                "phi1" = phi1[k + 1],
-                "sigma2" = sigma2[k + 1]))
+  results <- list("phi0" = phi0[k + 1],
+                  "phi1" = phi1[k + 1],
+                  "sigma2" = sigma2[k + 1])
+  if (output_iterates) 
+    results <- c(results, list("phi0_iterate" = phi0,
+                               "phi1_iterate" = phi1,
+                               "sigma2_iterate" = sigma2,
+                               "f_iterate" = f))
+  return(results)
 }
 
 
@@ -245,7 +237,7 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
   # compute the mean and covariance matrix of y conditional on observed data
   cond_mean_cov_y <- condMeanCov(y_obs, index_obs, n,  n_block, n_in_block, 
                                  first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                                 phi0, phi1, sigma2)
+                                 phi0, phi1, sigma2, full_cov = FALSE)
   cond_mean_y <- cond_mean_cov_y$cond_mean_y
   cond_cov_y <- cond_mean_cov_y$cond_cov_y
   
@@ -270,43 +262,68 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
 #
 condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block, 
                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                        phi0, phi1, sigma2) {
+                        phi0, phi1, sigma2, full_cov = FALSE) {
   
-  cond_mean_y <- vector(length = n)  # mean of y conditional on all the observed data
+  cond_mean_y <- rep(NA, n)  # mean of y conditional on all the observed data
   cond_mean_y[index_obs] <- y_obs
-  cond_cov_y <- matrix(0, nrow = n, ncol = n)  # covariance of y conditional on all the observed data
+  if (full_cov) cond_cov_y <- matrix(0, nrow = n, ncol = n)  # covariance of y conditional on all the observed data
+  cond_cov_y_diag <- rep(0, n)
+  cond_cov_y_diag1 <- rep(0, n-1)
   
-  for(d in 1:n_block) {  # for each missing block
+  for (d in 1:n_block) {  # for each missing block
     n_d <- n_in_block[d]  # number of missing values in the d-th missing block  
     index_d <- first_index_in_block[d]:last_index_in_block[d]  # indexes of missing values in the d-th missing block
-    phi1_exp <- phi1^(0:(n_d + 1))  # phi1[k] to the power of 0, 1, ..., (n_d + 1)
+    phi1_exp <- phi1^(0:(n_d+1))  # phi1[k] to the power of 0, 1, ..., (n_d+1)
     sum_phi1_exp <- cumsum(phi1_exp) 
-    cond_mean_block_obs <- sum_phi1_exp[1:(n_d + 1)] * phi0 + phi1_exp[2:(n_d + 2)] * previous_obs_before_block[d]  # mean of the d-th missing block conditional on all the previous observed samples
-    cond_cov_block_obs <- matrix(nrow = n_d + 1, ncol = n_d + 1)  # covariance of the d-th missing block and the next observation conditional on all the previous observed samples  
+    cond_mean_block_obs <- sum_phi1_exp[1:(n_d+1)] * phi0 + phi1_exp[2:(n_d+2)] * previous_obs_before_block[d]  # mean of the d-th missing block conditional on all the previous observed samples
     # computation of cond_cov_block_obs
-    for(i_diag in 1:(n_d+1)) {
-      if(i_diag == 1)
-        cond_cov_block_obs[1, 1] <- 1
-      else
-        cond_cov_block_obs[i_diag, i_diag] <- cond_cov_block_obs[i_diag - 1, i_diag - 1] * phi1^2 + 1
-      
-      if(i_diag != n_d + 1) {
-        cond_cov_block_obs[i_diag, (i_diag + 1) : (n_d + 1)] <-
-        cond_cov_block_obs[(i_diag + 1) : (n_d + 1), i_diag] <- cond_cov_block_obs[i_diag, i_diag] * phi1_exp[2:(n_d  + 1 - i_diag + 1)]
+    cond_cov_block_obs_diag <- c(1, rep(NA, n_d))
+    for (i in 1:n_d)  cond_cov_block_obs_diag[i+1] <- cond_cov_block_obs_diag[i]*phi1^2 + 1
+    cond_cov_block_obs_diag1 <- cond_cov_block_obs_diag[1:n_d] * phi1
+    cond_cov_block_obs_lastcol <- cond_cov_block_obs_diag * rev(phi1_exp[1:(n_d+1)])
+    if (full_cov) {
+      cond_cov_block_obs <- matrix(nrow = n_d+1, ncol = n_d+1)  # covariance of the d-th missing block and the next observation conditional on all the previous observed samples  
+      diag(cond_cov_block_obs) <- cond_cov_block_obs_diag
+      for (i in 1:n_d)
+        cond_cov_block_obs[i, (i+1):(n_d+1)] <-
+        cond_cov_block_obs[(i+1):(n_d+1), i] <- cond_cov_block_obs_diag[i] * phi1_exp[2:(n_d+1 - i+1)]
+      #sanity check
+      if (sum(abs(cond_cov_block_obs_lastcol - cond_cov_block_obs[, n_d+1])) > 1e-9 ||
+          sum(abs(cond_cov_block_obs_diag1 - diag1(cond_cov_block_obs))) > 1e-9 ||
+          sum(abs(cond_cov_block_obs_diag - diag(cond_cov_block_obs))) > 1e-9) {
+        message("Error in computation of cond_cov_block_obs...")
+        browser()
       }
     }
+
     # mean of the d-th missing block conditional on all the observed data
-    cond_mean_block <- cond_mean_block_obs[1:n_d] + cond_cov_block_obs[1:n_d, n_d + 1] / cond_cov_block_obs[n_d + 1, n_d + 1]  * 
-                       (next_obs_after_block[d] - cond_mean_block_obs[n_d + 1] ) 
+    cond_mean_block <- cond_mean_block_obs[1:n_d] + cond_cov_block_obs_lastcol[1:n_d] / cond_cov_block_obs_lastcol[n_d+1] *
+                                                    (next_obs_after_block[d] - cond_mean_block_obs[n_d+1])
     # covariance of the d-th missing block conditional on all the observed data
-    cond_cov_block <- (cond_cov_block_obs[1:n_d, 1:n_d] - cond_cov_block_obs[1:n_d, n_d + 1] %*% 
-                       t(cond_cov_block_obs[1:n_d, n_d + 1])/cond_cov_block_obs[n_d + 1, n_d + 1]) * sigma2
-    
+    if (full_cov) cond_cov_block <- sigma2 * (cond_cov_block_obs[1:n_d, 1:n_d] - tcrossprod(cond_cov_block_obs[1:n_d, n_d+1])/cond_cov_block_obs[n_d+1, n_d+1])  #slower: cond_cov_block <- sigma2 * (cond_cov_block_obs[1:n_d, 1:n_d] - cond_cov_block_obs[1:n_d, n_d+1] %*% t(cond_cov_block_obs[1:n_d, n_d+1])/cond_cov_block_obs[n_d+1, n_d+1])
+    cond_cov_block_diag <- sigma2 * (cond_cov_block_obs_diag[-(n_d+1)] - cond_cov_block_obs_lastcol[1:n_d]^2/cond_cov_block_obs_lastcol[n_d+1])
+    cond_cov_block_diag1 <- sigma2 * (cond_cov_block_obs_diag1[-n_d] - cond_cov_block_obs_lastcol[1:(n_d-1)]*cond_cov_block_obs_lastcol[2:n_d]/cond_cov_block_obs_lastcol[n_d+1])
+
+    # update global mean and cov matrix
     cond_mean_y[index_d] <- cond_mean_block
-    cond_cov_y[index_d, index_d] <- cond_cov_block
+    if (full_cov) cond_cov_y[index_d, index_d] <- cond_cov_block
+    cond_cov_y_diag[index_d] <- cond_cov_block_diag  # cond_cov_y_diag[index_d] <- diag(cond_cov_block)
+    cond_cov_y_diag1[index_d[-n_d]] <- cond_cov_block_diag1  # cond_cov_y_diag1[index_d[-n_d]] <- diag1(cond_cov_block)
   }
-  return(list("cond_mean_y" = cond_mean_y,
-              "cond_cov_y" = cond_cov_y))
+  # sanity check
+  if (full_cov)
+    if (sum(abs(diag(cond_cov_y) - cond_cov_y_diag)) > 1e-9 ||
+        sum(abs(diag1(cond_cov_y) - cond_cov_y_diag1)) > 1e-9) {
+      message("Error in computation of cond_cov_y...")
+      browser()
+    }
+  
+  results <- list("mean_y" = cond_mean_y,
+                  "cov_y_diag" = cond_cov_y_diag,
+                  "cov_y_diag1" = cond_cov_y_diag1)
+  if (full_cov) 
+    results <- c(results, list("cov_y" = cond_cov_y))
+  return(results)
 }
 
 
