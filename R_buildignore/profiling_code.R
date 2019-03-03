@@ -38,20 +38,15 @@ diag1 <- function(X) {
 profvis({
   estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol = 1e-10,  
                                   maxiter = 1000, output_iterates = FALSE) {
-    if (NCOL(y) == 1)
-      y <- as.vector(y)
-    else {
-      stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-      return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, ftol, maxiter, output_iterates))
-    }
-    
+    #y <- as.vector(y)
+    y <- as.numeric(y)
+
     # find the missing blocks
     n <- length(y)  # length of the time series
     index_obs <- which(!is.na(y))  # indexes of observed values
     index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
     n_obs <- length(index_obs)
-    y_obs <- as.numeric(y[index_obs])  # observed values
-    browser()
+    y_obs <- y[index_obs]  # observed values
     delta_index_obs <- diff(index_obs)
     index_delta_index_obs <- which(delta_index_obs > 1)
     n_block <- length(index_delta_index_obs)  # number of missing blocks
@@ -59,7 +54,7 @@ profvis({
     first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
     last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
     previous_obs_before_block <- as.numeric(y[first_index_in_block - 1] )  # previous observed value before each block
-    next_obs_after_block <- as.numeric(y[last_index_in_block + 1])  # next observed value after each block
+    next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
     
     
     # objective function, the observed data log-likelihood

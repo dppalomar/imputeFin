@@ -57,7 +57,7 @@
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol = 1e-10,  
                                 maxiter = 1000, output_iterates = FALSE) {
   if (NCOL(y) == 1)
-    y <- as.vector(y)
+    y <- as.numeric(y)
   else {
     stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
     return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, ftol, maxiter, output_iterates))
