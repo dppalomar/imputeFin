@@ -35,6 +35,41 @@ plot(1:n_iter,estimation_result$phi1_iterate,  pch=19, cex.lab = 1.5, cex.axis =
 plot(1:n_iter,estimation_result$sigma2_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2, xaxt="n",  xlab =" ",type='o', col = "green",    ylab = expression(sigma^2) )
 plot(1:n_iter,estimation_result$f_iterate, pch=19, cex.lab = 1.5, cex.axis = 1.2,  type='o',col = "green",  xlab ="Iteration k", ylab = "obj" )
 
+# plot using ggplot2::qplot
+library(ggplot2)
+library(gridExtra)
+n_iter <- length(estimation_result$phi0_iterate)
+p1 <- qplot(1:n_iter, estimation_result$phi0_iterate, geom = c("line", "point"), xlab = "", ylab = expression(phi[0])) + 
+  scale_x_continuous(breaks = 1:n_iter)
+p2 <- qplot(1:n_iter, estimation_result$phi1_iterate, geom = c("line", "point"), xlab = "", ylab = expression(phi[1])) +
+  scale_x_continuous(breaks = 1:n_iter)
+p3 <- qplot(1:n_iter, estimation_result$sigma2_iterate, geom = c("line", "point"), xlab = "", ylab = expression(sigma^2)) + 
+  scale_x_continuous(breaks = 1:n_iter)
+p4 <- qplot(1:n_iter, estimation_result$f_iterate, geom = c("line", "point"), col = I("darkblue"), xlab = "iteration", ylab = "obj") + 
+  scale_x_continuous(breaks = 1:n_iter)
+grid.arrange(p1, p2, p3, p4, ncol = 1)
+
+# # plot using ggplot2::ggplot
+# library(ggplot2)
+# library(gridExtra)
+# library(tidyr)
+# library(dplyr)
+# library(tibble)
+# 
+# as_tibble(estimation_result) %>%
+#   mutate("iteration" = c(1:n_iter)) %>%
+#   select("iteration", "phi0") %>%
+#   ggplot(aes(x = iteration, y = phi0)) +
+#   geom_line() + geom_point()
+# 
+# as_tibble(estimation_result) %>%
+#   mutate("iteration" = c(1:n_iter)) %>%
+#   select("iteration", "phi0", "phi1") %>%
+#   gather("phi0", "phi1", key = "iterate_type", value = "value") %>%
+#   ggplot(aes(x = iteration, y = value)) +
+#   geom_line() + geom_point() +
+#   facet_grid(iterate_type ~ .)
+
 
 # test the imputation function
 param = list("phi0" = phi0,
