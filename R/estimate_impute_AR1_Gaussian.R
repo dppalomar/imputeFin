@@ -77,7 +77,6 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
   last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
   previous_obs_before_block <- as.numeric(y[first_index_in_block - 1] )  # previous observed value before each block
   next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
-  
 
   # objective function, the observed data log-likelihood
   obj <- function(phi0, phi1, sigma2) {
