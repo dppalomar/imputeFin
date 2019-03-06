@@ -30,10 +30,6 @@ estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FAL
 
 # profiling
 library(profvis)
-diag1 <- function(X) {
-  m <- min(dim(X))
-  X[1 + dim(X)[1L] + 0L:(m - 2L) * (dim(X)[1L] + 1)]  # main diag: x[1 + 0L:(m - 1L) * (dim(x)[1L] + 1)]
-}
 
 profvis({
   estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol = 1e-10,  
