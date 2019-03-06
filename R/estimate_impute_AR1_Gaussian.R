@@ -236,7 +236,7 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
   # compute the mean and covariance matrix of y conditional on observed data
   cond_mean_cov_y <- condMeanCov(y_obs, index_obs, n,  n_block, n_in_block, 
                                  first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                                 phi0, phi1, sigma2, full_cov = FALSE)
+                                 phi0, phi1, sigma2, full_cov = TRUE)
   cond_mean_y <- cond_mean_cov_y$cond_mean_y
   cond_cov_y <- cond_mean_cov_y$cond_cov_y
   
