@@ -28,6 +28,7 @@ LazyData: true
 Imports: MASS, xts
 RoxygenNote: 6.1.1
 Suggests:
+    testthat
 VignetteBuilder:
     knitr,
     rmarkdown,    

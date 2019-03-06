@@ -17,11 +17,14 @@ package?imputeFin
 ##
 devtools::load_all()  #or Ctrl-Shift-L
 devtools::install()
+#devtools::install(build_vignettes = TRUE)
 library(imputeFin)
-#devtools::build()  # to generate the installation file
 
 
 # Documentation
 devtools::document()  #to generate all documentation via roxygen
-?XXX
+?estimateAR1Gaussian
 
+
+# Code tests
+devtools::test()
