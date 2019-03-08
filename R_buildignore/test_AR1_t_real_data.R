@@ -58,6 +58,7 @@ y_imputed <- imputeAR1t(y_missing, n_sample = 4, n_burn = 200, n_thin = 100)  #u
 idx_miss_bis <- (min(idx_miss)-1):(max(idx_miss)+1)
 #setEPS()
 #postscript("~/Downloads/SCM_eigenvalues_histogram.eps", width=12, height=8)
+
 par(mfrow=c(2,2))
 #plot 1
 { plot(y_missing, main="Imputation or true?")

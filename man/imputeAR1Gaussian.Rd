@@ -19,7 +19,7 @@ imputeAR1Gaussian(y, n_sample = 1, param = NULL, random_walk = FALSE,
 \item{zero_mean}{logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown.}
 }
 \value{
-\item{\code{y_imputed}  }{a xts object, each column is a imputed complete time series}
+\item{\code{y_imputed}  }{a numerical matrix, each column is a imputed complete time series}
 }
 \description{
 Estimate the parameters of the Gaussian AR(1) model from a time series with missing values and impute the missing values based on the estimates

@@ -67,8 +67,7 @@ estimation_result <- estimateAR1Gaussian(y)
 
 }
 \references{
-W. James and C. Stein, “Estimation with quadratic loss”, in Proceedings of the Fourth Berkeley 
-Symposium on Mathematical Statistics and Probability, vol. 1, 1961, pp. 361–379.
+R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
 }
 \author{
 Junyan Liu and Daniel P. Palomar

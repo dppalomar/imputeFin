@@ -50,8 +50,7 @@
 #' estimation_result <- estimateAR1Gaussian(y)
 #' 
 #' @references
-#' W. James and C. Stein, “Estimation with quadratic loss”, in Proceedings of the Fourth Berkeley 
-#' Symposium on Mathematical Statistics and Probability, vol. 1, 1961, pp. 361–379.
+#' R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
 #' 
 #' @export
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol = 1e-10,  
@@ -75,9 +74,9 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
   n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
   first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
   last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
-  previous_obs_before_block <- as.numeric(y[first_index_in_block - 1] )  # previous observed value before each block
+  previous_obs_before_block <- y[first_index_in_block - 1]  # previous observed value before each block
   next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
-
+  
   # objective function, the observed data log-likelihood
   obj <- function(phi0, phi1, sigma2) {
     sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
@@ -150,7 +149,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
 
 #
 # Extracts the diagonal on top of the main diagonal
-#
+#' @export
 diag1 <- function(X) {
   m <- min(dim(X))
   X[1 + dim(X)[1L] + 0L:(m - 2L) * (dim(X)[1L] + 1)]  # main diag: x[1 + 0L:(m - 1L) * (dim(x)[1L] + 1)]
@@ -167,7 +166,7 @@ diag1 <- function(X) {
 #' @param random_walk logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE.
 #' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown.
 #' @return 
-#' \item{\code{y_imputed}  }{a xts object, each column is a imputed complete time series}
+#' \item{\code{y_imputed}  }{a numerical matrix, each column is a imputed complete time series}
 #' @author Junyan Liu and Daniel P. Palomar
 #' @examples
 #' library(imputeFin)
@@ -204,10 +203,16 @@ diag1 <- function(X) {
 #'              "sigma2" = sigma2,
 #'              "nu" = nu)
 #' y_imputed <- imputeAR1Gaussian(y_miss, n_sample = 3, param) # if the parameters are unknown
-#' @import xts
 #' @export
 imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE, zero_mean = TRUE) {
    # if the parameters are unknown, then estimate the parameters.
+  if (NCOL(y) == 1)
+    y <- as.numeric(y)
+  else {
+    stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
+    return(apply(y, MARGIN = 2, FUN = imputeAR1Gaussian, n_sample, param, random_walk, zero_mean))
+  }
+  
   if (any(is.null(param))) {
     estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
     phi0 <- estimation_result$phi0
@@ -218,47 +223,40 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
     phi1 <- param$phi1
     sigma2 <- param$sigma2
   }
-  # impute the missing y and generate complete data sets
+  
+  # find the missing blocks
   n <- length(y)  # length of the time series
   index_obs <- which(!is.na(y))  # indexes of observed values
   index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
   n_obs <- length(index_obs)
-  y_obs <- as.numeric( y[index_obs])  # observed values
+  y_obs <- y[index_obs]  # observed values
   delta_index_obs <- diff(index_obs)
   index_delta_index_obs <- which(delta_index_obs > 1)
   n_block <- length(index_delta_index_obs)  # number of missing blocks
   n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
   first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
   last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
-  previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] )  # previous observed value before each block
-  next_obs_after_block <- as.numeric(y[last_index_in_block + 1])  # next observed value after each block
-  
+  previous_obs_before_block <- y[first_index_in_block - 1]  # previous observed value before each block
+  next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
+ 
   # compute the mean and covariance matrix of y conditional on observed data
-  cond_mean_cov_y <- condMeanCov(y_obs, index_obs, n,  n_block, n_in_block, 
-                                 first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                                 phi0, phi1, sigma2, full_cov = TRUE)
-  cond_mean_y <- cond_mean_cov_y$cond_mean_y
-  cond_cov_y <- cond_mean_cov_y$cond_cov_y
-  
-  # compute the mean and covariance matrix of missing values conditional on observed data
-  cond_mean_miss <- cond_mean_y[index_miss]
-  cond_cov_miss <- cond_cov_y[index_miss, index_miss]
-  
+  cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                      first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                      phi0, phi1, sigma2, full_cov = TRUE)
+ 
   #impute the missing values by drawing samples from its conditional distribution
   y_imputed <- matrix(nrow = n, ncol = n_sample)
-  y_imputed[index_miss, 1:n_sample] <- t(MASS::mvrnorm(n = n_sample, cond_mean_miss, cond_cov_miss))
-  y_imputed[index_obs, 1:n_sample] <- y_obs %*% t( rep(1, n_sample) )
-  y_imputed <- xts(y_imputed, index(y))
+  y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_sample, cond$mean_y[index_miss], cond$cov_y[index_miss, index_miss]))
+  y_imputed[index_obs, ] <- rep(y_obs, times = n_sample)
   
   return(list("y_imputed" = y_imputed,
-              "cond_mean_y" = cond_mean_y,
-              "cond_cov_y" = cond_cov_y))
+              "cond_mean_y" = cond$mean_y,
+              "cond_cov_y" = cond$cov_y))
 }
 
 
-#
 # Compute the conditional mean and covariance matrix of y given the observed data and current estimates
-#
+#' @export
 condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block, 
                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
                         phi0, phi1, sigma2, full_cov = FALSE) {
@@ -326,9 +324,8 @@ condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block,
 }
 
 
-#
 # A heuristic method to compute the parameters of Gaussian AR(1) model from incomplete time series
-#
+ 
 estimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = TRUE) {
   index_miss_p <- c(0, index_miss, length(y) + 1)
   delta_index_miss_p <- diff(index_miss_p)
