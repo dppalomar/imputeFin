@@ -64,7 +64,7 @@ package?imputeFin
 ```
 
 # Usage of the package
-## Estimation and imputation for univariate incomplete time series
+## Estimation and imputation for univariate incomplete Gaussian AR(1) time series
 We start by loading the package:
 ```{r, message = FALSE}
 library(imputeFin)
@@ -76,49 +76,60 @@ We download the adjusted price of S&P 500 index from 2012-01-01 to 2015-07-08, a
 library(xts)
 library(quantmod)
 y_orig <- log(Ad(getSymbols("^GSPC", from = "2012-01-01", to = "2015-07-08", auto.assign = FALSE)))
-T <- nrow(y_orig)
+n <- nrow(y_orig)
 miss_pct <- 0.2 # the percentage of missing values
-n_miss <- floor(miss_pct*T)
-idx_miss <- round(T/2) + 1:n_miss
-y_miss <- y_orig
-y_miss[idx_miss] <- NA
-idx_obs <- setdiff(1:T, idx_miss)
+n_miss <- floor(miss_pct*n)
+index_miss <- round(n/2) + 1:n_miss
+y <- y_orig
+y[index_miss] <- NA
 ```
 
-Then we use the function `estimateAR1()` to estimate the parameters of AR(1) model from this incomplete time series.
+Then we use the function `estimateAR1Gaussian()` to estimate the parameters of Gaussian AR(1) model from this incomplete time series.
 
 ```{r, message = FALSE}
 library(tictoc)
 tic("parameter estimation")
-estimation_result <- estimateAR1(y_miss)
+estimation_result <- estimateAR1Gaussian(y)
 toc()
 estimation_result$phi0
 estimation_result$phi1
 estimation_result$sigma2
-estimation_result$nu
 ```
 
-Next, we use the function imputeAR1() to impute the missing values in the incomplete time series.
+Next, we use the function `imputeAR1Gaussian()` to impute the missing values in the incomplete time series.
  
 ```{r}
 # we generate n_sample = 2 imputed time series
 tic("imputation of missing values with unknown parameters")
-y_imputed_unknown <- imputeAR1(y_miss, n_sample = 2, n_burn = 200, n_thin = 100)
+imputation_result <- imputeAR1Gaussian(y, n_sample = 2)
 toc()
 
-idx_miss_bis <- (min(idx_miss)-1):(max(idx_miss)+1)
-{ plot(y_miss, main = "original")
-  lines(y_orig[idx_miss_bis, 1], col="blue", lwd=2) }  # plot the original time series
-{plot(y_miss, main="Imputed")
-lines(y_imputed_unknown[idx_miss_bis, 1], col="blue", lwd=2)}#plot the first imputed time series
-{plot(y_miss, main="Imputed")
-lines(y_imputed_unknown[idx_miss_bis, 2], col="blue", lwd=2)}#plot the second imputed time series
+y_imputed <- xts(imputation_result$y_imputed, index(y))
+index_miss_bis <- (min(index_miss)-1):(max(index_miss)+1)
+{ plot(y, main = "original")
+  lines(y_orig[index_miss_bis, 1], col="blue", lwd=2) }  # plot the original time series
+{ plot(y, main="Imputed")
+  lines(y_imputed[index_miss_bis, 1], col="blue", lwd=2) }#plot the first imputed time series
+{ plot(y, main="Imputed")
+  lines(y_imputed[index_miss_bis, 2], col="blue", lwd=2) }#plot the second imputed time series
 
 # if we have already known the parameters, then we can use this information when doing the imputation.
-parameters_estimate = c(estimation_result$phi0, estimation_result$phi1, 
-                        estimation_result$sigma2, estimation_result$nu)
+param = list("phi0" = estimation_result$phi0,
+             "phi1" = estimation_result$phi1,
+             "sigma2" = estimation_result$sigma2)
+
 tic("imputation of missing values with known parameters")
-y_imputed_known <- imputeAR1(y_miss, n_sample = 2, n_burn = 200, n_thin = 100, 
-                             parameters = parameters_estimate)
+imputation_result <- imputeAR1Gaussian(y, n_sample = 2)
 toc()
+```
+
+# Comparison with other packages
+We compare with the existing package `imputeTS`. 
+
+```{r}
+# impute using package imputeTS 
+library("imputeTS")
+y_imputed_km = na.kalman(y)
+{ plot(y, main="Imputed by package imputeTS")
+  lines(y_imputed_km[index_miss_bis], col="blue", lwd=2) }#plot the second imputed time series
 ```

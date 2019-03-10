@@ -1,12 +1,12 @@
 library(imputeFin)
 library(xts)
-# generate the complete time series
 
-phi0 <- 0
-phi1 <- 1
+# generate the complete time series
+phi0 <- 1
+phi1 <- 0.5
 sigma2 <- 0.01 
-n <- 300
-n_miss <- 0.2*n
+n <- 500
+n_miss <- 0.1*n
 n_drop <- 10
 n_total <- n + n_drop
 data <- vector(length = n_total)
@@ -26,8 +26,8 @@ y <- y_orig
 y[index_miss] <- NA
 
 # test the estimation function
-# estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE, ftol = 1e-10,  
-#                                         maxiter = 1000, output_iterates = TRUE)
+ estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE, ftol = 1e-10,  
+                                         maxiter = 1000, output_iterates = TRUE)
 # layout(matrix(c(1, 2, 3, 4)), heights = c(1,1,1,1))
 # par(mar = c(4, 5, 0.1, 0.5))
 # n_iter <- length(estimation_result$phi0_iterate)
@@ -88,7 +88,29 @@ par(mfrow=c(3,1))
 { plot(y, main = "Imputated")
   lines(y_imputed[index_miss_p, 1], col = "blue", lwd = 2) }
 #plot 3
-{ plot(y, main = "Imputated")
-  lines(y_imputed[index_miss_p, 2], col = "blue", lwd = 2) }
+#{ plot(y, main = "Imputated")
+#  lines(y_imputed[index_miss_p, 2], col = "blue", lwd = 2) }
 
 
+# comparison with other methods
+library("imputeTS")
+y_imputed_km = na.kalman(y)
+#plot 3
+{ plot(y, main = "Imputated by kalman method")
+  lines(y_imputed_km[index_miss_p], col = "blue", lwd = 2) }
+
+library("knitr")
+rst_orig <- ar(y_orig, order.max = 1, demean = TRUE)
+est_orig <- list("phi0" = rst_orig$x.mean * (1 - sum(rst_orig$ar)),
+                 "phi1" = rst_orig$ar,
+                 "sigma2" = rst_orig$var.pred)
+rst_km <- ar(y_imputed_km, order.max = 1, demean = TRUE)
+est_km <- list("phi0" = rst_km$x.mean * (1 - sum(rst_km$ar)),
+                 "phi1" = rst_km$ar,
+                 "sigma2" = rst_km$var.pred)
+rst_pr <- ar(y_imputed[, 1], order.max = 1, demean = TRUE)
+est_pr <- list("phi0" = rst_pr$x.mean * (1 - sum(rst_pr$ar)),
+               "phi1" = rst_pr$ar,
+               "sigma2" = rst_pr$var.pred)
+rst = cbind(est_orig, est_km, est_pr)
+print( kable(rst))
