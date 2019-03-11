@@ -249,9 +249,16 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
   y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_sample, cond$mean_y[index_miss], cond$cov_y[index_miss, index_miss]))
   y_imputed[index_obs, ] <- rep(y_obs, times = n_sample)
   
-  return(list("y_imputed" = y_imputed,
-              "cond_mean_y" = cond$mean_y,
-              "cond_cov_y" = cond$cov_y))
+  results <- list("y_imputed" = y_imputed,
+                  "phi0" = phi0,
+                  "phi1" = phi1,
+                  "sigma2" = sigma2,
+                  "cond_mean_y" = cond$mean_y,
+                  "cond_cov_y" = cond$cov_y)
+  if (exists(estimation_result)) 
+    results <- c(results, list("estimates" = estimation_result))
+  
+  return(results)
 }
 
 
