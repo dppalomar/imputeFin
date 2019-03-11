@@ -53,8 +53,9 @@
 #' R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
 #' 
 #' @export
-estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol = 1e-10,  
-                                maxiter = 1000, output_iterates = FALSE) {
+estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
+                                output_iterates = FALSE, condMeanCov = FALSE,
+                                ftol = 1e-10,  maxiter = 1000) {
   if (NCOL(y) == 1)
     y <- as.numeric(y)
   else {
@@ -143,6 +144,13 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
                                "phi1_iterate" = phi1,
                                "sigma2_iterate" = sigma2,
                                "f_iterate" = f))
+  if (condMeanCov) {
+    cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                        phi0[k+1], phi1[k+1], sigma2[k+1], full_cov = TRUE)
+    results <- c(results, list("cond_mean_y" = cond$mean_y,
+                               "cond_cov_y" = cond$cov_y))
+  }
   return(results)
 }
 
