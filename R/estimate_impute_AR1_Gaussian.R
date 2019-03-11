@@ -214,8 +214,10 @@ diag1 <- function(X) {
 #' @export
 imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE, zero_mean = TRUE) {
    # if the parameters are unknown, then estimate the parameters.
-  if (NCOL(y) == 1)
+  if (NCOL(y) == 1) {
+    y_attrib <- attributes(y)
     y <- as.numeric(y)
+  }
   else {
     stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
     return(apply(y, MARGIN = 2, FUN = imputeAR1Gaussian, n_sample, param, random_walk, zero_mean))
@@ -256,6 +258,7 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
   y_imputed <- matrix(nrow = n, ncol = n_sample)
   y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_sample, cond$mean_y[index_miss], cond$cov_y[index_miss, index_miss]))
   y_imputed[index_obs, ] <- rep(y_obs, times = n_sample)
+  attributes(y_imputed) <- y_attrib  # duck typing
   
   results <- list("y_imputed" = y_imputed,
                   "phi0" = phi0,
