@@ -26,7 +26,7 @@ y <- y_orig
 y[index_miss] <- NA
 
 # test the estimation function
- estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE, ftol = 1e-10,  
+estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE, ftol = 1e-10,  
                                          maxiter = 1000, output_iterates = TRUE)
 # layout(matrix(c(1, 2, 3, 4)), heights = c(1,1,1,1))
 # par(mar = c(4, 5, 0.1, 0.5))
@@ -74,22 +74,42 @@ grid.arrange(p1, p2, p3, p4, ncol = 1)
 
 # test the imputation function
 param <- list("phi0" = phi0,
-             "phi1" = phi1,
-             "sigma2" = sigma2)
+              "phi1" = phi1,
+              "sigma2" = sigma2)
 imputation_result <- imputeAR1Gaussian(y, n_sample = 2, param = NULL, random_walk = FALSE, zero_mean = TRUE)
 y_imputed <- xts(imputation_result$y_imputed, seq(as.Date("2016-01-01"), length = n, by = "days"))
   
 index_miss_p <- (min(index_miss)-1):(max(index_miss)+1)
-par(mfrow=c(3,1))
+par(mfrow=c(2,1))
 #plot 1
 { plot(y, main = "Original")
   lines(y_orig[index_miss_p], col = "blue", lwd = 2) }
 #plot 2
-{ plot(y, main = "Imputated")
+{ plot(y, main = "Imputed")
   lines(y_imputed[index_miss_p, 1], col = "blue", lwd = 2) }
 #plot 3
-#{ plot(y, main = "Imputated")
+#{ plot(y, main = "Imputed")
 #  lines(y_imputed[index_miss_p, 2], col = "blue", lwd = 2) }
+par(mfrow=c(1,1))
+
+
+# plot using ggplot2 (http://www.sthda.com/english/articles/32-r-graphics-essentials/128-plot-time-series-data-using-ggplot/)
+# autoplot(y) + labs(title = "Original", x = "", y = "") + theme_bw()
+# qplot(Index, Value, data = fortify(y, melt=TRUE), geom = "line",
+#       main = "Original", xlab = "", ylab = "") + theme_bw()
+p1 <- ggplot() +
+  geom_line(data = fortify(y, melt = TRUE), aes(Index, Value), color = I("black")) +
+  geom_line(data = fortify(y_orig[index_miss_p], melt = TRUE), aes(Index, Value), color = I("red")) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "3 month") +
+  labs(title = "Original", x = "", y = "") + 
+  theme_bw()
+p2 <- ggplot() +
+  geom_line(data = fortify(y, melt = TRUE), aes(Index, Value), color = I("black")) +
+  geom_line(data = fortify(y_imputed[index_miss_p, 1], melt = TRUE), aes(Index, Value), color = I("red")) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "3 month") +
+  labs(title = "Imputed", x = "", y = "") + 
+  theme_bw()
+grid.arrange(p1, p2, ncol = 1)
 
 
 # comparison with other methods
