@@ -149,7 +149,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol =
 
 #
 # Extracts the diagonal on top of the main diagonal
-#' @export
+#
 diag1 <- function(X) {
   m <- min(dim(X))
   X[1 + dim(X)[1L] + 0L:(m - 2L) * (dim(X)[1L] + 1)]  # main diag: x[1 + 0L:(m - 1L) * (dim(x)[1L] + 1)]

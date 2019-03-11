@@ -41,7 +41,12 @@ next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after 
 cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
                     first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
                     phi0, phi1, sigma2, full_cov = TRUE)
+cond2 <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                    first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                    phi0, phi1, sigma2, full_cov = FALSE)
 
 # check the diag & diag1
 sum(abs(cond$cov_y_diag - diag(cond$cov_y)))
 sum(abs(cond$cov_y_diag1 - diag1(cond$cov_y))) 
+sum(abs(cond2$cov_y_diag - cond$cov_y_diag))
+sum(abs(cond2$cov_y_diag1 - cond$cov_y_diag1)) 

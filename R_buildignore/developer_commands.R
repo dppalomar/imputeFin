@@ -9,7 +9,7 @@ devtools::install_github("dppalomar/imputeFin")
 library(imputeFin)
 help(package = "imputeFin")
 package?imputeFin
-?XXXX
+?estimateAR1Gaussian
 
 
 ##
