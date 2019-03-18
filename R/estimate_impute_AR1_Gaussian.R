@@ -56,27 +56,15 @@
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
                                 output_iterates = FALSE, condMeanCov = FALSE,
                                 ftol = 1e-10,  maxiter = 1000) {
-  if (NCOL(y) == 1)
-    y <- as.numeric(y)
-  else {
-    stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-    return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, ftol, maxiter, output_iterates))
+  if (NCOL(y) > 1){
+    # stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
+    return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, ftol, maxiter))
   }
+
+  y <- as.numeric(y)
   
   # find the missing blocks
-  n <- length(y)  # length of the time series
-  index_obs <- which(!is.na(y))  # indexes of observed values
-  index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
-  n_obs <- length(index_obs)
-  y_obs <- y[index_obs]  # observed values
-  delta_index_obs <- diff(index_obs)
-  index_delta_index_obs <- which(delta_index_obs > 1)
-  n_block <- length(index_delta_index_obs)  # number of missing blocks
-  n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
-  first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
-  last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
-  previous_obs_before_block <- y[first_index_in_block - 1]  # previous observed value before each block
-  next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
+  list2env(findMissingBlock(y), envir = environment())
   
   # objective function, the observed data log-likelihood
   obj <- function(phi0, phi1, sigma2) {
@@ -111,7 +99,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
     s_y1y1 <- sum(cond$cov_y_diag[-n]  + cond$mean_y[-n]^2)  #slow version: s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
     s_y2y1 <- sum(cond$cov_y_diag1 + cond$mean_y[-1] * cond$mean_y[-n])  #slow version: s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
     
-    # M-step (update the estimates
+    # M-step (update the estimates)
     if (!random_walk && !zero_mean) {
       phi1[k + 1] <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
       phi0[k + 1] <- (s_y2 - phi1[k +1] * s_y1) / (n - 1)
@@ -144,6 +132,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
                                "phi1_iterate" = phi1,
                                "sigma2_iterate" = sigma2,
                                "f_iterate" = f))
+
   if (condMeanCov) {
     cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
@@ -214,67 +203,64 @@ diag1 <- function(X) {
 #' @export
 imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE, zero_mean = TRUE) {
    # if the parameters are unknown, then estimate the parameters.
-  if (NCOL(y) == 1) {
-    y_attrib <- attributes(y)
-    y <- as.numeric(y)
-  }
-  else {
-    stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-    return(apply(y, MARGIN = 2, FUN = imputeAR1Gaussian, n_sample, param, random_walk, zero_mean))
-  }
+  if (NCOL(y) > 1) {
+    #stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
+    return(apply(matrix(c(1:NCOL(y)), nrow = 1), MARGIN = 2, FUN = function(i){imputeAR1Gaussian(y[, i], n_sample, param, random_walk, zero_mean)}))
+  }  
   
+  if (is.xts(y)) {
+      flag_xts <- TRUE
+      time_y <- index(y)
+      y <- as.numeric(y)
+    } else 
+      flag_xts <- FALSE
+
   if (any(is.null(param))) {
-    estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
-    phi0 <- estimation_result$phi0
-    phi1 <- estimation_result$phi1
-    sigma2 <- estimation_result$sigma2
+    estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
+    cond_mean_y <- estimation_result$cond_mean_y
+    cond_cov_y <- estimation_result$cond_cov_y
+    n <- length(y)  # length of the time series
+    index_obs <- which(!is.na(y))  # indexes of observed values
+    index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
+    y_obs <- y[index_obs]  # observed values
   } else {
     phi0 <- param$phi0
     phi1 <- param$phi1
     sigma2 <- param$sigma2
+    
+    # find the missing blocks
+    list2env(findMissingBlock(y), envir = environment())
+    
+    # compute the mean and covariance matrix of y conditional on observed data
+    cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                        phi0, phi1, sigma2, full_cov = TRUE)
+    cond_mean_y <- cond$mean_y
+    cond_cov_y <- cond$cov_y
   }
   
-  # find the missing blocks
-  n <- length(y)  # length of the time series
-  index_obs <- which(!is.na(y))  # indexes of observed values
-  index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
-  n_obs <- length(index_obs)
-  y_obs <- y[index_obs]  # observed values
-  delta_index_obs <- diff(index_obs)
-  index_delta_index_obs <- which(delta_index_obs > 1)
-  n_block <- length(index_delta_index_obs)  # number of missing blocks
-  n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
-  first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
-  last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
-  previous_obs_before_block <- y[first_index_in_block - 1]  # previous observed value before each block
-  next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
- 
-  # compute the mean and covariance matrix of y conditional on observed data
-  cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
-                      first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                      phi0, phi1, sigma2, full_cov = TRUE)
- 
-  #impute the missing values by drawing samples from its conditional distribution
+ #impute the missing values by drawing samples from its conditional distribution
   y_imputed <- matrix(nrow = n, ncol = n_sample)
-  y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_sample, cond$mean_y[index_miss], cond$cov_y[index_miss, index_miss]))
+  y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_sample, cond_mean_y[index_miss], cond_cov_y[index_miss, index_miss]))
   y_imputed[index_obs, ] <- rep(y_obs, times = n_sample)
-  attributes(y_imputed) <- y_attrib  # duck typing
+  if (flag_xts) y_imputed <- xts(y_imputed, time_y)
   
   results <- list("y_imputed" = y_imputed,
-                  "phi0" = phi0,
-                  "phi1" = phi1,
-                  "sigma2" = sigma2,
-                  "cond_mean_y" = cond$mean_y,
-                  "cond_cov_y" = cond$cov_y)
-  if (exists(estimation_result)) 
-    results <- c(results, list("estimates" = estimation_result))
+                  "cond_mean_y" = cond_mean_y,
+                  "cond_cov_y" = cond_cov_y)
+
+  if (any(is.null(param))) {
+    results <- c(results, list("phi0" = estimation_result$phi0,
+                               "phi1" = estimation_result$phi1,
+                               "sigma2" = estimation_result$sigma2))
+  }
   
   return(results)
 }
 
 
 # Compute the conditional mean and covariance matrix of y given the observed data and current estimates
-#' @export
+
 condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block, 
                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
                         phi0, phi1, sigma2, full_cov = FALSE) {
@@ -303,12 +289,12 @@ condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block,
         cond_cov_block_obs[i, (i+1):(n_d+1)] <-
         cond_cov_block_obs[(i+1):(n_d+1), i] <- cond_cov_block_obs_diag[i] * phi1_exp[2:(n_d+1 - i+1)]
       #sanity check
-      if (sum(abs(cond_cov_block_obs_lastcol - cond_cov_block_obs[, n_d+1])) > 1e-9 ||
-          sum(abs(cond_cov_block_obs_diag1 - diag1(cond_cov_block_obs))) > 1e-9 ||
-          sum(abs(cond_cov_block_obs_diag - diag(cond_cov_block_obs))) > 1e-9) {
-        message("Error in computation of cond_cov_block_obs...")
-        browser()
-      }
+      #if (sum(abs(cond_cov_block_obs_lastcol - cond_cov_block_obs[, n_d+1])) > 1e-9 ||
+      #    sum(abs(cond_cov_block_obs_diag1 - diag1(cond_cov_block_obs))) > 1e-9 ||
+      #    sum(abs(cond_cov_block_obs_diag - diag(cond_cov_block_obs))) > 1e-9) {
+      #  message("Error in computation of cond_cov_block_obs...")
+      #  browser()
+      #}
     }
 
     # mean of the d-th missing block conditional on all the observed data
@@ -326,12 +312,12 @@ condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block,
     cond_cov_y_diag1[index_d[-n_d]] <- cond_cov_block_diag1  # cond_cov_y_diag1[index_d[-n_d]] <- diag1(cond_cov_block)
   }
   # sanity check
-  if (full_cov)
-    if (sum(abs(diag(cond_cov_y) - cond_cov_y_diag)) > 1e-9 ||
-        sum(abs(diag1(cond_cov_y) - cond_cov_y_diag1)) > 1e-9) {
-      message("Error in computation of cond_cov_y...")
-      browser()
-    }
+  #if (full_cov)
+  #  if (sum(abs(diag(cond_cov_y) - cond_cov_y_diag)) > 1e-9 ||
+  #      sum(abs(diag1(cond_cov_y) - cond_cov_y_diag1)) > 1e-9) {
+  #    message("Error in computation of cond_cov_y...")
+  #    browser()
+  #  }
   
   results <- list("mean_y" = cond_mean_y,
                   "cov_y_diag" = cond_cov_y_diag,
@@ -366,7 +352,6 @@ estimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zer
   s_y_obs2_square <- sum(y_obs2^2)
   s_y_obs2_y_obs1 <- sum(y_obs1 * y_obs2)
   
-
   # compute the estimates
   if (!random_walk && !zero_mean) {
     phi1 <- (s_y_obs2_y_obs1 - s_y_obs2 * s_y_obs1 / n_y_obs1) / (s_y_obs1_square - s_y_obs1 * s_y_obs1 / n_y_obs1) 
@@ -388,3 +373,37 @@ estimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zer
               "phi1" = phi1,
               "sigma2" = sigma2))
 }
+
+
+# find the missing blocks
+
+findMissingBlock <- function(y){
+
+  n <- length(y)  # length of the time series
+  index_obs <- which(!is.na(y))  # indexes of observed values
+  index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
+  n_obs <- length(index_obs)
+  y_obs <- y[index_obs]  # observed values
+  delta_index_obs <- diff(index_obs)
+  index_delta_index_obs <- which(delta_index_obs > 1)
+  n_block <- length(index_delta_index_obs)  # number of missing blocks
+  n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
+  first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
+  last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
+  previous_obs_before_block <- y[first_index_in_block - 1]  # previous observed value before each block
+  next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
+  
+  return(list("n" = n,
+              "index_obs" = index_obs,
+              "index_miss" = index_miss,
+              "n_obs" =  n_obs,
+              "y_obs" = y_obs,
+              "delta_index_obs" =  delta_index_obs,
+              "n_block" = n_block,
+              "n_in_block" = n_in_block,
+              "first_index_in_block" = first_index_in_block,
+              "last_index_in_block" = last_index_in_block,
+              "previous_obs_before_block" = previous_obs_before_block,
+              "next_obs_after_block" = next_obs_after_block))
+}
+

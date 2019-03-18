@@ -1,6 +1,5 @@
 library(imputeFin)
 library(xts)
-
 # generate the complete time series
 phi0 <- 1
 phi1 <- 0.5
@@ -17,17 +16,24 @@ for (i in 2:n_total) {
   data[i] <- phi0 + phi1 * data[i - 1] + epsilon[i]
 }
 data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influence of initial point
-y_orig <- xts(data,  seq(as.Date("2016-01-01"), length = n, by = "days"))
+
+m <- 1
+data_mtr <- matrix(rep(data, m), nrow = n, ncol = m)
+
+y_orig <- xts(data_mtr,  seq(as.Date("2016-01-01"), length = n, by = "days"))
 
 # creat missing values
-#index_miss <- sort(sample(2:(n - 1), n_miss))
+# index_miss <- sort(sample(2:(n - 1), n_miss))
 index_miss <- round(n/2) + 1:n_miss
 y <- y_orig
-y[index_miss] <- NA
+y[index_miss,] <- NA
+
 
 # test the estimation function
-estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE, ftol = 1e-10,  
-                                         maxiter = 1000, output_iterates = TRUE)
+estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE,
+                                         output_iterates = TRUE, condMeanCov = FALSE,
+                                         ftol = 1e-10,  maxiter = 1000)
+
 # layout(matrix(c(1, 2, 3, 4)), heights = c(1,1,1,1))
 # par(mar = c(4, 5, 0.1, 0.5))
 # n_iter <- length(estimation_result$phi0_iterate)
@@ -76,10 +82,10 @@ grid.arrange(p1, p2, p3, p4, ncol = 1)
 param <- list("phi0" = phi0,
               "phi1" = phi1,
               "sigma2" = sigma2)
-imputation_result <- imputeAR1Gaussian(y, n_sample = 2, param = NULL, random_walk = FALSE, zero_mean = TRUE)
-y_imputed <- xts(imputation_result$y_imputed, seq(as.Date("2016-01-01"), length = n, by = "days"))
+imputation_result <- imputeAR1Gaussian(y, n_sample = 2, param, random_walk = FALSE, zero_mean = TRUE)
+y_imputed <- imputation_result$y_imputed
   
-index_miss_p <- (min(index_miss)-1):(max(index_miss)+1)
+index_miss_p <- (min(index_miss)-1):(max(index_miss) + 1)
 par(mfrow=c(2,1))
 #plot 1
 { plot(y, main = "Original")
@@ -90,7 +96,8 @@ par(mfrow=c(2,1))
 #plot 3
 #{ plot(y, main = "Imputed")
 #  lines(y_imputed[index_miss_p, 2], col = "blue", lwd = 2) }
-par(mfrow=c(1,1))
+
+# par(mfrow=c(1,1))
 
 
 # plot using ggplot2 (http://www.sthda.com/english/articles/32-r-graphics-essentials/128-plot-time-series-data-using-ggplot/)
