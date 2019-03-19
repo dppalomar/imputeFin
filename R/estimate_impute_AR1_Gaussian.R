@@ -202,7 +202,7 @@ diag1 <- function(X) {
 #' y_imputed <- imputeAR1Gaussian(y_miss, n_sample = 3, param) # if the parameters are unknown
 #' @export
 imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE, zero_mean = TRUE) {
-   # if the parameters are unknown, then estimate the parameters.
+
   if (NCOL(y) > 1) {
     #stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
     return(apply(matrix(c(1:NCOL(y)), nrow = 1), MARGIN = 2, FUN = function(i){imputeAR1Gaussian(y[, i], n_sample, param, random_walk, zero_mean)}))
@@ -215,6 +215,7 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
     } else 
       flag_xts <- FALSE
 
+  # if the parameters are unknown, then estimate the parameters.
   if (any(is.null(param))) {
     estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
     cond_mean_y <- estimation_result$cond_mean_y

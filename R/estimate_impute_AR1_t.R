@@ -53,31 +53,26 @@
 #' estimation_result <- estimateAR1t(y)
 #' @import xts
 #' @export
-estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, n_chain = 10, n_thin = 1, 
-                         n_iter = 100, K = 30, output_iterates = FALSE) {
-  # find the missing blocks
-  n <- length(y)  # length of the time series
-  index_obs <- which(!is.na(y))  # indexes of observed values
-  delta_index_obs <- diff(index_obs)
-  index_delta_index_obs <- which(delta_index_obs > 1)
-  n_block <- length(index_delta_index_obs)  # number of missing blocks
-  n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
-  first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
-  last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
-  previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] )  # previous observed value before each block
-  next_obs_after_block <- as.numeric(y[last_index_in_block + 1])  # next observed value after each block
+estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, output_iterates = FALSE,
+                         n_chain = 10, n_thin = 1, n_iter = 100, K = 30) {
   
-  # initialize the estimates and some parameters
+  if (NCOL(y) > 1){
+    # stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
+    return(apply(y, MARGIN = 2, FUN = estimateAR1t, random_walk, zero_mean, output_iterates, n_chain, n_thin, n_iter, K))
+  }
+  
+  y <- as.numeric(y)
+  # find the missing blocks
+  list2env(findMissingBlock(y), envir = environment())
+  
+ # initialize the estimates and some parameters
   phi0 <- phi1 <- sigma2 <- nu <- gamma <- c()
-  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, output_iterates = FALSE)
+  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
   phi0[1] <- estimation_Gaussian$phi0
   phi1[1] <- estimation_Gaussian$phi1
   sigma2[1] <- estimation_Gaussian$sigma2
   nu[1] <- 3
-  
-  imputation_Gaussian <- imputeAR1Gaussian(y, n_sample = 1, param = estimation_Gaussian)
-  y_sample_init <- imputation_Gaussian$cond_mean_y
-  y_samples <- matrix(y_sample_init, n, n_chain)
+  y_samples <- matrix(estimation_Gaussian$cond_mean_y, n, n_chain)
   tau_samples <- matrix(NA, n, n_chain)
   s <- s_approx <- rep(0, 7)  # approximations of the sufficient statistics
   
@@ -124,7 +119,6 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, n_chain = 10,
       phi1[k+1] <- 1
       phi0[k+1] <- 0
     }
-    
     sigma2[k+1] <- (s_approx[2] + phi0[k+1]^2 * s_approx[3] + phi1[k+1]^2 * s_approx[4] - 2 * phi0[k+1] * s_approx[5]
                     - 2 * phi1[k+1] * s_approx[6] + 2 * phi0[k+1] * phi1[k+1] * s_approx[7]) / (n - 1)
     
@@ -141,22 +135,18 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, n_chain = 10,
     #   break    
   }
   
-  if(output_iterates){
-    return(list("phi0" = phi0[k + 1],
-                "phi1" = phi1[k + 1],
-                "sigma2" = sigma2[k + 1],
-                "nu" = nu[k + 1],
-                "phi0_iterate" = phi0,
-                "phi1_iterate" = phi1,
-                "sigma2_iterate" = sigma2, 
-                "nu_iterate" = nu))
-  }else{
-    return(list("phi0" = phi0[k + 1],
-                "phi1" = phi1[k + 1],
-                "sigma2" = sigma2[k + 1],
-                "nu" = nu[k + 1]))
-    
-  }
+  results <- list("phi0" = phi0[k + 1],
+                  "phi1" = phi1[k + 1],
+                  "sigma2" = sigma2[k + 1],
+                  "nu" = nu[k + 1])
+  if (output_iterates) 
+    results <- c(results, list("phi0_iterate" = phi0,
+                               "phi1_iterate" = phi1,
+                               "sigma2_iterate" = sigma2,
+                               "nu_iterate" = nu))
+  
+  return(results) 
+  
 }
 
 
@@ -212,7 +202,19 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, n_chain = 10,
 #' y_imputed <- imputeAR1t(y_miss, n_sample = 3, param) # if the parameters are unknown
 #' @import  xts
 #' @export
-imputeAR1t <- function(y, n_sample = 1, param = NULL,  random_walk = FALSE, zero_mean = TRUE,  n_burn = 100, n_thin = 50) {
+imputeAR1t <- function(y, n_sample = 1, param = NULL,  random_walk = FALSE, zero_mean = TRUE, n_burn = 100, n_thin = 50) {
+  
+ if (NCOL(y) > 1) {
+    #stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
+    return(apply(matrix(c(1:NCOL(y)), nrow = 1), MARGIN = 2, FUN = function(i){imputeAR1t(y[, i], n_sample, param, random_walk, zero_mean, n_burn, n_thin)}))
+  }  
+  
+  if (is.xts(y)) {
+    flag_xts <- TRUE
+    time_y <- index(y)
+    y <- as.numeric(y)
+  } else 
+    flag_xts <- FALSE
   
   # if the parameters are unknown, then estimate the parameters.
   if(any(is.null(param))){
@@ -229,19 +231,9 @@ imputeAR1t <- function(y, n_sample = 1, param = NULL,  random_walk = FALSE, zero
   }
   
   # impute the missing y and generate complete data sets
-  n <- length(y)               # length of the time series
-  index_obs <- which( !is.na(y))# indexes of observed values
-  delta_index_obs <- diff(index_obs)
-  index_delta_index_obs <- which( delta_index_obs>1)
-  n_block <- length(index_delta_index_obs)                             # number of missing blocks
-  n_in_block <- delta_index_obs[index_delta_index_obs] - 1             # number of missing values in each block
-  first_index_in_block <- index_obs[index_delta_index_obs] + 1         # index of the first missing value in each block
-  last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block # index of the last missing value in each block
-  previous_obs_before_block <- as.numeric( y[first_index_in_block - 1] ) # previous observed value before each block
-  next_obs_after_block <- as.numeric( y[last_index_in_block + 1] )       # next observed value after each block
-  
-  imputation_Gaussian <- imputeAR1Gaussian(y, n_sample = 1, param = NULL, random_walk, zero_mean)
-  y_tmp <- imputation_Gaussian$cond_mean_y
+  list2env(findMissingBlock(y), envir = environment())
+  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
+  y_tmp <- estimation_Gaussian$cond_mean_y
   y_imputed <- matrix(nrow = n, ncol = n_sample)
   
   # burn-in period
@@ -258,9 +250,18 @@ imputeAR1t <- function(y, n_sample = 1, param = NULL,  random_walk = FALSE, zero
                                       phi0, phi1, sigma2, nu) 
     y_imputed[, j] <- sample$y
   }
-  y_imputed <- xts(y_imputed, index(y))
-  return(y_imputed)
+
+  if (flag_xts) y_imputed <- xts(y_imputed, time_y)
   
+  results <- list("y_imputed" = y_imputed)
+  
+  if (any(is.null(param))) {
+    results <- c(results, list("phi0" = phi0,
+                               "phi1" = phi1,
+                               "sigma2" = sigma2,
+                               "nu" = nu))
+  }
+  return(results)
 }
 
 

@@ -23,8 +23,8 @@ data_mtr <- matrix(rep(data, m), nrow = n, ncol = m)
 y_orig <- xts(data_mtr,  seq(as.Date("2016-01-01"), length = n, by = "days"))
 
 # creat missing values
-# index_miss <- sort(sample(2:(n - 1), n_miss))
-index_miss <- round(n/2) + 1:n_miss
+index_miss <- sort(sample(2:(n - 1), n_miss))
+# index_miss <- round(n/2) + 1:n_miss
 y <- y_orig
 y[index_miss,] <- NA
 
