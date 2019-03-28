@@ -55,10 +55,10 @@
 #' @export
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
                                 output_iterates = FALSE, condMeanCov = FALSE,
-                                ftol = 1e-10,  maxiter = 1000) {
+                                tol = 1e-10,  maxiter = 1000) {
   if (NCOL(y) > 1){
     # stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-    return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, ftol, maxiter))
+    return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, tol, maxiter))
   }
 
   y <- as.numeric(y)
@@ -67,16 +67,19 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
   list2env(findMissingBlock(y), envir = environment())
   
   # objective function, the observed data log-likelihood
-  obj <- function(phi0, phi1, sigma2) {
-    sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
-    for (i in 1:(n_obs-1)) {
-      sum_phi1[i] <- sum(phi1^(0:(delta_index_obs[i] - 1)))
-      sum2_phi1[i] <- sum(phi1^((0:(delta_index_obs[i] - 1))*2))
+  if (output_iterates){
+    obj <- function(phi0, phi1, sigma2) {
+      sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
+      for (i in 1:(n_obs-1)) {
+        sum_phi1[i] <- sum(phi1^(0:(delta_index_obs[i] - 1)))
+        sum2_phi1[i] <- sum(phi1^((0:(delta_index_obs[i] - 1))*2))
+      }
+      return(-sum((y_obs[2:n_obs] - phi1^delta_index_obs * y_obs[1:(n_obs - 1)] 
+                   - phi0 * sum_phi1)^2 / (2 * sum2_phi1 * sigma2))
+             -0.5 * (n_obs - 1) * log(sigma2) - 0.5 * sum(log(sum2_phi1)))
     }
-    return(-sum((y_obs[2:n_obs] - phi1^delta_index_obs * y_obs[1:(n_obs - 1)] 
-                - phi0 * sum_phi1)^2 / (2 * sum2_phi1 * sigma2))
-          -0.5 * (n_obs - 1) * log(sigma2) - 0.5 * sum(log(sum2_phi1)))
   }
+
   
   # initialize the estimates
   phi0 <- phi1 <- sigma2 <- f <- c()
@@ -117,16 +120,22 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
                       - 2 * phi0[k + 1] * s_y2 - 2 * phi1[k + 1] * s_y2y1 + 2 * phi0[k + 1] * phi1[k + 1] * s_y1 ) / (n - 1))
     
     # computation of the objective function
-    f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
-    
+    if (output_iterates) f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
+
     # stop when the iterates do not change much
-    if (abs(f[k + 1] - f[k]) <= ftol * (abs(f[k + 1]) + abs(f[k]))/2) 
+#    if (abs(f[k + 1] - f[k]) <= ftol * (abs(f[k + 1]) + abs(f[k]))/2) 
+#      break
+    
+    if (abs(phi0[k + 1] - phi0[k]) <= tol * (abs(phi0[k + 1]) + abs(phi0[k]))/2
+        && abs(phi1[k + 1] - phi1[k]) <= tol * (abs(phi1[k + 1]) + abs(phi1[k]))/2
+        && abs(sigma2[k + 1] - sigma2[k]) <= tol * (abs(sigma2[k + 1]) + abs(sigma2[k]))/2) 
       break
   }
   
   results <- list("phi0" = phi0[k + 1],
                   "phi1" = phi1[k + 1],
                   "sigma2" = sigma2[k + 1])
+  
   if (output_iterates) 
     results <- c(results, list("phi0_iterate" = phi0,
                                "phi1_iterate" = phi1,
@@ -214,6 +223,9 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
       y <- as.numeric(y)
     } else 
       flag_xts <- FALSE
+    
+#    y_attrib <- attributes(y)
+    y <- as.numeric(y)
 
   # if the parameters are unknown, then estimate the parameters.
   if (any(is.null(param))) {
@@ -240,12 +252,16 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
     cond_cov_y <- cond$cov_y
   }
   
- #impute the missing values by drawing samples from its conditional distribution
+ # impute the missing values by drawing samples from its conditional distribution
   y_imputed <- matrix(nrow = n, ncol = n_sample)
   y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_sample, cond_mean_y[index_miss], cond_cov_y[index_miss, index_miss]))
   y_imputed[index_obs, ] <- rep(y_obs, times = n_sample)
+  
   if (flag_xts) y_imputed <- xts(y_imputed, time_y)
   
+  # y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib 
+  #                                                                       return(x)})
+
   results <- list("y_imputed" = y_imputed,
                   "cond_mean_y" = cond_mean_y,
                   "cond_cov_y" = cond_cov_y)

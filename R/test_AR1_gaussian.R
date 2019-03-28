@@ -1,4 +1,4 @@
-library(imputeFin)
+source("estimate_impute_AR1_Gaussian.R")
 library(xts)
 # generate the complete time series
 phi0 <- 1
@@ -17,11 +17,11 @@ for (i in 2:n_total) {
 }
 data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influence of initial point
 
-m <- 1
+m <- 3
 data_mtr <- matrix(rep(data, m), nrow = n, ncol = m)
 
-#y_orig <- xts(data_mtr,  seq(as.Date("2016-01-01"), length = n, by = "days"))
-y_orig <- data_mtr
+y_orig <- xts(data_mtr,  seq(as.Date("2016-01-01"), length = n, by = "days"))
+#y_orig <- data_mtr
 
 # creat missing values
 index_miss <- sort(sample(2:(n - 1), n_miss))
@@ -33,7 +33,7 @@ y[index_miss,] <- NA
 # test the estimation function
 estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE,
                                          output_iterates = TRUE, condMeanCov = FALSE,
-                                         ftol = 1e-10,  maxiter = 1000)
+                                         tol = 1e-10,  maxiter = 1000)
 
 # layout(matrix(c(1, 2, 3, 4)), heights = c(1,1,1,1))
 # par(mar = c(4, 5, 0.1, 0.5))

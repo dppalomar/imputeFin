@@ -1,10 +1,10 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (MiKTeX 2.9.6800 64-bit) (preloaded format=pdflatex 2018.9.18)  10 MAR 2019 15:33
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (MiKTeX 2.9.6800 64-bit) (preloaded format=pdflatex 2018.9.18)  28 MAR 2019 22:41
 entering extended mode
-**c:/Users/jliubl/AppData/Local/Temp/Rtmp6hYS3f/preview-37e4b3d379c.dir/ImputeF
-in-vignette.tex
+**c:/Users/jliubl/AppData/Local/Temp/Rtmp4c9Dip/preview-3b6044d13dd7.dir/Impute
+Fin-vignette.tex
 
-(c:/Users/jliubl/AppData/Local/Temp/Rtmp6hYS3f/preview-37e4b3d379c.dir/ImputeFi
-n-vignette.tex
+(c:/Users/jliubl/AppData/Local/Temp/Rtmp4c9Dip/preview-3b6044d13dd7.dir/ImputeF
+in-vignette.tex
 LaTeX2e <2018-04-01> patch level 5
 ("C:\Program Files\MiKTeX 2.9\tex\latex\base\article.cls"
 Document Class: article 2014/09/29 v1.4h Standard LaTeX document class
@@ -629,20 +629,58 @@ LaTeX Info: Redefining \nameref on input line 124.
 \@outlinefile=\write4
 \openout4 = `ImputeFin-vignette.out'.
 
-! I can't write on file `ImputeFin-vignette.pdf'.
-Please type another file name for output
-! Emergency stop.
-<to be read again> 
-                   \edef 
-l.124 \begin{document}
-                       
+("C:\Program Files\MiKTeX 2.9\tex\context\base\supp-pdf.mkii"
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count128
+\scratchdimen=\dimen145
+\scratchbox=\box34
+\nofMPsegments=\count129
+\nofMParguments=\count130
+\everyMPshowfont=\toks26
+\MPscratchCnt=\count131
+\MPscratchDim=\dimen146
+\MPnumerator=\count132
+\makeMPintoPDFobject=\count133
+\everyMPtoPDFconversion=\toks27
+) ("C:\Program Files\MiKTeX 2.9\tex\latex\oberdiek\epstopdf-base.sty"
+Package: epstopdf-base 2016/05/15 v2.6 Base part for package epstopdf
+("C:\Program Files\MiKTeX 2.9\tex\latex\oberdiek\grfext.sty"
+Package: grfext 2016/05/16 v1.2 Manage graphics extensions (HO)
+)
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
+38.
+Package grfext Info: Graphics extension search list:
+(grfext)             [.pdf,.png,.jpg,.mps,.jpeg,.jbig2,.jb2,.PDF,.PNG,.JPG,.JPE
+G,.JBIG2,.JB2,.eps]
+(grfext)             \AppendGraphicsExtensions on input line 456.
+)
+\tf@toc=\write5
+\openout5 = `ImputeFin-vignette.toc'.
+
+LaTeX Font Info:    Try loading font information for T1+lmtt on input line 134.
+
+("C:\Program Files\MiKTeX 2.9\tex\latex\lm\t1lmtt.fd"
+File: t1lmtt.fd 2009/10/30 v1.6 Font defs for Latin Modern
+)
+LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10> not available
+(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 146.
+
+! Package inputenc Error: Unicode character ， (U+FF0C)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.191 ...ero_mean =} \OtherTok{FALSE}\NormalTok{)}
+                                                   
 Here is how much of TeX's memory you used:
- 11946 strings out of 492973
- 173445 string characters out of 3135929
- 283691 words of memory out of 3000000
- 15724 multiletter control sequences out of 15000+200000
- 7559 words of font info for 18 fonts, out of 3000000 for 9000
+ 12441 strings out of 492973
+ 180832 string characters out of 3135929
+ 291875 words of memory out of 3000000
+ 16178 multiletter control sequences out of 15000+200000
+ 28475 words of font info for 34 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
- 32i,1n,38p,313b,270s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 32i,3n,38p,456b,300s stack positions out of 5000i,500n,10000p,200000b,50000s
 
 !  ==> Fatal error occurred, no output PDF file produced!
