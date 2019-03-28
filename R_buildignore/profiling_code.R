@@ -32,26 +32,18 @@ estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FAL
 library(profvis)
 
 profvis({
-  estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE, ftol = 1e-10,  
-                                  maxiter = 1000, output_iterates = FALSE) {
-    #y <- as.vector(y)
-    y <- as.numeric(y)
-
-    # find the missing blocks
-    n <- length(y)  # length of the time series
-    index_obs <- which(!is.na(y))  # indexes of observed values
-    index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
-    n_obs <- length(index_obs)
-    y_obs <- y[index_obs]  # observed values
-    delta_index_obs <- diff(index_obs)
-    index_delta_index_obs <- which(delta_index_obs > 1)
-    n_block <- length(index_delta_index_obs)  # number of missing blocks
-    n_in_block <- delta_index_obs[index_delta_index_obs] - 1  # number of missing values in each block
-    first_index_in_block <- index_obs[index_delta_index_obs] + 1  # index of the first missing value in each block
-    last_index_in_block <- index_obs[index_delta_index_obs] + n_in_block  # index of the last missing value in each block
-    previous_obs_before_block <- as.numeric(y[first_index_in_block - 1] )  # previous observed value before each block
-    next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
+  estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
+                                  output_iterates = FALSE, condMeanCov = FALSE,
+                                  ftol = 1e-10,  maxiter = 1000) {
+    if (NCOL(y) > 1){
+      # stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
+      return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, ftol, maxiter))
+    }
     
+    y <- as.numeric(y)
+    
+    # find the missing blocks
+    list2env(imputeFin:::findMissingBlock(y), envir = environment())
     
     # objective function, the observed data log-likelihood
     obj <- function(phi0, phi1, sigma2) {
@@ -67,7 +59,7 @@ profvis({
     
     # initialize the estimates
     phi0 <- phi1 <- sigma2 <- f <- c()
-    estimation_heuristic <- estimateAR1GaussianHeuristic(y, index_miss, random_walk, zero_mean)
+    estimation_heuristic <- imputeFin:::estimateAR1GaussianHeuristic(y, index_miss, random_walk, zero_mean)
     phi1[1] <- estimation_heuristic$phi1
     phi0[1] <- estimation_heuristic$phi0
     sigma2[1] <- estimation_heuristic$sigma2
@@ -76,7 +68,7 @@ profvis({
     for (k in 1:maxiter) {
       # E-step
       # computation of mean and covariance of y conditional on all the observed data
-      cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+      cond <- imputeFin:::condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
                           first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
                           phi0[k], phi1[k], sigma2[k], full_cov = FALSE)
       # computation of sufficient statistics
@@ -86,7 +78,7 @@ profvis({
       s_y1y1 <- sum(cond$cov_y_diag[-n]  + cond$mean_y[-n]^2)  #slow version: s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
       s_y2y1 <- sum(cond$cov_y_diag1 + cond$mean_y[-1] * cond$mean_y[-n])  #slow version: s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
       
-      # M-step (update the estimates
+      # M-step (update the estimates)
       if (!random_walk && !zero_mean) {
         phi1[k + 1] <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
         phi0[k + 1] <- (s_y2 - phi1[k +1] * s_y1) / (n - 1)
@@ -111,19 +103,24 @@ profvis({
         break
     }
     
-    if (output_iterates)
-      return(list("phi0" = phi0[k + 1],
-                  "phi1" = phi1[k + 1],
-                  "sigma2" = sigma2[k + 1],
-                  "phi0_iterate" = phi0,
-                  "phi1_iterate" = phi1,
-                  "sigma2_iterate" = sigma2,
-                  "f_iterate" = f))
-    else
-      return(list("phi0" = phi0[k + 1],
-                  "phi1" = phi1[k + 1],
-                  "sigma2" = sigma2[k + 1]))
-  }  
+    results <- list("phi0" = phi0[k + 1],
+                    "phi1" = phi1[k + 1],
+                    "sigma2" = sigma2[k + 1])
+    if (output_iterates) 
+      results <- c(results, list("phi0_iterate" = phi0,
+                                 "phi1_iterate" = phi1,
+                                 "sigma2_iterate" = sigma2,
+                                 "f_iterate" = f))
+    
+    if (condMeanCov) {
+      cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                          first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                          phi0[k+1], phi1[k+1], sigma2[k+1], full_cov = TRUE)
+      results <- c(results, list("cond_mean_y" = cond$mean_y,
+                                 "cond_cov_y" = cond$cov_y))
+    }
+    return(results)
+  }
   estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE, ftol = 1e-10,  
                                            maxiter = 1000, output_iterates = TRUE)  
 })

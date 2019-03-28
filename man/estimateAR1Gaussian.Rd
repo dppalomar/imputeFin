@@ -5,7 +5,8 @@
 \title{Fit Gaussian AR(1) Model to Time Series with Missing Values}
 \usage{
 estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = TRUE,
-  ftol = 1e-10, maxiter = 1000, output_iterates = FALSE)
+  output_iterates = FALSE, condMeanCov = FALSE, ftol = 1e-10,
+  maxiter = 1000)
 }
 \arguments{
 \item{y}{a xts object indicating time series with missing values. The first and last one should not be NA.}
@@ -14,11 +15,11 @@ estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = TRUE,
 
 \item{zero_mean}{logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown. The default value is FALSE.}
 
+\item{output_iterates}{logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.}
+
 \item{ftol}{a positive number controlling the stopping criterion (default \code{1e-8}).}
 
 \item{maxiter}{a positive integer indicating the maximum number of iterations allowed (default \code{1000}).}
-
-\item{output_iterates}{logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.}
 }
 \value{
 A list containing the following elements:

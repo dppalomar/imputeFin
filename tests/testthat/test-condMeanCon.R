@@ -46,28 +46,28 @@ test_that("the function behaves well with xts and vectors", {
   y_obs_xts <- y_obs
   y_obs_vector <- as.numeric(y_obs)
   
-  cond_xts <- condMeanCov(y_obs_xts, index_obs, n, n_block, n_in_block, 
-                          first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                          phi0, phi1, sigma2, full_cov = TRUE)
+  cond_xts <- imputeFin:::condMeanCov(y_obs_xts, index_obs, n, n_block, n_in_block, 
+                                      first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                                      phi0, phi1, sigma2, full_cov = TRUE)
 
-  cond_vector <- condMeanCov(y_obs_vector, index_obs, n, n_block, n_in_block, 
-                             first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                             phi0, phi1, sigma2, full_cov = TRUE)
+  cond_vector <- imputeFin:::condMeanCov(y_obs_vector, index_obs, n, n_block, n_in_block, 
+                                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                                         phi0, phi1, sigma2, full_cov = TRUE)
   
   expect_equal(cond_xts, cond_vector)
 })
 
 
 test_that("the main and second main diagonal of cond$cov are equal to the directly computed ones", {
-  cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
-                      first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                      phi0, phi1, sigma2, full_cov = TRUE)
-  cond2 <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
-                       first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                       phi0, phi1, sigma2, full_cov = FALSE)
+  cond <- imputeFin:::condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                                  first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                                  phi0, phi1, sigma2, full_cov = TRUE)
+  cond2 <- imputeFin:::condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                                   first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                                   phi0, phi1, sigma2, full_cov = FALSE)
   
   expect_equal(cond$cov_y_diag,  diag(cond$cov_y))
-  expect_equal(cond$cov_y_diag1, diag1(cond$cov_y))
+  expect_equal(cond$cov_y_diag1, imputeFin:::diag1(cond$cov_y))
   expect_equal(cond$cov_y_diag,  cond2$cov_y_diag)
   expect_equal(cond$cov_y_diag1, cond2$cov_y_diag1)
 })

@@ -4,8 +4,9 @@
 \alias{estimateAR1t}
 \title{Fit Student's t AR(1) Models to Time Series with Missing values}
 \usage{
-estimateAR1t(y, random_walk = FALSE, zero_mean = TRUE, n_chain = 10,
-  n_thin = 1, n_iter = 100, K = 30, output_iterates = FALSE)
+estimateAR1t(y, random_walk = FALSE, zero_mean = TRUE,
+  output_iterates = FALSE, n_chain = 10, n_thin = 1, n_iter = 100,
+  K = 30)
 }
 \arguments{
 \item{y}{a xts object indicating time series with missing values. The first and last one should not be NA.}
@@ -14,6 +15,8 @@ estimateAR1t(y, random_walk = FALSE, zero_mean = TRUE, n_chain = 10,
 
 \item{zero_mean}{logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown. The default value is FALSE.}
 
+\item{output_iterates}{logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.}
+
 \item{n_chain}{a positive integer indicating the number of the parallel Markov chains used (default \code{10}).}
 
 \item{n_thin}{a positive integer indicating the sampling period of the Gibbs sampling (default \code{1}). Every n_thin-th samples is used. This is aimed to reduce the dependence of the samples.}
@@ -21,8 +24,6 @@ estimateAR1t(y, random_walk = FALSE, zero_mean = TRUE, n_chain = 10,
 \item{n_iter}{a positive integer indicating the number of the iterations (default \code{100}).}
 
 \item{K}{a positive number controlling the values the step sizes (default \code{30}).}
-
-\item{output_iterates}{logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.}
 }
 \value{
 A list containing the following elements:
