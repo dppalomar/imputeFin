@@ -87,20 +87,20 @@ y[index_miss] <- NA
 Then we use the function `estimateAR1t()` to estimate the parameters of Student's t AR(1) model from this incomplete time series.
 
 ```{r, message = FALSE}
-estimation_result <- estimateAR1t(y，zero_mean = FALSE)
+estimation_result <- estimateAR1t(y, zero_mean = FALSE)
 estimation_result$phi0
 estimation_result$phi1
 estimation_result$sigma2
 estimation_result$nu
 
-imputation_result <- imputeAR1t(y, n_sample = 3，zero_mean = FALSE)
+imputation_result <- imputeAR1t(y, n_sample = 3, zero_mean = FALSE)
 ```
 
 Next, we use the function `imputeAR1t()` to impute the missing values in the incomplete time series.
  
 ```{r}
 # we generate n_sample = 2 imputed time series
-imputation_result <- imputeAR1t(y, n_sample = 2，zero_mean = FALSE)
+imputation_result <- imputeAR1t(y, n_sample = 2, zero_mean = FALSE)
 y_imputed <- imputation_result$y_imputed
 index_miss_bis <- (min(index_miss)-1):(max(index_miss)+1)
 { plot(y, main = "original")
@@ -114,17 +114,16 @@ param  <- list("phi0" = estimation_result$phi0,
                "phi1" = estimation_result$phi1,
                "sigma2" = estimation_result$sigma2,
                "nu" = estimation_result$nu)
-imputation_result <- imputeAR1Gaussian(y, n_sample = 2, param，zero_mean = FALSE)
-
+imputation_result <- imputeAR1Gaussian(y, n_sample = 2, param, zero_mean = FALSE)
 ```
 
 The functions `estimateAR1t()` and `imputeAR1t()` can also deal with multivariate incomplete time series. They will do estimatation and imputation for each univariate time series seperately.
 
 ```{r}
-stocks = lapply(c("^GSPC","^HSI"), function(sym) {
+stocks <- lapply(c("^GSPC","^HSI"), function(sym) {
   log(Ad(getSymbols(sym, from = "2018-01-01", to = "2019-01-01", auto.assign = FALSE)))
 })
-Y_orig = do.call(merge, stocks)
+Y_orig <- do.call(merge, stocks)
 n <- nrow(Y_orig)
 miss_pct1 <- 0.1 # the percentage of missing values
 miss_pct2 <- 0.2

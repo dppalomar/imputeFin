@@ -63,11 +63,21 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
 
   y <- as.numeric(y)
   
+  # trivial case with no NAs
+  if (!anyNA(y)) {
+    #
+    # code
+    #
+    return(list("phi0" = NULL,
+                "phi1" = NULL,
+                "sigma2" = NULL))
+  }
+  
   # find the missing blocks
   list2env(findMissingBlock(y), envir = environment())
   
   # objective function, the observed data log-likelihood
-  if (output_iterates){
+  if (output_iterates)
     obj <- function(phi0, phi1, sigma2) {
       sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
       for (i in 1:(n_obs-1)) {
@@ -78,8 +88,6 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
                    - phi0 * sum_phi1)^2 / (2 * sum2_phi1 * sigma2))
              -0.5 * (n_obs - 1) * log(sigma2) - 0.5 * sum(log(sum2_phi1)))
     }
-  }
-
   
   # initialize the estimates
   phi0 <- phi1 <- sigma2 <- f <- c()
@@ -87,7 +95,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
   phi1[1] <- estimation_heuristic$phi1
   phi0[1] <- estimation_heuristic$phi0
   sigma2[1] <- estimation_heuristic$sigma2
-  f[1] <- obj(phi0[1], phi1[1], sigma2[1])
+  if (output_iterates) f[1] <- obj(phi0[1], phi1[1], sigma2[1])
 
   for (k in 1:maxiter) {
     # E-step

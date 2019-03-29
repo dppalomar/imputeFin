@@ -92,9 +92,9 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, output_iterat
     # }))
     
     # approximate the sufficient statistics
-    if (k <= K){
+    if (k <= K)
       gamma[k] <- 1
-    } else
+    else
       gamma[k] <- 1/(k - K)
     s[1] <- sum(log(tau_samples[2:n,]) - tau_samples[2:n,]) / n_chain
     s[2] <- sum(tau_samples[2:n,] * y_samples[2:n,]^2) / n_chain
