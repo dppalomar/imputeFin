@@ -58,19 +58,44 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
                                 tol = 1e-10,  maxiter = 1000) {
   if (NCOL(y) > 1){
     # stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-    return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, tol, maxiter))
+    # return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, tol, maxiter))
+    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, tol, maxiter)
+    phi0_vct <- unlist(lapply(estimation_list, function(x){x$phi0}))
+    phi1_vct <- unlist(lapply(estimation_list, function(x){x$phi1}))
+    sigma_vct <- unlist(lapply(estimation_list, function(x){x$sigma2}))
+    return(c(estimation_list, list("phi0_vct" = phi0_vct,
+                                   "phi1_vct" = phi1_vct,
+                                   "sigma_vct" = sigma_vct)))
+    
   }
 
   y <- as.numeric(y)
-  
-  # trivial case with no NAs
+ # trivial case with no NAs
   if (!anyNA(y)) {
-    #
-    # code
-    #
-    return(list("phi0" = NULL,
-                "phi1" = NULL,
-                "sigma2" = NULL))
+    n <- length(y)
+    s_y2 <- sum(y[-1])
+    s_y1 <- sum(y[-n])
+    s_y2y2 <- sum(y[-1]^2) 
+    s_y1y1 <- sum(y[-n]^2) 
+    s_y2y1 <- sum(y[-1]*y[-n])
+    if (!random_walk && !zero_mean) {
+      phi1 <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
+      phi0 <- (s_y2 - phi1 * s_y1) / (n - 1)
+    } else if (random_walk && !zero_mean){
+      phi1 <- 1
+      phi0 <- (s_y2 - s_y1) / (n - 1)
+    } else if (!random_walk && zero_mean){
+      phi1 <- s_y2y1 / s_y1y1 
+      phi0 <- 0
+    } else{
+      phi1 <- 1
+      phi0 <- 0
+    }
+    sigma2 <- (( s_y2y2 + (n - 1) * phi0^2 + phi1^2 * s_y1y1 
+                        - 2 * phi0 * s_y2 - 2 * phi1 * s_y2y1 + 2 * phi0 * phi1 * s_y1 ) / (n - 1))
+    return(list("phi0" = phi0,
+                "phi1" = phi1,
+                "sigma2" = sigma2))
   }
   
   # find the missing blocks
@@ -218,25 +243,36 @@ diag1 <- function(X) {
 #'              "nu" = nu)
 #' y_imputed <- imputeAR1Gaussian(y_miss, n_sample = 3, param) # if the parameters are unknown
 #' @export
-imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE, zero_mean = TRUE) {
+imputeAR1Gaussian <- function(y, n_sample = 1, random_walk = FALSE, zero_mean = TRUE,
+                              estimates = FALSE) {
 
   if (NCOL(y) > 1) {
     #stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-    return(apply(matrix(c(1:NCOL(y)), nrow = 1), MARGIN = 2, FUN = function(i){imputeAR1Gaussian(y[, i], n_sample, param, random_walk, zero_mean)}))
+#    results <- apply(matrix(c(1:NCOL(y)), nrow = 1), MARGIN = 2, FUN = function(i){imputeAR1Gaussian(y[, i], n_sample, random_walk, zero_mean, estimates)})
+    results <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_sample, random_walk, zero_mean, estimates)})
+    # browser()
+    if (n_sample == 1 && estimates == FALSE) {
+      results <- do.call(cbind, results)
+    } else {
+      # mapply(cbind, results[[1]], results[[2]], results[[3]]...)
+      results <- do.call(mapply, c("FUN" = cbind, results, "SIMPLIFY" = FALSE))
+      if (estimates == TRUE){
+        results$phi0 <- as.vector(results$phi0)
+        results$phi1 <- as.vector(results$phi1)
+        results$sigma2 <- as.vector(results$sigma2)
+      }
+    } 
+    return(results)
   }  
   
-  if (is.xts(y)) {
-      flag_xts <- TRUE
-      time_y <- index(y)
-      y <- as.numeric(y)
-    } else 
-      flag_xts <- FALSE
-    
-#    y_attrib <- attributes(y)
-    y <- as.numeric(y)
-
-  # if the parameters are unknown, then estimate the parameters.
-  if (any(is.null(param))) {
+  y_attrib <- attributes(y)
+  y <- as.numeric(y)
+  
+  # trivial case with no NAs
+  if (!anyNA(y)){
+    y_imputed <- matrix(rep(y, times = n_sample), ncol = n_sample)
+    if (estimates) estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
+  } else {
     estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
     cond_mean_y <- estimation_result$cond_mean_y
     cond_cov_y <- estimation_result$cond_cov_y
@@ -244,42 +280,33 @@ imputeAR1Gaussian <- function(y, n_sample = 1, param = NULL, random_walk = FALSE
     index_obs <- which(!is.na(y))  # indexes of observed values
     index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
     y_obs <- y[index_obs]  # observed values
+    # impute the missing values by drawing samples from its conditional distribution
+    y_imputed <- matrix(nrow = n, ncol = n_sample)
+    y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_sample, cond_mean_y[index_miss], cond_cov_y[index_miss, index_miss]))
+    y_imputed[index_obs, ] <- rep(y_obs, times = n_sample)
+  }
+
+  if (n_sample == 1) {
+    attributes(y_imputed) <- y_attrib
+    if (!estimates) {
+      results <- y_imputed
+    } else
+      results <- list("y_imputed" = y_imputed,
+                      "phi0" = estimation_result$phi0,
+                      "phi1" = estimation_result$phi1,
+                      "sigma2" = estimation_result$sigma2)
   } else {
-    phi0 <- param$phi0
-    phi1 <- param$phi1
-    sigma2 <- param$sigma2
+    y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib 
+                                                                           return(x)})
+    if (!estimates) {
+      results <- c("y_imputed" = y_imputed)
+    } else
+      results <- c("y_imputed" = y_imputed, list("phi0" = estimation_result$phi0,
+                                                 "phi1" = estimation_result$phi1,
+                                                 "sigma2" = estimation_result$sigma2))
     
-    # find the missing blocks
-    list2env(findMissingBlock(y), envir = environment())
-    
-    # compute the mean and covariance matrix of y conditional on observed data
-    cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
-                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                        phi0, phi1, sigma2, full_cov = TRUE)
-    cond_mean_y <- cond$mean_y
-    cond_cov_y <- cond$cov_y
   }
-  
- # impute the missing values by drawing samples from its conditional distribution
-  y_imputed <- matrix(nrow = n, ncol = n_sample)
-  y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_sample, cond_mean_y[index_miss], cond_cov_y[index_miss, index_miss]))
-  y_imputed[index_obs, ] <- rep(y_obs, times = n_sample)
-  
-  if (flag_xts) y_imputed <- xts(y_imputed, time_y)
-  
-  # y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib 
-  #                                                                       return(x)})
-
-  results <- list("y_imputed" = y_imputed,
-                  "cond_mean_y" = cond_mean_y,
-                  "cond_cov_y" = cond_cov_y)
-
-  if (any(is.null(param))) {
-    results <- c(results, list("phi0" = estimation_result$phi0,
-                               "phi1" = estimation_result$phi1,
-                               "sigma2" = estimation_result$sigma2))
-  }
-  
+ 
   return(results)
 }
 
