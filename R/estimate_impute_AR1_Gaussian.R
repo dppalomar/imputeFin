@@ -56,9 +56,7 @@
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
                                 output_iterates = FALSE, condMeanCov = FALSE,
                                 tol = 1e-10,  maxiter = 1000) {
-  if (NCOL(y) > 1){
-    # stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-    # return(apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, tol, maxiter))
+  if (NCOL(y) > 1) {
     estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, tol, maxiter)
     phi0_vct <- unlist(lapply(estimation_list, function(x){x$phi0}))
     phi1_vct <- unlist(lapply(estimation_list, function(x){x$phi1}))
@@ -66,11 +64,11 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
     return(c(estimation_list, list("phi0_vct" = phi0_vct,
                                    "phi1_vct" = phi1_vct,
                                    "sigma_vct" = sigma_vct)))
-    
   }
 
   y <- as.numeric(y)
- # trivial case with no NAs
+  
+  # trivial case with no NAs
   if (!anyNA(y)) {
     n <- length(y)
     s_y2 <- sum(y[-1])
@@ -155,10 +153,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
     # computation of the objective function
     if (output_iterates) f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
 
-    # stop when the iterates do not change much
-#    if (abs(f[k + 1] - f[k]) <= ftol * (abs(f[k + 1]) + abs(f[k]))/2) 
-#      break
-    
+    # termination criterion    
     if (abs(phi0[k + 1] - phi0[k]) <= tol * (abs(phi0[k + 1]) + abs(phi0[k]))/2
         && abs(phi1[k + 1] - phi1[k]) <= tol * (abs(phi1[k + 1]) + abs(phi1[k]))/2
         && abs(sigma2[k + 1] - sigma2[k]) <= tol * (abs(sigma2[k + 1]) + abs(sigma2[k]))/2) 
@@ -247,8 +242,6 @@ imputeAR1Gaussian <- function(y, n_sample = 1, random_walk = FALSE, zero_mean = 
                               estimates = FALSE) {
 
   if (NCOL(y) > 1) {
-    #stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-#    results <- apply(matrix(c(1:NCOL(y)), nrow = 1), MARGIN = 2, FUN = function(i){imputeAR1Gaussian(y[, i], n_sample, random_walk, zero_mean, estimates)})
     results <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_sample, random_walk, zero_mean, estimates)})
     # browser()
     if (n_sample == 1 && estimates == FALSE) {
@@ -256,7 +249,7 @@ imputeAR1Gaussian <- function(y, n_sample = 1, random_walk = FALSE, zero_mean = 
     } else {
       # mapply(cbind, results[[1]], results[[2]], results[[3]]...)
       results <- do.call(mapply, c("FUN" = cbind, results, "SIMPLIFY" = FALSE))
-      if (estimates == TRUE){
+      if (estimates == TRUE) {
         results$phi0 <- as.vector(results$phi0)
         results$phi1 <- as.vector(results$phi1)
         results$sigma2 <- as.vector(results$sigma2)
@@ -306,7 +299,6 @@ imputeAR1Gaussian <- function(y, n_sample = 1, random_walk = FALSE, zero_mean = 
                                                  "sigma2" = estimation_result$sigma2))
     
   }
- 
   return(results)
 }
 
