@@ -7,7 +7,7 @@
 #' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown. The default value is FALSE.
 #' @param ftol a positive number controlling the stopping criterion (default \code{1e-8}).
 #' @param maxiter a positive integer indicating the maximum number of iterations allowed (default \code{1000}).
-#' @param output_iterates logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.
+#' @param iterates logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.
 #' @return A list containing the following elements:
 #' \item{\code{phi0}}{real number, the estimate for phi0}
 #' \item{\code{phi1}}{real number, the estimate for phi1}
@@ -54,16 +54,16 @@
 #' 
 #' @export
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
-                                output_iterates = FALSE, condMeanCov = FALSE,
+                                iterates = FALSE, condMeanCov = FALSE,
                                 tol = 1e-10,  maxiter = 1000) {
   if (NCOL(y) > 1) {
-    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, output_iterates, condMeanCov, tol, maxiter)
-    phi0_vct <- unlist(lapply(estimation_list, function(x){x$phi0}))
-    phi1_vct <- unlist(lapply(estimation_list, function(x){x$phi1}))
-    sigma_vct <- unlist(lapply(estimation_list, function(x){x$sigma2}))
-    return(c(estimation_list, list("phi0_vct" = phi0_vct,
-                                   "phi1_vct" = phi1_vct,
-                                   "sigma_vct" = sigma_vct)))
+    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, iterates, condMeanCov, tol, maxiter)
+    phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
+    phi1 <- unlist(lapply(estimation_list, function(x){x$phi1}))
+    sigma2 <- unlist(lapply(estimation_list, function(x){x$sigma2}))
+    return(c(estimation_list, list("phi0" = phi0,
+                                   "phi1" = phi1,
+                                   "sigma2" = sigma2)))
   }
 
   y <- as.numeric(y)
@@ -100,7 +100,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
   list2env(findMissingBlock(y), envir = environment())
   
   # objective function, the observed data log-likelihood
-  if (output_iterates)
+  if (iterates)
     obj <- function(phi0, phi1, sigma2) {
       sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
       for (i in 1:(n_obs-1)) {
@@ -118,7 +118,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
   phi1[1] <- estimation_heuristic$phi1
   phi0[1] <- estimation_heuristic$phi0
   sigma2[1] <- estimation_heuristic$sigma2
-  if (output_iterates) f[1] <- obj(phi0[1], phi1[1], sigma2[1])
+  if (iterates) f[1] <- obj(phi0[1], phi1[1], sigma2[1])
 
   for (k in 1:maxiter) {
     # E-step
@@ -151,7 +151,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
                       - 2 * phi0[k + 1] * s_y2 - 2 * phi1[k + 1] * s_y2y1 + 2 * phi0[k + 1] * phi1[k + 1] * s_y1 ) / (n - 1))
     
     # computation of the objective function
-    if (output_iterates) f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
+    if (iterates) f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
 
     # termination criterion    
     if (abs(phi0[k + 1] - phi0[k]) <= tol * (abs(phi0[k + 1]) + abs(phi0[k]))/2
@@ -164,7 +164,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
                   "phi1" = phi1[k + 1],
                   "sigma2" = sigma2[k + 1])
   
-  if (output_iterates) 
+  if (iterates) 
     results <- c(results, list("phi0_iterate" = phi0,
                                "phi1_iterate" = phi1,
                                "sigma2_iterate" = sigma2,
@@ -195,7 +195,7 @@ diag1 <- function(X) {
 #' @description Estimate the parameters of the Gaussian AR(1) model from a time series with missing values and impute the missing values based on the estimates
 #'
 #' @param y a xts object indicating time series with missing values. The first and last one should not be NA.
-#' @param n_sample a positive integer indicating the number of imputations (default \code{1}).
+#' @param n_samples a positive integer indicating the number of imputations (default \code{1}).
 #' @param param a list consisting of the paramters of the Student's t AR(1) time series y if known. The default value is FALSE.
 #' @param random_walk logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE.
 #' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown.
@@ -230,30 +230,39 @@ diag1 <- function(X) {
 #' y <- y_orig
 #' y[index_miss] <- NA
 #' 
-#' # impute the missing values and generate n_sample complete time series
-#' y_imputed <- imputeAR1Gaussian( y_miss, n_sample = 3) # if the parameters are unknown
+#' # impute the missing values and generate n_samples complete time series
+#' y_imputed <- imputeAR1Gaussian( y_miss, n_samples = 3) # if the parameters are unknown
 #' param = list("phi0" = phi0,
 #'              "phi1" = phi1,
 #'              "sigma2" = sigma2,
 #'              "nu" = nu)
-#' y_imputed <- imputeAR1Gaussian(y_miss, n_sample = 3, param) # if the parameters are unknown
+#' y_imputed <- imputeAR1Gaussian(y_miss, n_samples = 3, param) # if the parameters are unknown
 #' @export
-imputeAR1Gaussian <- function(y, n_sample = 1, random_walk = FALSE, zero_mean = TRUE,
+imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
                               estimates = FALSE, positions_NA = FALSE) {
 
   if (NCOL(y) > 1) {
-    results <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_sample, random_walk, zero_mean, estimates)})
-    # browser()
-    if (n_sample == 1 && estimates == FALSE) {
-      results <- do.call(cbind, results)
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, estimates, positions_NA)})
+    if (n_samples == 1 && !estimates && !positions_NA) {
+      results <- do.call(cbind, results_list)
     } else {
+       if (positions_NA) {
+        index_miss_list <- lapply(results_list, FUN = function(result){result$index_miss})
+        results_list <- lapply(results_list, FUN = function(result){result$index_miss = NULL
+                                                                    return(result)})
+      }
+      
       # mapply(cbind, results[[1]], results[[2]], results[[3]]...)
-      results <- do.call(mapply, c("FUN" = cbind, results, "SIMPLIFY" = FALSE))
-      if (estimates == TRUE) {
+      results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
+      if (estimates) {
         results$phi0 <- as.vector(results$phi0)
         results$phi1 <- as.vector(results$phi1)
         results$sigma2 <- as.vector(results$sigma2)
       }
+      if (positions_NA){
+        results = c(results, list("index_miss" = index_miss_list))
+      }
+      
     } 
     return(results)
   }  
@@ -263,8 +272,9 @@ imputeAR1Gaussian <- function(y, n_sample = 1, random_walk = FALSE, zero_mean = 
   
   # trivial case with no NAs
   if (!anyNA(y)){
-    y_imputed <- matrix(rep(y, times = n_sample), ncol = n_sample)
+    y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
     if (estimates) estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
+    index_miss = NULL
   } else {
     estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
     cond_mean_y <- estimation_result$cond_mean_y
@@ -274,26 +284,27 @@ imputeAR1Gaussian <- function(y, n_sample = 1, random_walk = FALSE, zero_mean = 
     index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
     y_obs <- y[index_obs]  # observed values
     # impute the missing values by drawing samples from its conditional distribution
-    y_imputed <- matrix(nrow = n, ncol = n_sample)
-    y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_sample, cond_mean_y[index_miss], cond_cov_y[index_miss, index_miss]))
-    y_imputed[index_obs, ] <- rep(y_obs, times = n_sample)
+    y_imputed <- matrix(nrow = n, ncol = n_samples)
+    y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_samples, cond_mean_y[index_miss], cond_cov_y[index_miss, index_miss]))
+    y_imputed[index_obs, ] <- rep(y_obs, times = n_samples)
   }
 
-  if (n_sample == 1) {
+  if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
     if (!estimates && !positions_NA) {
       results <- y_imputed
     } else
       results <- list("y_imputed" = y_imputed)
   } else {
-    y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib })
+    y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib
+                                                                           return(x)})
     results <- c("y_imputed" = y_imputed)
   }
   
   if (estimates)  results <- c(results, list("phi0" = estimation_result$phi0,
                                              "phi1" = estimation_result$phi1,
                                              "sigma2" = estimation_result$sigma2))
-  if (positions_NA) results <- c(results, list("positions_NA" = index_miss))
+  if (positions_NA) results <- c(results, list("index_miss" = index_miss))
  
 
   return(results)

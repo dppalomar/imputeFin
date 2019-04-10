@@ -1,4 +1,5 @@
 library(imputeFin)
+#source("estimate_impute_AR1_Gaussian.R")
 library(xts)
 # generate the complete time series
 phi0 <- 1
@@ -32,11 +33,12 @@ colnames(y_orig) <- c("a", "b", "c")
 index_miss <- round(n/2) + 1:n_miss
 y <- y_orig
 y[index_miss, 1] <- NA
+y[c(5,10,12), 2] <- NA
 
 
 # test the estimation function
 estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE,
-                                         output_iterates = TRUE, condMeanCov = TRUE,
+                                         iterates = TRUE, condMeanCov = TRUE,
                                          tol = 1e-10,  maxiter = 1000)
 
 
@@ -77,7 +79,7 @@ estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FAL
 
 
 # test the imputation function
-imputation_result <- imputeAR1Gaussian(y, n_sample = 3, random_walk = FALSE, zero_mean = FALSE, estimates = FALSE)
+imputation_result <- imputeAR1Gaussian(y, n_samples = 3, random_walk = FALSE, zero_mean = FALSE, estimates = TRUE, positions_NA = TRUE)
 y_imputed <- imputation_result$y_imputed.1
   
 # index_miss_p <- (min(index_miss)-1):(max(index_miss) + 1)

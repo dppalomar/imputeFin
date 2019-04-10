@@ -9,7 +9,7 @@
 #' @param n_thin  a positive integer indicating the sampling period of the Gibbs sampling (default \code{1}). Every n_thin-th samples is used. This is aimed to reduce the dependence of the samples.
 #' @param n_iter a positive integer indicating the number of the iterations (default \code{100}).
 #' @param K a positive number controlling the values the step sizes (default \code{30}).
-#' @param output_iterates logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.
+#' @param iterates logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.
 #' @return A list containing the following elements:
 #' \item{\code{phi0}}{real number, the estimate for phi0}
 #' \item{\code{phi1}}{real number, the estimate for phi1}
@@ -53,15 +53,32 @@
 #' estimation_result <- estimateAR1t(y)
 #' @import xts
 #' @export
-estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, output_iterates = FALSE,
+estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, 
+                         iterates = FALSE, condMean_Gaussian = TRUE,
                          n_chain = 10, n_thin = 1, n_iter = 100, K = 30) {
   
   if (NCOL(y) > 1){
-    # stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-    return(apply(y, MARGIN = 2, FUN = estimateAR1t, random_walk, zero_mean, output_iterates, n_chain, n_thin, n_iter, K))
+    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1t, random_walk, zero_mean, iterates, n_chain, n_thin, n_iter, K)
+    phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
+    phi1 <- unlist(lapply(estimation_list, function(x){x$phi1}))
+    sigma2 <- unlist(lapply(estimation_list, function(x){x$sigma2}))
+    nu <- unlist(lapply(estimation_list, function(x){x$nu}))
+    return(c(estimation_list, list("phi0" = phi0,
+                                   "phi1" = phi1,
+                                   "sigma2" = sigma2,
+                                   "nu" = nu)))
   }
   
   y <- as.numeric(y)
+  # trivial case with no NAs
+  if (!anyNA(y)) {
+
+    return(list("phi0" = 0,
+                "phi1" = 0,
+                "sigma2" = 0,
+                "nu" = 0))
+  }
+  
   # find the missing blocks
   list2env(findMissingBlock(y), envir = environment())
   
@@ -92,10 +109,11 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, output_iterat
     # }))
     
     # approximate the sufficient statistics
-    if (k <= K)
+    if (k <= K) {
       gamma[k] <- 1
-    else
+    } else
       gamma[k] <- 1/(k - K)
+    
     s[1] <- sum(log(tau_samples[2:n,]) - tau_samples[2:n,]) / n_chain
     s[2] <- sum(tau_samples[2:n,] * y_samples[2:n,]^2) / n_chain
     s[3] <- sum(tau_samples[2:n,] ) / n_chain
@@ -128,22 +146,19 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, output_iterat
     optimation_result <- optimize(f_nu, c(1e-6, 1e6), n, s_approx[1])
     nu[k + 1] <- optimation_result$minimum
     
-    # # check convergence on parameters and objective function
-    # werr <- sum(abs(w_next - wk)) / max(1, sum(abs(wk)))
-    # ferr <- abs(fun_next - fun_k) / max(1, abs(fun_k))
-    # if (k > 1 && (werr < wtol || ferr < ftol))
-    #   break    
   }
   
   results <- list("phi0" = phi0[k + 1],
                   "phi1" = phi1[k + 1],
                   "sigma2" = sigma2[k + 1],
                   "nu" = nu[k + 1])
-  if (output_iterates) 
+  if (iterates) 
     results <- c(results, list("phi0_iterate" = phi0,
                                "phi1_iterate" = phi1,
                                "sigma2_iterate" = sigma2,
                                "nu_iterate" = nu))
+  if(condMean_Gaussian)
+    results <- c(results, list("cond_mean_Gaussian" = estimation_Gaussian$cond_mean_y))
   
   return(results) 
   
@@ -202,65 +217,90 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, output_iterat
 #' y_imputed <- imputeAR1t(y_miss, n_sample = 3, param) # if the parameters are unknown
 #' @import  xts
 #' @export
-imputeAR1t <- function(y, n_sample = 1, param = NULL,  random_walk = FALSE, zero_mean = TRUE, n_burn = 100, n_thin = 50) {
+imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
+                       n_burn = 100, n_thin = 50,
+                       estimates = FALSE, positions_NA = FALSE) {
   
- if (NCOL(y) > 1) {
-    #stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
-    return(apply(matrix(c(1:NCOL(y)), nrow = 1), MARGIN = 2, FUN = function(i){imputeAR1t(y[, i], n_sample, param, random_walk, zero_mean, n_burn, n_thin)}))
+  if (NCOL(y) > 1) {
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1t(y[, i], n_samples, random_walk, zero_mean, n_burn, n_thin, estimates, positions_NA)})
+    if (n_samples == 1 && !estimates && !positions_NA) {
+      results <- do.call(cbind, results_list)
+    } else {
+      if (positions_NA) {
+        index_miss_list <- lapply(results_list, FUN = function(result){result$index_miss})
+        results_list <- lapply(results_list, FUN = function(result){result$index_miss = NULL
+                                                                    return(result)})
+      }
+      
+      # mapply(cbind, results[[1]], results[[2]], results[[3]]...)
+      results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
+      if (estimates) {
+        results$phi0 <- as.vector(results$phi0)
+        results$phi1 <- as.vector(results$phi1)
+        results$sigma2 <- as.vector(results$sigma2)
+        results$nu <- as.vector(results$nu)
+      }
+      if (positions_NA){
+        results = c(results, list("index_miss" = index_miss_list))
+      }
+      
+    } 
+    return(results)
   }  
   
-  if (is.xts(y)) {
-    flag_xts <- TRUE
-    time_y <- index(y)
-    y <- as.numeric(y)
-  } else 
-    flag_xts <- FALSE
+##############################################################
+  y_attrib <- attributes(y)
+  y <- as.numeric(y)
   
-  # if the parameters are unknown, then estimate the parameters.
-  if(any(is.null(param))){
-    estimation_result <- estimateAR1t(y, random_walk, zero_mean, output_iterates = FALSE)
+  # trivial case with no NAs
+  if (!anyNA(y)){
+    y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
+    if (estimates) estimation_result <- estimateAR1t(y, random_walk, zero_mean)
+    index_miss = NULL
+  } else {
+    estimation_result <- estimateAR1t(y, random_walk, zero_mean, condMean_Gaussian = TRUE)
+    y_tmp <- estimation_result$cond_mean_Gaussian
     phi0 <- estimation_result$phi0
     phi1 <- estimation_result$phi1
     sigma2 <- estimation_result$sigma2
     nu <- estimation_result$nu
-  }else{
-    phi0 <- param$phi0
-    phi1 <- param$phi1
-    sigma2 <- param$sigma2
-    nu <- param$nu
+    y_imputed <- matrix(nrow = n, ncol = n_samples)
+    list2env(findMissingBlock(y), envir = environment())
+    # browser()
+    
+    # burn-in period
+    for (i in 1:n_burn) {
+      sample <- samplingLatentVariables(y_tmp, n_thin = 1, n_block, n_in_block,
+                                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
+                                        phi0, phi1, sigma2, nu) 
+      y_tmp <- sample$y
+    }
+    # sample every n_thin-th sample
+    for (j in 1:n_samples) {
+      sample <- samplingLatentVariables(y_tmp, n_thin, n_block, n_in_block,
+                                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
+                                        phi0, phi1, sigma2, nu) 
+      y_imputed[, j] <- sample$y
+    }
   }
   
-  # impute the missing y and generate complete data sets
-  list2env(findMissingBlock(y), envir = environment())
-  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
-  y_tmp <- estimation_Gaussian$cond_mean_y
-  y_imputed <- matrix(nrow = n, ncol = n_sample)
-  
-  # burn-in period
-  for (i in 1:n_burn) {
-    sample <- samplingLatentVariables(y_tmp, n_thin = 1, n_block, n_in_block,
-                                      first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
-                                      phi0, phi1, sigma2, nu) 
-    y_tmp <- sample$y
+  if (n_samples == 1) {
+    attributes(y_imputed) <- y_attrib
+    if (!estimates && !positions_NA) {
+      results <- y_imputed
+    } else
+      results <- list("y_imputed" = y_imputed)
+  } else {
+    y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib
+                                                                           return(x)})
+    results <- c("y_imputed" = y_imputed)
   }
-  # sample every n_thin-th sample
-  for (j in 1:n_sample) {
-    sample <- samplingLatentVariables(y_tmp, n_thin, n_block, n_in_block,
-                                      first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
-                                      phi0, phi1, sigma2, nu) 
-    y_imputed[, j] <- sample$y
-  }
-
-  if (flag_xts) y_imputed <- xts(y_imputed, time_y)
   
-  results <- list("y_imputed" = y_imputed)
-  
-  if (any(is.null(param))) {
-    results <- c(results, list("phi0" = phi0,
-                               "phi1" = phi1,
-                               "sigma2" = sigma2,
-                               "nu" = nu))
-  }
+  if (estimates)  results <- c(results, list("phi0" = estimation_result$phi0,
+                                             "phi1" = estimation_result$phi1,
+                                             "sigma2" = estimation_result$sigma2,
+                                             "nu" = estimation_result$nu))
+  if (positions_NA) results <- c(results, list("index_miss" = index_miss))
   return(results)
 }
 
