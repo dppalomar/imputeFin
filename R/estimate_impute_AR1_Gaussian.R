@@ -244,7 +244,7 @@ diag1 <- function(X) {
 #' y_imputed <- imputeAR1Gaussian(y_miss, n_sample = 3, param) # if the parameters are unknown
 #' @export
 imputeAR1Gaussian <- function(y, n_sample = 1, random_walk = FALSE, zero_mean = TRUE,
-                              estimates = FALSE) {
+                              estimates = FALSE, positions_NA = FALSE) {
 
   if (NCOL(y) > 1) {
     #stop("Code for multiple columns is to be revised. Right now it returns a list of lists.")
@@ -288,24 +288,19 @@ imputeAR1Gaussian <- function(y, n_sample = 1, random_walk = FALSE, zero_mean = 
 
   if (n_sample == 1) {
     attributes(y_imputed) <- y_attrib
-    if (!estimates) {
+    if (!estimates && !positions_NA) {
       results <- y_imputed
     } else
-      results <- list("y_imputed" = y_imputed,
-                      "phi0" = estimation_result$phi0,
-                      "phi1" = estimation_result$phi1,
-                      "sigma2" = estimation_result$sigma2)
+      results <- list("y_imputed" = y_imputed)
   } else {
-    y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib 
-                                                                           return(x)})
-    if (!estimates) {
-      results <- c("y_imputed" = y_imputed)
-    } else
-      results <- c("y_imputed" = y_imputed, list("phi0" = estimation_result$phi0,
-                                                 "phi1" = estimation_result$phi1,
-                                                 "sigma2" = estimation_result$sigma2))
-    
+    y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib })
+    results <- c("y_imputed" = y_imputed)
   }
+  
+  if (estimates)  results <- c(results, list("phi0" = estimation_result$phi0,
+                                             "phi1" = estimation_result$phi1,
+                                             "sigma2" = estimation_result$sigma2))
+  if (positions_NA) results <- c(results, list("positions_NA" = index_miss))
  
   return(results)
 }
