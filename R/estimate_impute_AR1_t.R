@@ -265,6 +265,7 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
     phi1 <- estimation_result$phi1
     sigma2 <- estimation_result$sigma2
     nu <- estimation_result$nu
+    y_imputed <- matrix(nrow = n, ncol = n_samples)
 
     # browser()
     
