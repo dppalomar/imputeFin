@@ -5,8 +5,8 @@
 \title{Fit Student's t AR(1) Models to Time Series with Missing values}
 \usage{
 estimateAR1t(y, random_walk = FALSE, zero_mean = TRUE,
-  output_iterates = FALSE, n_chain = 10, n_thin = 1, n_iter = 100,
-  K = 30)
+  iterates = FALSE, condMean_Gaussian = TRUE, n_chain = 10,
+  n_thin = 1, n_iter = 100, K = 30)
 }
 \arguments{
 \item{y}{a xts object indicating time series with missing values. The first and last one should not be NA.}
@@ -15,7 +15,7 @@ estimateAR1t(y, random_walk = FALSE, zero_mean = TRUE,
 
 \item{zero_mean}{logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown. The default value is FALSE.}
 
-\item{output_iterates}{logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.}
+\item{iterates}{logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.}
 
 \item{n_chain}{a positive integer indicating the number of the parallel Markov chains used (default \code{10}).}
 

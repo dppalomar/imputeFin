@@ -4,15 +4,12 @@
 \alias{imputeAR1t}
 \title{Imputate Missing Values in  Incomplete Student's t AR(1) Time Series}
 \usage{
-imputeAR1t(y, n_sample = 1, param = NULL, random_walk = FALSE,
-  zero_mean = TRUE, n_burn = 100, n_thin = 50)
+imputeAR1t(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
+  n_burn = 100, n_thin = 50, estimates = FALSE,
+  positions_NA = FALSE)
 }
 \arguments{
 \item{y}{a xts object indicating time series with missing values. The first and last one should not be NA.}
-
-\item{n_sample}{a positive integer indicating the number of imputations (default \code{1}).}
-
-\item{param}{a list consisting of the paramters of the Student's t AR(1) time series y if known. The default value is FALSE.}
 
 \item{random_walk}{logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE.}
 
@@ -21,6 +18,10 @@ imputeAR1t(y, n_sample = 1, param = NULL, random_walk = FALSE,
 \item{n_burn}{a positive integer controlling the length of the burn-in period of the Gibb sampling (default \code{100}). The first (n_burn * n_thin) samples generated will be ignored.}
 
 \item{n_thin}{a positive integer indicating the sampling period of Gibbs sampling. After then burn-in perid (default \code{50}), every n_thin-th sample is used. This is aimed to reduce the dependence of the samples.}
+
+\item{n_sample}{a positive integer indicating the number of imputations (default \code{1}).}
+
+\item{param}{a list consisting of the paramters of the Student's t AR(1) time series y if known. The default value is FALSE.}
 }
 \value{
 \item{\code{y_imputed}  }{a xts object, each column is a imputed complete time series}
