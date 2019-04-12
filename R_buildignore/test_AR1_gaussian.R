@@ -35,7 +35,8 @@ y <- y_orig
 y[index_miss, 1] <- NA
 y[c(5,10,12), 2] <- NA
 
-
+# save(y, file = "g_data.Rda" )
+# load(file = "g_data.Rda" )
 # test the estimation function
 estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE,
                                          iterates = TRUE, condMeanCov = TRUE,

@@ -259,13 +259,14 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
     index_miss = NULL
   } else {
     estimation_result <- estimateAR1t(y, random_walk, zero_mean, condMean_Gaussian = TRUE)
+    list2env(findMissingBlock(y), envir = environment())
     y_tmp <- estimation_result$cond_mean_Gaussian
     phi0 <- estimation_result$phi0
     phi1 <- estimation_result$phi1
     sigma2 <- estimation_result$sigma2
     nu <- estimation_result$nu
     y_imputed <- matrix(nrow = n, ncol = n_samples)
-    list2env(findMissingBlock(y), envir = environment())
+
     # browser()
     
     # burn-in period
