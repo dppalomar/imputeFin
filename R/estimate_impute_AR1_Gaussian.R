@@ -53,7 +53,7 @@
 #' R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
 #' 
 #' @export
-estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
+estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                 iterates = FALSE, condMeanCov = FALSE,
                                 tol = 1e-10,  maxiter = 1000) {
   if (NCOL(y) > 1) {
@@ -238,7 +238,7 @@ diag1 <- function(X) {
 #'              "nu" = nu)
 #' y_imputed <- imputeAR1Gaussian(y_miss, n_samples = 3, param) # if the parameters are unknown
 #' @export
-imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
+imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                               estimates = FALSE, positions_NA = FALSE) {
 
   if (NCOL(y) > 1) {
