@@ -80,7 +80,7 @@ estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FAL
 
 
 # test the imputation function
-imputation_result <- imputeAR1Gaussian(y, n_samples = 3, random_walk = FALSE, zero_mean = FALSE, estimates = TRUE, positions_NA = TRUE)
+imputation_result <- imputeAR1Gaussian(y, n_samples = 3, random_walk = FALSE, zero_mean = FALSE, estimates = TRUE)
 y_imputed <- imputation_result$y_imputed.1
   
 # index_miss_p <- (min(index_miss)-1):(max(index_miss) + 1)

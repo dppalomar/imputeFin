@@ -1,5 +1,5 @@
-# source("estimate_impute_AR1_t.R")
-# source("estimate_impute_AR1_Gaussian.R")
+#source("estimate_impute_AR1_Gaussian.R")
+#source("estimate_impute_AR1_t.R")
 library(imputeFin)
 library(xts)
 
@@ -21,12 +21,12 @@ for (i in 2:n_total) {
 }
 data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influence of initial point
 
-m <- 3
+m <- 2
 data_mtr <- matrix(rep(data, m), nrow = n, ncol = m)
 
 #xts
 y_orig <- xts(data_mtr, seq(as.Date("2016-01-01"), length = n, by = "days"))
-colnames(y_orig) <- c("a", "b", "c")
+colnames(y_orig) <- c("a", "b")
 
 #numerical vector
 #y_orig <- data_mtr
@@ -57,9 +57,9 @@ estimation_result <- estimateAR1t(y, random_walk = FALSE, zero_mean = FALSE,
 # grid.arrange(p1, p2, p3, p4, ncol = 1)
 
 # test the imputation function and compare with the Gaussian imputed result
-imputation_result <- imputeAR1t (y, n_samples = 3, random_walk = FALSE, zero_mean = FALSE,
+imputation_result <- imputeAR1t (y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                                  n_burn = 100, n_thin = 50,
-                                 estimates = TRUE, positions_NA = TRUE)
+                                 estimates = FALSE)
 
 # y_imputed <- imputation_result$y_imputed
 # index_miss_p <- (min(index_miss)-1):(max(index_miss) + 1)

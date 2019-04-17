@@ -219,32 +219,31 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE,
 #' @export
 imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                        n_burn = 100, n_thin = 50,
-                       estimates = FALSE, positions_NA = FALSE) {
+                       estimates = FALSE) {
   
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1t(y[, i], n_samples, random_walk, zero_mean, n_burn, n_thin, estimates, positions_NA)})
-    if (n_samples == 1 && !estimates && !positions_NA) {
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, estimates)})
+    if (n_samples == 1 && !estimates) {
+      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
-    } else {
-      if (positions_NA) {
-        index_miss_list <- lapply(results_list, FUN = function(result){result$index_miss})
-        results_list <- lapply(results_list, FUN = function(result){result$index_miss = NULL
-                                                                    return(result)})
-      }
-      
-      # mapply(cbind, results[[1]], results[[2]], results[[3]]...)
+      attr(results, "index_miss") = index_miss_list
+    } else if (n_samples == 1 && estimates) {
+      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result$y_imputed)$index_miss})
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
+      attr(results$y_imputed, "index_miss") = index_miss_list
+    } else {
+      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result$y_imputed.1)$index_miss})
+      results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
+      for (i in 1:n_samples) {
+        attr(results[[i]], "index_miss") = index_miss_list  
+      }
       if (estimates) {
         results$phi0 <- as.vector(results$phi0)
         results$phi1 <- as.vector(results$phi1)
         results$sigma2 <- as.vector(results$sigma2)
         results$nu <- as.vector(results$nu)
       }
-      if (positions_NA){
-        results = c(results, list("index_miss" = index_miss_list))
-      }
-      
-    } 
+    }
     return(results)
   }  
   
@@ -287,13 +286,15 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
   
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
-    if (!estimates && !positions_NA) {
+    attr(y_imputed, "index_miss") <- index_miss
+    if (!estimates) {
       results <- y_imputed
     } else
       results <- list("y_imputed" = y_imputed)
   } else {
     y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib
-                                                                           return(x)})
+    attr(x, "index_miss") <- index_miss
+    return(x)})
     results <- c("y_imputed" = y_imputed)
   }
   
@@ -301,8 +302,8 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                                              "phi1" = estimation_result$phi1,
                                              "sigma2" = estimation_result$sigma2,
                                              "nu" = estimation_result$nu))
-  if (positions_NA) results <- c(results, list("index_miss" = index_miss))
   return(results)
+  
 }
 
 
