@@ -21,15 +21,12 @@ for (i in 2:n_total) {
 }
 data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influence of initial point
 
-m <- 2
+m <- 3
 data_mtr <- matrix(rep(data, m), nrow = n, ncol = m)
 
 #xts
 y_orig <- xts(data_mtr, seq(as.Date("2016-01-01"), length = n, by = "days"))
-colnames(y_orig) <- c("a", "b")
-
-#numerical vector
-#y_orig <- data_mtr
+colnames(y_orig) <- c("a", "b", "c")
 
 # creat missing values
 index_miss <- sort(sample(2:(n - 1), n_miss))
@@ -39,14 +36,13 @@ y[index_miss, 1] <- NA
 y[c(5,10,12), 2] <- NA
 
 # save(y, file = "t_data.Rda" )
+# remove(list = ls())
 # load(file = "t_data.Rda" )
 
 # test the estimation function
 estimation_result <- estimateAR1t(y, random_walk = FALSE, zero_mean = FALSE, 
                                   iterates = TRUE, condMean_Gaussian = TRUE,
                                   n_chain = 10, n_thin = 1, n_iter = 100, K = 30)
-
-
 # library(ggplot2)
 # library(gridExtra)
 # n_iter <- length(estimation_result$phi0_iterate)
@@ -57,9 +53,10 @@ estimation_result <- estimateAR1t(y, random_walk = FALSE, zero_mean = FALSE,
 # grid.arrange(p1, p2, p3, p4, ncol = 1)
 
 # test the imputation function and compare with the Gaussian imputed result
-imputation_result <- imputeAR1t (y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
+imputation_result <- imputeAR1t (y, n_samples = 3, random_walk = FALSE, zero_mean = FALSE,
                                  n_burn = 100, n_thin = 50,
-                                 estimates = FALSE)
+                                 estimates = TRUE)
+
 
 # y_imputed <- imputation_result$y_imputed
 # index_miss_p <- (min(index_miss)-1):(max(index_miss) + 1)

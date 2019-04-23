@@ -157,7 +157,8 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
     if (abs(phi0[k + 1] - phi0[k]) <= tol * (abs(phi0[k + 1]) + abs(phi0[k]))/2
         && abs(phi1[k + 1] - phi1[k]) <= tol * (abs(phi1[k + 1]) + abs(phi1[k]))/2
         && abs(sigma2[k + 1] - sigma2[k]) <= tol * (abs(sigma2[k + 1]) + abs(sigma2[k]))/2) 
-      break
+    break
+    
   }
   
   results <- list("phi0" = phi0[k + 1],
