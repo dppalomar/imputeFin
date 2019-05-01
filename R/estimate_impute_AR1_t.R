@@ -51,7 +51,6 @@
 #' 
 #' # estimate the parameters from this incomplete time series
 #' estimation_result <- estimateAR1t(y)
-#' @import xts
 #' @export
 estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, 
                          iterates = FALSE, condMean_Gaussian = TRUE,
@@ -209,7 +208,6 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE,
 #'              "sigma2" = sigma2,
 #'              "nu" = nu)
 #' y_imputed <- imputeAR1t(y_miss, n_sample = 3, param) # if the parameters are unknown
-#' @import  xts
 #' @export
 imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                        n_burn = 100, n_thin = 50,

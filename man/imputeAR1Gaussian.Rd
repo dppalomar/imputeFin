@@ -4,19 +4,19 @@
 \alias{imputeAR1Gaussian}
 \title{Imputate Missing Values in  Incomplete Gaussian AR(1) Time Series}
 \usage{
-imputeAR1Gaussian(y, n_sample = 1, param = NULL, random_walk = FALSE,
-  zero_mean = TRUE)
+imputeAR1Gaussian(y, n_samples = 1, random_walk = FALSE,
+  zero_mean = FALSE, estimates = FALSE)
 }
 \arguments{
 \item{y}{a xts object indicating time series with missing values. The first and last one should not be NA.}
 
-\item{n_sample}{a positive integer indicating the number of imputations (default \code{1}).}
-
-\item{param}{a list consisting of the paramters of the Student's t AR(1) time series y if known. The default value is FALSE.}
+\item{n_samples}{a positive integer indicating the number of imputations (default \code{1}).}
 
 \item{random_walk}{logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE.}
 
 \item{zero_mean}{logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown.}
+
+\item{param}{a list consisting of the paramters of the Student's t AR(1) time series y if known. The default value is FALSE.}
 }
 \value{
 \item{\code{y_imputed}  }{a numerical matrix, each column is a imputed complete time series}
@@ -52,13 +52,13 @@ index_miss <- sort(index_miss)
 y <- y_orig
 y[index_miss] <- NA
 
-# impute the missing values and generate n_sample complete time series
-y_imputed <- imputeAR1Gaussian( y_miss, n_sample = 3) # if the parameters are unknown
+# impute the missing values and generate n_samples complete time series
+y_imputed <- imputeAR1Gaussian( y_miss, n_samples = 3) # if the parameters are unknown
 param = list("phi0" = phi0,
              "phi1" = phi1,
              "sigma2" = sigma2,
              "nu" = nu)
-y_imputed <- imputeAR1Gaussian(y_miss, n_sample = 3, param) # if the parameters are unknown
+y_imputed <- imputeAR1Gaussian(y_miss, n_samples = 3, param) # if the parameters are unknown
 }
 \author{
 Junyan Liu and Daniel P. Palomar
