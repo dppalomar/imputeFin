@@ -88,8 +88,11 @@ library(imputeFin)
 
 # test the imputation function
 imputation_result <- imputeAR1Gaussian(y, n_samples = 3, random_walk = FALSE, zero_mean = FALSE, estimates = TRUE)
-y_imputed = imputation_result$y_imputed.1
-plotImputed(y_imputed, i = 1)
+y_imputed <- imputation_result$y_imputed.1
+plotImputed(y_imputed, column = 1, type = "ggplot2")
+
+
+
   
 # index_miss_p <- (min(index_miss)-1):(max(index_miss) + 1)
 # par(mfrow=c(2,1))
