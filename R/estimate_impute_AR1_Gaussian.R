@@ -53,7 +53,7 @@
 #' R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
 #' 
 #' @export
-estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
+estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                 iterates = FALSE, condMeanCov = FALSE,
                                 tol = 1e-10,  maxiter = 1000) {
   if (NCOL(y) > 1) {
@@ -157,7 +157,8 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = TRUE,
     if (abs(phi0[k + 1] - phi0[k]) <= tol * (abs(phi0[k + 1]) + abs(phi0[k]))/2
         && abs(phi1[k + 1] - phi1[k]) <= tol * (abs(phi1[k + 1]) + abs(phi1[k]))/2
         && abs(sigma2[k + 1] - sigma2[k]) <= tol * (abs(sigma2[k + 1]) + abs(sigma2[k]))/2) 
-      break
+    break
+    
   }
   
   results <- list("phi0" = phi0[k + 1],
@@ -238,32 +239,31 @@ diag1 <- function(X) {
 #'              "nu" = nu)
 #' y_imputed <- imputeAR1Gaussian(y_miss, n_samples = 3, param) # if the parameters are unknown
 #' @export
-imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
-                              estimates = FALSE, positions_NA = FALSE) {
+imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
+                              estimates = FALSE) {
 
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, estimates, positions_NA)})
-    if (n_samples == 1 && !estimates && !positions_NA) {
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, estimates)})
+    if (n_samples == 1 && !estimates) {
+      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
-    } else {
-       if (positions_NA) {
-        index_miss_list <- lapply(results_list, FUN = function(result){result$index_miss})
-        results_list <- lapply(results_list, FUN = function(result){result$index_miss = NULL
-                                                                    return(result)})
-      }
-      
-      # mapply(cbind, results[[1]], results[[2]], results[[3]]...)
+      attr(results, "index_miss") = index_miss_list
+    } else if (n_samples == 1 && estimates) {
+      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result$y_imputed)$index_miss})
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
+      attr(results$y_imputed, "index_miss") = index_miss_list
+    } else {
+      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result$y_imputed.1)$index_miss})
+      results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
+      for (i in 1:n_samples) {
+        attr(results[[i]], "index_miss") = index_miss_list  
+      }
       if (estimates) {
         results$phi0 <- as.vector(results$phi0)
         results$phi1 <- as.vector(results$phi1)
         results$sigma2 <- as.vector(results$sigma2)
       }
-      if (positions_NA){
-        results = c(results, list("index_miss" = index_miss_list))
-      }
-      
-    } 
+    }
     return(results)
   }  
   
@@ -291,12 +291,14 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
 
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
-    if (!estimates && !positions_NA) {
+    attr(y_imputed, "index_miss") <- index_miss
+    if (!estimates) {
       results <- y_imputed
     } else
       results <- list("y_imputed" = y_imputed)
   } else {
     y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib
+                                                                           attr(x, "index_miss") <- index_miss
                                                                            return(x)})
     results <- c("y_imputed" = y_imputed)
   }
@@ -304,9 +306,6 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
   if (estimates)  results <- c(results, list("phi0" = estimation_result$phi0,
                                              "phi1" = estimation_result$phi1,
                                              "sigma2" = estimation_result$sigma2))
-  if (positions_NA) results <- c(results, list("index_miss" = index_miss))
- 
-
   return(results)
 }
 

@@ -1,9 +1,5 @@
-# source("estimate_impute_AR1_t.R")
-# source("estimate_impute_AR1_Gaussian.R")
-library(imputeFin)
-library(xts)
-
 # generate the complete time series
+library(xts)
 phi0 <- 0
 phi1 <- 1 
 sigma2 <- 0.01 
@@ -26,10 +22,8 @@ data_mtr <- matrix(rep(data, m), nrow = n, ncol = m)
 
 #xts
 y_orig <- xts(data_mtr, seq(as.Date("2016-01-01"), length = n, by = "days"))
-colnames(y_orig) <- c("a", "b", "c")
-
-#numerical vector
 #y_orig <- data_mtr
+colnames(y_orig) <- c("a", "b", "c")
 
 # creat missing values
 index_miss <- sort(sample(2:(n - 1), n_miss))
@@ -38,14 +32,21 @@ y <- y_orig
 y[index_miss, 1] <- NA
 y[c(5,10,12), 2] <- NA
 
-# save(y, file = "t_data.Rda" )
-# load(file = "t_data.Rda" )
+save(y, file = "t_data.Rda" )
+remove(list = ls())
 
-# test the estimation function
-estimation_result <- estimateAR1t(y, random_walk = FALSE, zero_mean = FALSE, 
-                                  iterates = TRUE, condMean_Gaussian = TRUE,
-                                  n_chain = 10, n_thin = 1, n_iter = 100, K = 30)
+# load the data and test the functions
+load(file = "t_data.Rda" )
+# source("estimate_impute_AR1_Gaussian.R")
+# source("estimate_impute_AR1_t.R")
+# source("outlier_and_plot.R")
+library(imputeFin)
+#library(ggplot2)
 
+# # test the estimation function
+# estimation_result <- estimateAR1t(y, random_walk = FALSE, zero_mean = FALSE, 
+#                                   iterates = TRUE, condMean_Gaussian = TRUE,
+#                                   n_chain = 10, n_thin = 1, n_iter = 100, K = 30)
 
 # library(ggplot2)
 # library(gridExtra)
@@ -56,10 +57,15 @@ estimation_result <- estimateAR1t(y, random_walk = FALSE, zero_mean = FALSE,
 # p4 <- qplot(1:n_iter, estimation_result$nu_iterate, geom = c("line", "point"), xlab = "", ylab = expression(nu))  
 # grid.arrange(p1, p2, p3, p4, ncol = 1)
 
-# test the imputation function and compare with the Gaussian imputed result
+# test the imputation function and plot function
 imputation_result <- imputeAR1t (y, n_samples = 3, random_walk = FALSE, zero_mean = FALSE,
                                  n_burn = 100, n_thin = 50,
-                                 estimates = TRUE, positions_NA = TRUE)
+                                 estimates = TRUE)
+y_imputed = imputation_result$y_imputed.1
+plotImputed(y_imputed, i = 1)
+
+
+
 
 # y_imputed <- imputation_result$y_imputed
 # index_miss_p <- (min(index_miss)-1):(max(index_miss) + 1)

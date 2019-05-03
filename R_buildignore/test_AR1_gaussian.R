@@ -1,11 +1,9 @@
-library(imputeFin)
-#source("estimate_impute_AR1_Gaussian.R")
+# generate the data 
 library(xts)
-# generate the complete time series
 phi0 <- 1
 phi1 <- 0.5
 sigma2 <- 0.01 
-n <- 500
+n <- 300
 n_miss <- 0.1*n
 n_drop <- 10
 n_total <- n + n_drop
@@ -21,26 +19,35 @@ data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influe
 m <- 3
 data_mtr <- matrix(rep(data, m), nrow = n, ncol = m)
 
-#xts
 y_orig <- xts(data_mtr, seq(as.Date("2016-01-01"), length = n, by = "days"))
+#y_orig <- data_mtr
 colnames(y_orig) <- c("a", "b", "c")
 
 #numerical vector
 #y_orig <- data_mtr
 
 # creat missing values
-# index_miss <- sort(sample(2:(n - 1), n_miss))
-index_miss <- round(n/2) + 1:n_miss
+index_miss <- sort(sample(2:(n - 1), n_miss))
+# index_miss <- round(n/2) + 1:n_miss
 y <- y_orig
 y[index_miss, 1] <- NA
 y[c(5,10,12), 2] <- NA
 
-# save(y, file = "g_data.Rda" )
-# load(file = "g_data.Rda" )
+save(y, file = "g_data.Rda" )
+remove(list = ls())
+
+# load the data and test the functions
+load(file = "g_data.Rda" )
+
+# source("estimate_impute_AR1_Gaussian.R")
+# source("outlier_and_plot.R")
+library(imputeFin)
+#library(ggplot2)
+
 # test the estimation function
-estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE,
-                                         iterates = TRUE, condMeanCov = TRUE,
-                                         tol = 1e-10,  maxiter = 1000)
+# estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FALSE,
+#                                          iterates = TRUE, condMeanCov = TRUE,
+#                                          tol = 1e-10,  maxiter = 1000)
 
 
 # plot using ggplot2::qplot
@@ -80,8 +87,9 @@ estimation_result <- estimateAR1Gaussian(y, random_walk = FALSE, zero_mean = FAL
 
 
 # test the imputation function
-imputation_result <- imputeAR1Gaussian(y, n_samples = 3, random_walk = FALSE, zero_mean = FALSE, estimates = TRUE, positions_NA = TRUE)
-y_imputed <- imputation_result$y_imputed.1
+imputation_result <- imputeAR1Gaussian(y, n_samples = 3, random_walk = FALSE, zero_mean = FALSE, estimates = TRUE)
+y_imputed = imputation_result$y_imputed.1
+plotImputed(y_imputed, i = 1)
   
 # index_miss_p <- (min(index_miss)-1):(max(index_miss) + 1)
 # par(mfrow=c(2,1))

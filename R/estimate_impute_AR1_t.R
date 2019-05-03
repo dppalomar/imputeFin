@@ -51,14 +51,13 @@
 #' 
 #' # estimate the parameters from this incomplete time series
 #' estimation_result <- estimateAR1t(y)
-#' @import xts
 #' @export
-estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE, 
+estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, 
                          iterates = FALSE, condMean_Gaussian = TRUE,
                          n_chain = 10, n_thin = 1, n_iter = 100, K = 30) {
   
   if (NCOL(y) > 1){
-    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1t, random_walk, zero_mean, iterates, n_chain, n_thin, n_iter, K)
+    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1t, random_walk, zero_mean, iterates, condMean_Gaussian, n_chain, n_thin, n_iter, K)
     phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
     phi1 <- unlist(lapply(estimation_list, function(x){x$phi1}))
     sigma2 <- unlist(lapply(estimation_list, function(x){x$sigma2}))
@@ -70,19 +69,13 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE,
   }
   
   y <- as.numeric(y)
-  # trivial case with no NAs
-  if (!anyNA(y)) {
-
-    return(list("phi0" = 0,
-                "phi1" = 0,
-                "sigma2" = 0,
-                "nu" = 0))
-  }
+# trivial case with no NAs
+  if (!anyNA(y)) return(estimateAR1tComplete(y, random_walk, zero_mean, iterates))
   
-  # find the missing blocks
+# find the missing blocks
   list2env(findMissingBlock(y), envir = environment())
   
- # initialize the estimates and some parameters
+# initialize the estimates and some parameters
   phi0 <- phi1 <- sigma2 <- nu <- gamma <- c()
   estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
   phi0[1] <- estimation_Gaussian$phi0
@@ -215,36 +208,34 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = TRUE,
 #'              "sigma2" = sigma2,
 #'              "nu" = nu)
 #' y_imputed <- imputeAR1t(y_miss, n_sample = 3, param) # if the parameters are unknown
-#' @import  xts
 #' @export
-imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
+imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                        n_burn = 100, n_thin = 50,
-                       estimates = FALSE, positions_NA = FALSE) {
+                       estimates = FALSE) {
   
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1t(y[, i], n_samples, random_walk, zero_mean, n_burn, n_thin, estimates, positions_NA)})
-    if (n_samples == 1 && !estimates && !positions_NA) {
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1t(y[, i], n_samples, random_walk, zero_mean, n_burn, n_thin, estimates)})
+    if (n_samples == 1 && !estimates) {
+      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
-    } else {
-      if (positions_NA) {
-        index_miss_list <- lapply(results_list, FUN = function(result){result$index_miss})
-        results_list <- lapply(results_list, FUN = function(result){result$index_miss = NULL
-                                                                    return(result)})
-      }
-      
-      # mapply(cbind, results[[1]], results[[2]], results[[3]]...)
+      attr(results, "index_miss") = index_miss_list
+    } else if (n_samples == 1 && estimates) {
+      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result$y_imputed)$index_miss})
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
+      attr(results$y_imputed, "index_miss") = index_miss_list
+    } else {
+      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result$y_imputed.1)$index_miss})
+      results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
+      for (i in 1:n_samples) {
+        attr(results[[i]], "index_miss") = index_miss_list  
+      }
       if (estimates) {
         results$phi0 <- as.vector(results$phi0)
         results$phi1 <- as.vector(results$phi1)
         results$sigma2 <- as.vector(results$sigma2)
         results$nu <- as.vector(results$nu)
       }
-      if (positions_NA){
-        results = c(results, list("index_miss" = index_miss_list))
-      }
-      
-    } 
+    }
     return(results)
   }  
   
@@ -287,12 +278,14 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
   
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
-    if (!estimates && !positions_NA) {
+    attr(y_imputed, "index_miss") <- index_miss
+    if (!estimates) {
       results <- y_imputed
     } else
       results <- list("y_imputed" = y_imputed)
   } else {
     y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib
+                                                                           attr(x, "index_miss") <- index_miss
                                                                            return(x)})
     results <- c("y_imputed" = y_imputed)
   }
@@ -301,7 +294,6 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = TRUE,
                                              "phi1" = estimation_result$phi1,
                                              "sigma2" = estimation_result$sigma2,
                                              "nu" = estimation_result$nu))
-  if (positions_NA) results <- c(results, list("index_miss" = index_miss))
   return(results)
 }
 
@@ -370,5 +362,92 @@ samplingLatentVariables <- function( y_sample_init, n_thin, n_block, n_in_block,
       y_tmp[ first_index_in_block[d] : last_index_in_block[d]] <- MASS::mvrnorm( n = 1, mu = mu_d, Sigma = sigma_d )
     }
   }
-  return(list('y' = y_tmp, 'tau' = tau_tmp))
+  return(list("y" = y_tmp, 
+              "tau" = tau_tmp))
 }
+
+
+
+
+estimateAR1tComplete <- function(y, random_walk = FALSE, zero_mean = FALSE, 
+                                 iterates = FALSE,
+                                 tol = 1e-10,  maxiter = 1000) {
+ 
+  phi0 <- phi1 <- sigma2 <- nu <- c()  
+  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
+  phi0[1] <- estimation_Gaussian$phi0
+  phi1[1] <- estimation_Gaussian$phi1
+  sigma2[1] <- estimation_Gaussian$sigma2
+  nu[1] <- 3
+  n <- length(y)
+  tmp <- (y[-1] - phi0[1] - phi1[1] * y[-n])^2/sigma2[1]
+  exp_tau <- vector( length = n )
+  
+  if (iterates) {
+    f = vector()
+    f[1] = sum( log(  gamma( 0.5 * (nu[1] + 1) )/gamma( 0.5 * nu[1] )/sqrt( pi * nu[1] * sigma2[1] ) )
+                + - 0.5 * (nu[1] + 1) * log( (y[-1] - phi0[1] - phi1[1] * y[-n])^2/sigma2[1]/nu[1] + 1 ) ) 
+  }
+
+  
+  for ( k in 1:maxiter) {
+    exp_tau = (nu[k] + 1)/( nu[k] + tmp )
+    s_tau = sum( exp_tau )
+    s_tau_y2 = sum( exp_tau * y[-1] )
+    s_tau_y1 = sum( exp_tau * y[-n] )
+    s_tau_y1y2 = sum( exp_tau * y[-n] * y[-1] )
+    s_tau_y1y1 = sum( exp_tau * y[-n] * y[-n] )
+  
+    if (!random_walk && !zero_mean) {
+      phi1[k+1] <- (s_tau * s_tau_y1y2 - s_tau_y2 * s_tau_y1 )/(s_tau * s_tau_y1y1 - s_tau_y1^2)
+      phi0[k+1] <- (s_tau_y2 - phi1[k+1] * s_tau_y1)/s_tau
+    } else if (random_walk && !zero_mean){
+      phi1[k+1] <- 1
+      phi0[k+1] <- (s_tau_y2 - s_tau_y1)/s_tau
+    } else if (!random_walk && zero_mean){
+      phi1[k+1] <- s_tau_y1y2 / s_tau_y1y1 
+      phi0[k+1] <- 0
+    } else{
+      phi1[k+1] <- 1
+      phi0[k+1] <- 0
+    }
+    sigma2[k+1] = sum( exp_tau * (y[-1] - phi0[k+1] - phi1[k+1] * y[-n])^2 )/(n - 1)
+    tmp = (y[-1] - phi0[k+1] - phi1[k+1] * y[-n])^2/sigma2[k+1]
+    
+    # minus log-likelihood about nu,  with mu and sigma fixed as mu[k+1] and sigma[k+1]
+    f_nu = function( nu){
+      f_nu = - sum ( - 0.5 * (nu + 1) * log( nu + tmp)
+                     + lgamma ( 0.5*(nu + 1) ) - lgamma (0.5*nu) + 0.5 * nu * log(nu ) )
+      return( f_nu )
+    }
+    
+    opt_rst = optimise ( f_nu, c(1e-6, 1e6) )
+    nu[k+1] = opt_rst$minimum
+    
+#    g[k] = sum( log(  gamma( 0.5 * (nu[k] + 1) )/gamma( 0.5 * nu[k] )/sqrt( pi * nu[k] * sigma[k+1] ) )
+#                + - 0.5 * (nu[k] + 1) * log( tmp/nu[k] + 1 ) )   
+    if (iterates) f[k+1] = sum( log(  gamma( 0.5 * (nu[k+1] + 1) )/gamma( 0.5 * nu[k+1] )/sqrt( pi * nu[k+1] * sigma2[k+1] ) )
+                   - 0.5 * (nu[k+1] + 1) * log( tmp/nu[k+1] + 1 ) ) 
+    
+    if (abs(phi0[k + 1] - phi0[k]) <= tol * (abs(phi0[k + 1]) + abs(phi0[k]))/2
+        && abs(phi1[k + 1] - phi1[k]) <= tol * (abs(phi1[k + 1]) + abs(phi1[k]))/2
+        && abs(sigma2[k + 1] - sigma2[k]) <= tol * (abs(sigma2[k + 1]) + abs(sigma2[k]))/2
+        && abs(nu[k + 1] - nu[k]) <= tol * (abs(nu[k + 1]) + abs(nu[k]))/2) 
+    break
+    
+  }
+  
+  results <- list("phi0" = phi0[k+1], 
+                  "phi1" = phi1[k+1], 
+                  "sigma2" = sigma2[k+1], 
+                  "nu" = nu[k+1])
+ if (iterates) 
+    results <- c(results, list("phi0_iterate" = phi0,
+                               "phi1_iterate" = phi1,
+                               "sigma2_iterate" = sigma2,
+                               "nu_iterate" = nu,
+                               "f_iterate" = f))
+  return(results)
+}
+
+
