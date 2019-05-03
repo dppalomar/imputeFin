@@ -243,13 +243,13 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
                               estimates = FALSE) {
 
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, estimates)})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) { imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, estimates) })
     if (n_samples == 1 && !estimates) {
-      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result)$index_miss})
+      index_miss_list <- lapply(results_list, FUN = function(result) { attributes(result)$index_miss })
       results <- do.call(cbind, results_list)
       attr(results, "index_miss") = index_miss_list
     } else if (n_samples == 1 && estimates) {
-      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result$y_imputed)$index_miss})
+      index_miss_list <- lapply(results_list, FUN = function(result) { attributes(result$y_imputed)$index_miss })
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
       attr(results$y_imputed, "index_miss") = index_miss_list
     } else {
@@ -265,7 +265,7 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
       }
     }
     return(results)
-  }  
+  }
   
   y_attrib <- attributes(y)
   y <- as.numeric(y)
@@ -274,7 +274,7 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
   if (!anyNA(y)){
     y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
     if (estimates) estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
-    index_miss = NULL
+    index_miss <- NULL
   } else {
     estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
     cond_mean_y <- estimation_result$cond_mean_y
@@ -297,9 +297,9 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
     } else
       results <- list("y_imputed" = y_imputed)
   } else {
-    y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x){attributes(x) <- y_attrib
-                                                                           attr(x, "index_miss") <- index_miss
-                                                                           return(x)})
+    y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x) { attributes(x) <- y_attrib
+                                                                             attr(x, "index_miss") <- index_miss
+                                                                             return(x) })
     results <- c("y_imputed" = y_imputed)
   }
   
