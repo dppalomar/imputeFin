@@ -19,16 +19,19 @@ Authors@R: c(
   person(c("Daniel", "P."), "Palomar", role = c("cre", "aut"), email = "daniel.p.palomar@gmail.com")
   )
 Maintainer: Daniel P. Palomar <daniel.p.palomar@gmail.com>
-URL: https://github.com/dppalomar/imputeFin,
+URL: https://CRAN.R-project.org/package=imputeFin,
+     https://github.com/dppalomar/imputeFin
 BugReports: https://github.com/dppalomar/imputeFin/issues
 Depends:
 License: GPL-3 | file LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports: MASS, xts
+Imports: 
+    MASS
 RoxygenNote: 6.1.1
 Suggests:
-    testthat
+    testthat,
+    xts
 VignetteBuilder:
     knitr,
     rmarkdown,    

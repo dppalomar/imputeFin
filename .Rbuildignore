@@ -6,6 +6,7 @@
 ^README\.html$
 ^README_cache$
 ^README_files$
+^data-raw$
 ^R_buildignore$
 ^papers&packages$
 ^vignettes/ImputeFinancialTimeSeries-vignette_cache$
