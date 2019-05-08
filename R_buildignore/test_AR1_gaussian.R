@@ -1,4 +1,5 @@
 library(imputeFin)
+library(zoo)
 data(AR1_Gaussian)
 
 # test the estimation function
@@ -12,7 +13,7 @@ estimation_result <- estimateAR1Gaussian(y_missing, random_walk = FALSE, zero_me
 # test the imputation function
 imputation_result <- imputeAR1Gaussian(y_missing, n_samples = 3, random_walk = FALSE, zero_mean = FALSE, estimates = TRUE)
 y_imputed <- imputation_result$y_imputed.1
-#plotImputed(y_imputed, column = 1, type = "simple")
+plotImputed(y_imputed, column = 1, type = "simple")
 
 
 

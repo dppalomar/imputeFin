@@ -8,4 +8,6 @@
 #'
 #' @keywords datasets
 #'
-"y_missing"
+# "y_missing"
+"AR1_Gaussian"
+"AR1_t"
