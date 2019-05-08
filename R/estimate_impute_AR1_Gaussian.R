@@ -56,6 +56,7 @@
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                 iterates = FALSE, condMeanCov = FALSE,
                                 tol = 1e-10,  maxiter = 1000) {
+
   if (NCOL(y) > 1) {
     estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, iterates, condMeanCov, tol, maxiter)
     phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
@@ -65,7 +66,6 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                    "phi1" = phi1,
                                    "sigma2" = sigma2)))
   }
-
   y <- as.numeric(y)
   
   # trivial case with no NAs

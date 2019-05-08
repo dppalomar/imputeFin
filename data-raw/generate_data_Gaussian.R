@@ -17,32 +17,27 @@ for (i in 2:n_total) {
 data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influence of initial point
 
 m <- 3
-data_mtr <- matrix(rep(data, m), nrow = n, ncol = m)
-
-y_orig <- xts(data_mtr, seq(as.Date("2016-01-01"), length = n, by = "days"))
-#y_orig <- data_mtr
+y_orig<- matrix(rep(data, m), nrow = n, ncol = m)
 colnames(y_orig) <- c("a", "b", "c")
 
-#numerical vector
-#y_orig <- data_mtr
-
 # creat missing values
-index_miss <- sort(sample(2:(n - 1), n_miss))
-# index_miss <- round(n/2) + 1:n_miss
-y_missing <- y_orig
-y_missing[index_miss, 1] <- NA
-y_missing[c(5,10,12), 2] <- NA
+y_missing_numeric <- y_orig
+index_miss1 <- round(n/2) + 1:n_miss
+index_miss2 <- sort(sample(2:(n - 1), n_miss))
+y_missing_numeric[index_miss1, 1] <- NA
+y_missing_numeric[index_miss2, 2] <- NA
+y_missing_xts <- xts(y_missing_numeric, seq(as.Date("2016-01-01"), length = n, by = "days"))
 
+AR1_Gaussian = list("y_missing_numeric" = y_missing_numeric, #  numerical matrix
+                    "y_missing_xts" = y_missing_xts, # xts
+                    "phi0" = phi0,
+                    "phi1" = phi1,
+                    "sigma2" = sigma2)
 #
 # this is to save the data to the package
 #
 #save(y_missing, file = "data-raw/y_missing.RData")
 usethis::use_data_raw()
-usethis::use_data(y_missing, overwrite = TRUE)
+usethis::use_data(AR1_Gaussian, overwrite = TRUE)
 
-
-
-AR1_Gaussian$y_missing
-            $phi0
-AR1_Studentt
 
