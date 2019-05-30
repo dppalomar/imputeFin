@@ -1,8 +1,12 @@
 #' @export
 plotImputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple")){
-  y_imputed_i <- y_imputed[, column]
-  index_miss <- attributes(y_imputed)$index_miss[[column]]
-  # index_obs <- setdiff(c(1:length(y_imputed_i)), index_miss)
+  if (is.matrix(y_imputed)) {
+    y_imputed_i <- y_imputed[, column]
+    index_miss <- attributes(y_imputed)$index_miss[[column]]
+  } else {
+    y_imputed_i <- y_imputed
+    index_miss <- attributes(y_imputed)$index_miss
+  }
   index <- index(y_imputed_i)
   
   switch(match.arg(type),

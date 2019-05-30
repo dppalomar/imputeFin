@@ -17,6 +17,8 @@ package?imputeFin
 ##
 devtools::load_all()  #or Ctrl-Shift-L
 devtools::install()
+
+
 #devtools::install(build_vignettes = TRUE)
 library(imputeFin)
 

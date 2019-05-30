@@ -1,5 +1,4 @@
 library(imputeFin)
-library(zoo)
 data(AR1_Gaussian)
 
 # test the estimation function

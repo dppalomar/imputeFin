@@ -2,52 +2,31 @@
 #'
 #' @description Estimate the parameters of a Gaussian AR(1) model from a time series with missing values
 #'
-#' @param y a xts object indicating time series with missing values. The first and last one should not be NA.
+#' @param y numeric vector, numeric matrix, or zoo object with missing values denoted by NA. The first and last values of a time series should not be NA.
 #' @param random_walk logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE. 
 #' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown. The default value is FALSE.
-#' @param ftol a positive number controlling the stopping criterion (default \code{1e-8}).
-#' @param maxiter a positive integer indicating the maximum number of iterations allowed (default \code{1000}).
 #' @param iterates logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.
+#' @param condMeanCov logical. If TRUE, the conditional mean and covariance matrix of the time series given the observed data and estimted parameters
+#'                    are outputted. If FALSE, they are ignored. The default value is FALSE.
+#' @param tol a positive number controlling the stopping criterion (default \code{1e-8}).
+#' @param maxiter a positive integer indicating the maximum number of iterations allowed (default \code{1000}).
 #' @return A list containing the following elements:
 #' \item{\code{phi0}}{real number, the estimate for phi0}
 #' \item{\code{phi1}}{real number, the estimate for phi1}
 #' \item{\code{sigma2}}{positive number, the estimate for sigma^2}
-#' \item{\code{phi0_iterate}}{a numerical vector, the estimates for phi0 in each iteration}
-#' \item{\code{phi1_iterate}}{a numerical vector, the estimates for phi1 in each iteration}
-#' \item{\code{sigma2_iterate}}{a vector of positive numbers, the estimates for sigma^2 in each iteration}
-#' \item{\code{f_iterate}}{a numerical vector, the objective values in each iteration}
+#' \item{\code{phi0_iterate}}{numerical vector, the estimates for phi0 in each iteration, returned only when \code{iterates = TRUE}}
+#' \item{\code{phi1_iterate}}{numerical vector, the estimates for phi1 in each iteration, returned only when \code{iterates = TRUE}}
+#' \item{\code{sigma2_iterate}}{vector of positive numbers, the estimates for sigma^2 in each iteration, returned only when \code{iterates = TRUE}}
+#' \item{\code{f_iterate}}{numerical vector, the objective values in each iteration, returned only when \code{iterates = TRUE}}
+#' \item{\code{cond_mean_y}}{vector of positive numbers, the estimates for sigma^2 in each iteration, returned only when \code{iterates = condMeanCov}}
+#' \item{\code{cond_cov_y}}{numerical vector, the objective values in each iteration, returned only when \code{iterates = condMeanCov}}
 #' @author Junyan Liu and Daniel P. Palomar
 #' @examples 
+#' 
 #' library(imputeFin)
-#' library(xts)
-#' # generate a complete Student's t AR(1) time series
-#' phi0 <- 0
-#' phi1 <- 1
-#' sigma2 <- 0.01 
-#' nu <- 1
-#' n <- 200
-#' n_miss <- 25 
-#' n_drop <- 100
-#' n_total <- n + n_drop
-#' data <- vector(length = n_total)
-#' epsilon <- vector(length = n_total - 1)# innovations
-#' data[1] <- 0
-#' for (i in 2:n_total) {
-#'   epsilon[i-1] <- rnorm(1, nu) * sqrt(sigma2)
-#'   data[i] <- phi0 + phi1 * data[i-1] + epsilon[i-1]
-#' }
-#' data <- data[(n_drop + 1):n_total] # drop the first n_drop to reduce the influence of initial point
-#' dates <- seq(as.Date("2016-01-01"), length = n, by = "days") 
-#' y_orig <- xts(data,  dates)
-#' 
-#' # creat missing values
-#' index_miss <- sample( 2:(n - 1), n_miss, FALSE)
-#' index_miss <- sort(index_miss)
-#' y <- y_orig
-#' y[index_miss] <- NA
-#' 
-#' # estimate the parameters from this incomplete time series
-#' estimation_result <- estimateAR1Gaussian(y)
+#' data(AR1_Gaussian) 
+#' y_missing <- AR1_Gaussian$y_missing_numeric # a numeric matrix with missing values
+#' estimation_result <- estimateAR1Gaussian(y_missing)
 #' 
 #' @references
 #' R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
@@ -56,6 +35,11 @@
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                 iterates = FALSE, condMeanCov = FALSE,
                                 tol = 1e-10,  maxiter = 1000) {
+   
+  if ("zoo" %in% class(y) && !require(zoo)) {
+     warning("you need to install package \"zoo\".\ny has been converted to a numeric vector.")
+     y = unclass(y_missing)
+  }
 
   if (NCOL(y) > 1) {
     estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, iterates, condMeanCov, tol, maxiter)
@@ -191,56 +175,30 @@ diag1 <- function(X) {
 }
 
 
-#' @title Imputate Missing Values in  Incomplete Gaussian AR(1) Time Series 
+#' @title Missing Value Imputation Based on Gaussian AR(1) Model 
 #'
-#' @description Estimate the parameters of the Gaussian AR(1) model from a time series with missing values and impute the missing values based on the estimates
+#' @description Impute the missing values by drawing samples from the conditional disribution of missing values given the observed data
 #'
-#' @param y a xts object indicating time series with missing values. The first and last one should not be NA.
+#' @param y  numeric vector, numeric matrix, or zoo object with missing values denoted by NA. The first and last values of a time series should not be NA.
 #' @param n_samples a positive integer indicating the number of imputations (default \code{1}).
-#' @param param a list consisting of the paramters of the Student's t AR(1) time series y if known. The default value is FALSE.
 #' @param random_walk logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE.
 #' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown.
+#' @param estimates logical. If TRUE, then the estimates of the model parameters are outputted. If FALSE, they are ignored. The default value is FALSE.
 #' @return 
 #' \item{\code{y_imputed}  }{a numerical matrix, each column is a imputed complete time series}
 #' @author Junyan Liu and Daniel P. Palomar
 #' @examples
 #' library(imputeFin)
-#' library(xts)
-#' phi0 <- 1
-#' phi1 <- 0.5 
-#' sigma2 <- 0.01 
-#' nu <- 1
-#' n <- 200
-#' n_miss <- 25 
-#' n_drop <- 100
-#' n_total <- n + n_drop
-#' data <- vector(length = n_total)
-#' epsilon <- vector(length = n_total - 1)# innovations
-#' data[1] <- 0
-#' for (i in 2:n_total) {
-#'   epsilon[i - 1] <- rnorm(1, nu) * sqrt(sigma2)
-#'   data[i] <- phi0 + phi1 * data[i - 1] + epsilon[i - 1]
-#' }
-#' data <- data[(n_drop + 1):n_total] # drop the first n_drop to reduce the influence of initial point
-#' dates <- seq(as.Date("2016-01-01"), length = n, by = "days") 
-#' y_orig <- xts(data,  dates)
-#' 
-#' # creat missing values
-#' index_miss <- sample(2:(n - 1), n_miss, FALSE)
-#' index_miss <- sort(index_miss)
-#' y <- y_orig
-#' y[index_miss] <- NA
-#' 
-#' # impute the missing values and generate n_samples complete time series
-#' y_imputed <- imputeAR1Gaussian( y_miss, n_samples = 3) # if the parameters are unknown
-#' param = list("phi0" = phi0,
-#'              "phi1" = phi1,
-#'              "sigma2" = sigma2,
-#'              "nu" = nu)
-#' y_imputed <- imputeAR1Gaussian(y_miss, n_samples = 3, param) # if the parameters are unknown
+#' data(AR1_Gaussian) 
+#' y_missing <- AR1_Gaussian$y_missing_numeric # a numeric matrix with missing values
+#' imputation_result <- imputeAR1Gaussian(y_missing, n_samples = 3)
 #' @export
 imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                               estimates = FALSE) {
+  if ("zoo" %in% class(y) && !require(zoo)) {
+    warning("you need to install package \"zoo\".\ny has been converted to a numeric vector.")
+    y = unclass(y_missing)
+  }
 
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, estimates)})
@@ -382,6 +340,7 @@ condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block,
 # A heuristic method to compute the parameters of Gaussian AR(1) model from incomplete time series
  
 estimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = TRUE) {
+  
   index_miss_p <- c(0, index_miss, length(y) + 1)
   delta_index_miss_p <- diff(index_miss_p)
   index_delta_index_miss_p <- which(delta_index_miss_p > 2)

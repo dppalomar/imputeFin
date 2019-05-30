@@ -56,6 +56,11 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE,
                          iterates = FALSE, condMean_Gaussian = TRUE,
                          n_chain = 10, n_thin = 1, n_iter = 100, K = 30) {
   
+  if ("zoo" %in% class(y) && !require(zoo)) {
+    warning("you need to install package \"zoo\".\ny has been converted to a numeric vector.")
+    y = unclass(y_missing)
+  }
+  
   if (NCOL(y) > 1){
     estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1t, random_walk, zero_mean, iterates, condMean_Gaussian, n_chain, n_thin, n_iter, K)
     phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
@@ -212,6 +217,10 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE,
 imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                        n_burn = 100, n_thin = 50,
                        estimates = FALSE) {
+  if ("zoo" %in% class(y) && !require(zoo)) {
+    warning("you need to install package \"zoo\".\ny has been converted to a numeric vector.")
+    y = unclass(y_missing)
+  }
   
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1t(y[, i], n_samples, random_walk, zero_mean, n_burn, n_thin, estimates)})
