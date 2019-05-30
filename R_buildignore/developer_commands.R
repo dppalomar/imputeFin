@@ -11,22 +11,18 @@ help(package = "imputeFin")
 package?imputeFin
 ?estimateAR1Gaussian
 
-
 ##
 ## Developer commands (http://r-pkgs.had.co.nz/)
 ##
 devtools::load_all()  #or Ctrl-Shift-L
 devtools::install()
 
-
 #devtools::install(build_vignettes = TRUE)
 library(imputeFin)
-
 
 # Documentation
 devtools::document()  #to generate all documentation via roxygen
 ?estimateAR1Gaussian
-
 
 # Code tests
 devtools::test()
