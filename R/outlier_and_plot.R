@@ -1,4 +1,24 @@
+#' @title Plot Imputed Time Series
+#'
+#' @description Plot imputed time series.
+#'
+#' @param y_imputed imputed time seies, which can be a numeric vector, numeric matrix, or zoo object with an attribute recording the locations of the missing values.
+#' @param column a positive integer indicating the number of column of y_imputed to be plotted (default \code{1}).
+#' @param type character string specifying the method to plot the time series, "ggplot2" or "simple". The default value is "simple".
+#' 
+#' @author Junyan Liu and Daniel P. Palomar
+#' 
+#' @examples
+#' library(imputeFin)
+#' data(AR1_t) 
+#' y_missing <- AR1_t$y_missing  # zoo object with missing values
+#' y_imputed <- imputeAR1t(y_missing)
+#' plotImputed(y_imputed)
+#' 
 #' @export
+#' @import zoo
+#' @import ggplot2
+
 plotImputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple")){
   if (is.matrix(y_imputed)) {
     y_imputed_i <- y_imputed[, column]

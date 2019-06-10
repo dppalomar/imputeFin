@@ -2,8 +2,7 @@ library(imputeFin)
 data(AR1_Gaussian)
 
 # test the estimation function
-# y_missing <- AR1_Gaussian$y_missing_numeric
-y_missing <- AR1_Gaussian$y_missing_xts
+y_missing <- AR1_Gaussian$y_missing
 estimation_result <- estimateAR1Gaussian(y_missing, random_walk = FALSE, zero_mean = FALSE,
                                          iterates = TRUE, condMeanCov = TRUE,
                                          tol = 1e-10,  maxiter = 1000)
