@@ -42,8 +42,7 @@
 estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, method = "heuristic",
                          iterates = FALSE, condMean_Gaussian = FALSE,
                          tol = 1e-10,  maxiter = 100, n_chain = 10, n_thin = 1,  K = 30) {
-  if ("zoo" %in% class(y)) library(zoo)
-  if (NCOL(y) > 1){
+  if (NCOL(y) > 1) {
     estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1t, random_walk, zero_mean, method, 
                              iterates, condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
     phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
@@ -199,7 +198,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, method = "he
           && abs(sigma2[k + 1] - sigma2[k]) <= tol * (abs(sigma2[k + 1]) + abs(sigma2[k]))/2
           && abs(nu[k + 1] - nu[k]) <= tol * (abs(nu[k + 1]) + abs(nu[k]))/2) 
         break
-      
+      # https://stats.stackexchange.com/questions/11646/kullback-leibler-divergence-between-two-gamma-distributions
     }
     
   }
@@ -255,7 +254,6 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, method = "he
 imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE, 
                        method = "heuristic", estimates = FALSE,
                        n_burn = 100, n_thin = 50) {
-  if ("zoo" %in% class(y)) library(zoo)
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1t(y[, i], n_samples, random_walk, zero_mean, method, estimates, n_burn, n_thin)})
     if (n_samples == 1 && !estimates) {
