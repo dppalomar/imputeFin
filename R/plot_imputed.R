@@ -43,6 +43,7 @@ plotImputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple")) {
            #   ggplot2::geom_line(data = data_frm, ggplot2::aes(x = index, y = value), col = "black") +
            #   ggplot2::geom_point(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value), col = "#DD3344") +
            #   ggplot2::labs(title = "Imputed time series", x = "time")  # + ggplot2::theme_bw()
+           # http://zevross.com/blog/2014/08/04/beautiful-plotting-in-r-a-ggplot2-cheatsheet-3/#manually-adding-legend-items-guides-override.aes
            ggplot2::ggplot() +
              ggplot2::geom_line(data = data_frm, ggplot2::aes(x = index, y = value), col = "black") +
              ggplot2::geom_point(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value, col = "imputed values")) +
