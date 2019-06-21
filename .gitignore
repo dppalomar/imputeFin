@@ -3,3 +3,7 @@
 .RData
 .Ruserdata
 .DS_Store
+inst/doc
+README_cache
+ImputeFinancialTimeSeries_cache/
+ImputeFinancialTimeSeries_files/

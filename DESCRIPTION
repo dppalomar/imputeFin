@@ -1,12 +1,21 @@
 Package: imputeFin
 Title: Imputation of Financial Time Series with Missing Values
 Version: 0.1.0
-Description:  Missing values often occur during the time series data 
-    collection process. When missing values appear, the traditional 
-    data analysis methods based on complete data cannot be appled. 
-    One promising way to solve this problem is to impute the missing
-    values. This package provides an efficient way to impute the 
-    missing values based on autoregressive(AR) models.
+Date: 2019-06-21
+Description:  Missing values often occur in financial data due to a variety 
+    of reasons (errors in the collection process or in the processing stage, 
+    lack of asset liquidity, lack of reporting of funds, etc.). However, 
+    most data analysis methods expect complete data and cannot be employed 
+    with missing values. One convenient way to deal with this issue without 
+    having to redesign the data analysis method is to impute the missing 
+    values. This package provides an efficient way to impute the missing 
+    values based on modeling the time series with an autoregressive (AR) model,
+    convenient to model log-prices and log-volume in financial data. In the
+    current version, the imputation is univariate-based (so no asset correlation 
+    is used). The package is based on the paper:
+    J. Liu, S. Kumar, and D. P. Palomar (2019). Parameter Estimation of 
+    Heavy-Tailed AR Model With Missing Data Via Stochastic EM. IEEE Trans. on 
+    Signal Processing, vol. 67, no. 8, pp. 2159-2172. <doi:10.1109/TSP.2019.2899816>.
 Authors@R: c(
   person("Junyan", "LIU", role =  "aut", email = "jliubl@connect.ust.hk"),
   person(c("Daniel", "P."), "Palomar", role = c("cre", "aut"), email = "daniel.p.palomar@gmail.com")
@@ -15,20 +24,22 @@ Maintainer: Daniel P. Palomar <daniel.p.palomar@gmail.com>
 URL: https://CRAN.R-project.org/package=imputeFin,
      https://github.com/dppalomar/imputeFin
 BugReports: https://github.com/dppalomar/imputeFin/issues
-Depends:
 License: GPL-3 | file LICENSE
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 6.1.1
 Imports: 
     MASS,
-    zoo,
-    ggplot2
-RoxygenNote: 6.1.1
+    zoo
 Suggests:
+    bookdown,
+    knitr,
+    ggplot2,
+    prettydoc,
+    rmarkdown,    
     testthat,
     xts
 VignetteBuilder:
     knitr,
-    rmarkdown,    
-    bookdown,
-    prettydoc
+    rmarkdown,
+    R.rsp

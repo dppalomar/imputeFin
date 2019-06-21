@@ -1,118 +1,75 @@
+---
+output:
+  html_document:
+    variant: markdown_github
+    keep_md: true
+  md_document:
+    variant: markdown_github
+---
+
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-portfolioBacktest
-=================
 
-Backtesting of a portfolio in a rolling-window fashion over a dataset of stock prices. Multiple datasets are allowed (e.g., taken randomly over different markets, different time periods, and different subset of the stock universe). In addition, multiple portfolios can be backtested for a subsequent comparison and ranking on a number of criteria including expected return, volatility, Sharpe ratio, maximum drawdown, turnover rate, return on investment, computational time, etc. The portfolio is defined as a function that takes as input a window of the stock prices and outputs the portfolio weights. This package can be useful for a researcher/practitioner who wants to backtest a set of portfolios over a multitude of datasets over different markets. In addition, it can be particularly useful to evaluate students in a portfolio design course where the grading is based on the performance.
 
-Installation
-------------
 
-``` r
-# install.packages("devtools")
-devtools::install_github("dppalomar/portfolioBacktest")
+# imputeFin
+[![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/imputeFin)](https://CRAN.R-project.org/package=imputeFin)
+[![CRAN Downloads](https://cranlogs.r-pkg.org/badges/imputeFin)](https://CRAN.R-project.org/package=imputeFin)
+[![CRAN Downloads Total](https://cranlogs.r-pkg.org/badges/grand-total/imputeFin?color=brightgreen)](https://CRAN.R-project.org/package=imputeFin)
 
-# Getting help
-library(portfolioBacktest)
-help(package = "portfolioBacktest")
-package?portfolioBacktest
-?portfolioBacktest
+Missing values often occur in financial data due to a variety 
+of reasons (errors in the collection process or in the processing stage, 
+lack of asset liquidity, lack of reporting of funds, etc.). However, 
+most data analysis methods expect complete data and cannot be employed 
+with missing values. One convenient way to deal with this issue without 
+having to redesign the data analysis method is to impute the missing 
+values. This package provides an efficient way to impute the missing 
+values based on modeling the time series with an autoregressive (AR) model,
+convenient to model log-prices and log-volume in financial data. In the
+current version, the imputation is univariate-based (so no asset correlation 
+is used).
+
+The package is based on the paper:
+J. Liu, S. Kumar, and D. P. Palomar (2019). Parameter Estimation of 
+Heavy-Tailed AR Model With Missing Data Via Stochastic EM. IEEE Trans. on 
+Signal Processing, vol. 67, no. 8, pp. 2159-2172. <doi:10.1109/TSP.2019.2899816>.
+
+
+## Installation
+The package can be installed from [CRAN](https://CRAN.R-project.org/package=imputeFin) or [GitHub](https://github.com/dppalomar/imputeFin):
+
+```r
+# install stable version from CRAN
+install.packages("imputeFin")
+
+# install development version from GitHub
+devtools::install_github("dppalomar/imputeFin")
 ```
 
-Usage of `portfolioBacktest()`
-------------------------------
+To get help:
 
-We start by loading the package and some random sets of stock market data:
-
-``` r
-library(xts)
-library(portfolioBacktest)
-data(prices)  # you may want to specify data(prices, package = "portfolioBacktest") 
-              # in case there is any conflict with the package PerformanceAnalytics
+```r
+library(imputeFin)
+help(package = "imputeFin")
+?imputeAR1Gaussian
 ```
 
-The dataset `prices` is a list of objects `xts` that contains the prices of random sets of stock market data from the S&P 500, HSI, NKY, SHZ, and UKC, over random periods of two years with a random selection of 50 stocks of each universe.
+To cite `imputeFin` in publications:
 
-``` r
-length(prices)
-#> [1] 50
-str(prices[[1]])
-#> An 'xts' object on 2008-11-27/2010-11-02 containing:
-#>   Data: num [1:504, 1:50] 15.7 15.4 14.7 14.9 15.8 ...
-#>  - attr(*, "dimnames")=List of 2
-#>   ..$ : NULL
-#>   ..$ : chr [1:50] "MSCI UN Equity" "MNST UW Equity" "LKQ UW Equity" "UDR UN Equity" ...
-#>   Indexed by objects of class: [Date] TZ: UTC
-#>   xts Attributes:  
-#>  NULL
-
-colnames(prices[[1]])
-#>  [1] "MSCI UN Equity" "MNST UW Equity" "LKQ UW Equity"  "UDR UN Equity" 
-#>  [5] "LB UN Equity"   "MS UN Equity"   "IFF UN Equity"  "TMO UN Equity" 
-#>  [9] "BIIB UW Equity" "NOC UN Equity"  "CPB UN Equity"  "VMC UN Equity" 
-#> [13] "ULTA UW Equity" "NVDA UW Equity" "FAST UW Equity" "WMB UN Equity" 
-#> [17] "VRTX UW Equity" "EBAY UW Equity" "RHI UN Equity"  "XRAY UW Equity"
-#> [21] "GRMN UW Equity" "ALGN UW Equity" "FTI UN Equity"  "NBL UN Equity" 
-#> [25] "LLY UN Equity"  "FIS UN Equity"  "L UN Equity"    "STT UN Equity" 
-#> [29] "CVX UN Equity"  "IR UN Equity"   "PKG UN Equity"  "CDNS UW Equity"
-#> [33] "XLNX UW Equity" "JCI UN Equity"  "IBM UN Equity"  "VRSN UW Equity"
-#> [37] "WFC UN Equity"  "SIVB UW Equity" "PM UN Equity"   "ZBH UN Equity" 
-#> [41] "RTN UN Equity"  "CINF UW Equity" "ALXN UW Equity" "UTX UN Equity" 
-#> [45] "AAPL UW Equity" "ADM UN Equity"  "BBY UN Equity"  "AMZN UW Equity"
-#> [49] "MRO UN Equity"  "IPGP UW Equity"
+```r
+citation("imputeFin")
 ```
 
-Now, we define some portfolio design that takes as input the prices and outputs the portfolio vector `w`:
 
-``` r
-portfolio_fun <- function(prices) {
-  X <- diff(log(prices))[-1]  # compute log returns
-  Sigma <- cov(X)  # compute SCM
-  # design GMVP
-  w <- solve(Sigma, rep(1, nrow(Sigma)))
-  w <- w/sum(abs(w))  # normalized to have ||w||_1=1
-  return(w)
-}
-```
 
-We are then ready to use the function `backtestPortfolio()` that will execute and evaluate the portfolio design function on a rolling-window basis:
+## Usage of `imputeFin`
+TBD
 
-``` r
-res <- portfolioBacktest(portfolio_fun, prices[[1]], shortselling = TRUE)
-names(res)
-#> [1] "returns"       "cumPnL"        "performance"   "cpu_time"     
-#> [5] "error"         "error_message"
-plot(res$cumPnL)
-```
 
-<img src="man/figures/README-unnamed-chunk-6-1.png" width="75%" style="display: block; margin: auto;" />
 
-``` r
-res$performance
-#>    sharpe ratio    max drawdown expected return      volatility 
-#>      0.90688642      0.02956825      0.04228335      0.04662475
-```
+## Links
+Package: [CRAN](https://CRAN.R-project.org/package=imputeFin) and [GitHub](https://github.com/dppalomar/imputeFin).
 
-We can also backtest over multiple data sets
+README file: [GitHub-readme](https://github.com/dppalomar/imputeFin/blob/master/README.md).
 
-``` r
-# perform multiple backtesting
-mul_res <- portfolioBacktest(portfolio_fun, prices[1:5], shortselling = TRUE)
-mul_res$performance
-#>                  dataset 1  dataset 2  dataset 3  dataset 4  dataset 5
-#> sharpe ratio    0.90688642 0.27460669 0.92214292 1.50478540 1.21084101
-#> max drawdown    0.02956825 0.03029658 0.03314320 0.03096982 0.02255325
-#> expected return 0.04228335 0.01046984 0.04261875 0.18965447 0.04153513
-#> volatility      0.04662475 0.03812668 0.04621708 0.12603423 0.03430271
-mul_res$performance_summary
-#>    sharpe ratio (median)    max drawdown (median) expected return (median) 
-#>               0.92214292               0.03029658               0.04228335 
-#>      volatility (median) 
-#>               0.04621708
-```
+Vignette: [CRAN-vignette](https://CRAN.R-project.org/package=imputeFin/vignettes/ImputeFinancialTimeSeries.html).
 
-Links
------
-
-Package: [GitHub](https://github.com/dppalomar/portfolioBacktest).
-README file: [GitHub-readme](https://rawgit.com/dppalomar/portfolioBacktest/master/README.html).
-Vignette: [GitHub-html-vignette](https://rawgit.com/dppalomar/portfolioBacktest/master/vignettes/PortfolioBacktest-vignette.html) and [GitHub-pdf-vignette](https://rawgit.com/dppalomar/portfolioBacktest/master/vignettes/PortfolioBacktest-vignette.pdf).

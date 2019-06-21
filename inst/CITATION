@@ -1,35 +1,36 @@
-citHeader("To cite 'riskParityPortfolio' in publications, please use:")
+citHeader("To cite 'imputeFin' in publications, please use:")
 
 citEntry(entry = "Manual",
-         title        = "{riskParityPortfolio: Design of Risk Parity Portfolios}",
-         author       = personList(as.person("J. V. de M. Cardoso"),
+         title        = "{imputeFin: Imputation of Financial Time Series with Missing Values}",
+         author       = personList(as.person("J. Liu"),
                                    as.person("D. P. Palomar")),
-         note         = "R package version 0.1.1",
+         note         = "R package version 0.1.0",
          year         = "2019",
-         url          = "https://CRAN.R-project.org/package=riskParityPortfolio",
+         url          = "https://CRAN.R-project.org/package=imputeFin",
          textVersion  =
-           paste("J. V. de M. Cardoso and D. P. Palomar (2019).",
-                 "riskParityPortfolio: Design of Risk Parity Portfolios.",
-                 "R package version 0.1.1.",
-                 "https://CRAN.R-project.org/package=riskParityPortfolio")
+           paste("J. Liu and D. P. Palomar (2019).",
+                 "imputeFin: Imputation of Financial Time Series with Missing Values.",
+                 "R package version 0.1.0.",
+                 "https://CRAN.R-project.org/package=imputeFin")
 )
 
 citEntry(entry = "Article",
-         title        = "SCRIP: Successive Convex Optimization Methods
-    for Risk Parity Portfolio Design",
-         author       = personList(as.person("Y. Feng"),
+         title        = "Parameter Estimation of Heavy-Tailed AR Model With 
+                         Missing Data Via Stochastic EM",
+         author       = personList(as.person("J. Liu"),
+                                   as.person("S. Kumar"),
                                    as.person("D. P. Palomar")),
-         journal      = "IEEE Transactions on Signal Processing",
-         volume       = "63",
-         number       = "19",
-         pages        = "5285--5300",
-         year         = "2018",
-         url          = "https://doi.org/10.1109/TSP.2015.2452219",
+         journal      = "IEEE Trans. on Signal Processing",
+         volume       = "67",
+         number       = "8",
+         pages        = "2159--2172",
+         year         = "2019",
+         url          = "https://doi.org/10.1109/TSP.2019.2899816",
          textVersion  =
-           paste("Y. Feng and D. P. Palomar (2015).",
-                 "SCRIP: Successive Convex Optimization Methods
-    for Risk Parity Portfolio Design.",
-                 "IEEE Transactions on Signal Processing,",
-                 "vol. 63, no. 19, pp. 5285-5300.",
-                 "https://doi.org/10.1109/TSP.2015.2452219")
+           paste("J. Liu, S. Kumar, and D. P. Palomar (2019).",
+                 "Parameter Estimation of Heavy-Tailed AR Model With 
+                         Missing Data Via Stochastic EM.",
+                 "IEEE Trans. on Signal Processing,",
+                 "vol. 67, no. 8, pp. 2159-2172.",
+                 "https://doi.org/10.1109/TSP.2019.2899816")
 )
