@@ -40,10 +40,10 @@ convenient to model log-prices and log-volume in financial data. In the
 current version, the imputation is univariate-based (so no asset correlation 
 is used).
 
-The package is based on the paper:
+The package is based on the paper:   
 J. Liu, S. Kumar, and D. P. Palomar (2019). Parameter Estimation of 
-Heavy-Tailed AR Model With Missing Data Via Stochastic EM. IEEE Trans. on 
-Signal Processing, vol. 67, no. 8, pp. 2159-2172. <doi:10.1109/TSP.2019.2899816>.
+Heavy-Tailed AR Model With Missing Data Via Stochastic EM. _IEEE Trans. on 
+Signal Processing_, vol. 67, no. 8, pp. 2159-2172. <doi:10.1109/TSP.2019.2899816>
 
 
 ## Installation
