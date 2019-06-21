@@ -10,7 +10,7 @@
 #'                    are outputted. If FALSE, they are ignored. The default value is FALSE.
 #' @param tol a positive number controlling the stopping criterion (default \code{1e-8}).
 #' @param maxiter a positive integer indicating the maximum number of iterations allowed (default \code{1000}).
-#' @return A list containing the following elements:
+#' @return If the input y is a univariate time series, this function will return a list containing the following elements:
 #' \item{\code{phi0}}{real number, the estimate for phi0}
 #' \item{\code{phi1}}{real number, the estimate for phi1}
 #' \item{\code{sigma2}}{positive number, the estimate for sigma^2}
@@ -18,8 +18,13 @@
 #' \item{\code{phi1_iterate}}{numerical vector, the estimates for phi1 in each iteration, returned only when \code{iterates = TRUE}}
 #' \item{\code{sigma2_iterate}}{vector of positive numbers, the estimates for sigma^2 in each iteration, returned only when \code{iterates = TRUE}}
 #' \item{\code{f_iterate}}{numerical vector, the objective values in each iteration, returned only when \code{iterates = TRUE}}
-#' \item{\code{cond_mean_y}}{numerical vector, the conditional mean of the time series given the observed data and estimted parameters, returned only when \code{condMeanCov = TRUE}}
+#' \item{\code{cond_mean_y}}{numerical vector, the conditional mean of the time series given the observed data and the estimated parameters, returned only when \code{condMeanCov = TRUE}}
 #' \item{\code{cond_cov_y}}{numerical matrix, the conditional covariance matrix of the time series given the observed data and estimted parameters, returned only when \code{condMeanCov = TRUE}}
+#' If the input y is multivariate time series (y has multiple columns), this function will return a list containing the above result for each univariate time series in y (each result is
+#' a list) and three vectors that combines the estimation results of all the time series as follows:
+#' \item{\code{phi0_vct}}{numeric vector, containing the estimate for phi0 for each univariate time series}
+#' \item{\code{phi1_vct}}{numeric vector, containing the estimate for phi1 for each univariate time series}
+#' \item{\code{sigma2_vct}}{vector of positive numbers, containing the estimate for sigma2 for each univariate time series}
 #' 
 #' @author Junyan Liu and Daniel P. Palomar
 #' 
@@ -38,16 +43,14 @@
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                 iterates = FALSE, condMeanCov = FALSE,
                                 tol = 1e-10,  maxiter = 1000) {
-   
-  if ("zoo" %in% class(y)) library(zoo)
   if (NCOL(y) > 1) {
     estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, iterates, condMeanCov, tol, maxiter)
     phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
     phi1 <- unlist(lapply(estimation_list, function(x){x$phi1}))
     sigma2 <- unlist(lapply(estimation_list, function(x){x$sigma2}))
-    return(c(estimation_list, list("phi0" = phi0,
-                                   "phi1" = phi1,
-                                   "sigma2" = sigma2)))
+    return(c(estimation_list, list("phi0_vct" = phi0,
+                                   "phi1_vct" = phi1,
+                                   "sigma2_vct" = sigma2)))
   }
   y <- as.numeric(y)
   
@@ -179,13 +182,19 @@ diag1 <- function(X) {
 #' @description Impute the missing values by drawing samples from the conditional disribution of missing values given the observed data based on Gaussian AR(1) model
 #'
 #' @param y  numeric vector, numeric matrix, or zoo object with missing values denoted by NA. The first and last values of a time series should not be NA.
-#' @param n_samples a positive integer indicating the number of imputations (default \code{1}).
+#' @param n_samples positive integer indicating the number of imputations (default \code{1}).
 #' @param random_walk logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE.
 #' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown.
 #' @param estimates logical. If TRUE, then the estimates of the model parameters are outputted. If FALSE, they are ignored. The default value is FALSE.
-#' @return The output depends on the inputs. By default (n_samples = 1 and estimates = FALSE), the function will return an imputed time series, which a numeric vector, numeric matrix
-#' or zoo object (depending on the type of input y) with one attribute recording the locations of missing values. If n_samples>1, the function will return a list consisting of n_sample 
-#' imputed time series. If estimates = TRUE, the function will return a list that also incluedes the parameter estimation result. 
+#' @return By default (n_samples = 1 and estimates = FALSE), the function will return an imputed time series y_imputed, which is a numeric vector, numeric matrix, 
+#' or zoo object (depending on the type of input y) with one attribute recording the locations of missing values.
+#' 
+#' If n_samples > 1, the function will return a list consisting of n_sample imputed time series: y_imputed.1, y_imputed.2,... 
+#' 
+#' If estimates = TRUE, apart from the imputed time seris, the function will also return the parameter estimation result as follows:
+#' \item{\code{phi0}}{real number or numeric vector, containing the estimate for phi0 for each univariate time series}
+#' \item{\code{phi1}}{real number or numeric vector, containing the estimate for phi1 for each univariate time series}
+#' \item{\code{sigma2}}{positive number or vector of positive numbers, containing the estimate for sigma2 for each univariate time series}
 #' 
 #' @author Junyan Liu and Daniel P. Palomar
 #' 
@@ -200,7 +209,6 @@ diag1 <- function(X) {
 #' @import MASS
 imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                               estimates = FALSE) {
-  if ("zoo" %in% class(y)) library(zoo)
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, estimates)})
     if (n_samples == 1 && !estimates) {
