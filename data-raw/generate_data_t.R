@@ -1,3 +1,5 @@
+library(xts)
+
 phi0 <- 0
 phi1 <- 1 
 sigma2 <- 0.01 
@@ -25,18 +27,16 @@ index_miss1 <- round(n/2) + 1:n_miss
 index_miss2 <- sort(sample(2:(n - 1), n_miss))
 y_missing_numeric[index_miss1, 1] <- NA
 y_missing_numeric[index_miss2, 2] <- NA
-y_missing <- zoo(y_missing_numeric, seq(as.Date("2016-01-01"), length = n, by = "days"))
+y_missing <- xts(y_missing_numeric, seq(as.Date("2016-01-01"), length = n, by = "days"))
 
-AR1_t = list("y_missing" = y_missing,  # zoo
-             "phi0" = phi0,
-             "phi1" = phi1,
-             "sigma2" = sigma2,
-             "nu" = nu)
+ts_AR1_t = list("y_missing" = y_missing,
+                "phi0"      = phi0,
+                "phi1"      = phi1,
+                "sigma2"    = sigma2,
+                "nu"        = nu)
 #
 # this is to save the data to the package
 #
 #save(y_missing, file = "data-raw/y_missing.RData")
 usethis::use_data_raw()
-usethis::use_data(AR1_t, overwrite = TRUE)
-
-
+usethis::use_data(ts_AR1_t, overwrite = TRUE)
