@@ -9,7 +9,7 @@
 #'
 #' @format List with the following elements:
 #' \describe{
-#'   \item{y_missing}{300 x 3 \code{xts} object with three AR(1) Student's t time 
+#'   \item{y_missing}{300 x 3 \code{zoo} object with three AR(1) Student's t time 
 #'                    series along the columns: the first column contains a
 #'                    time series with 10% consecutive missing values; the
 #'                    second column contains a time series with 10% missing 
