@@ -1,31 +1,25 @@
 ---
-title: "Imputation for AR Time Series"
+title: "Imputation of Financial Time Series"
 author: |
-  | Junyan Liu and Daniel P. Palomar
+  | Junyan LIU and Daniel P. Palomar
   | Hong Kong University of Science and Technology (HKUST)
 date: "`r Sys.Date()`"
 output:
-  bookdown::html_document2:
-    base_format: prettydoc::html_pretty
+  prettydoc::html_pretty:
     theme: tactile
     highlight: vignette
-    fig_caption: yes
-    number_sections: no
     toc: yes
     toc_depth: 2
-  bookdown::pdf_document2:
-    fig_caption: yes
-    number_sections: yes
+  html_document:
+    theme: flatly
+    highlight: pygments  
     toc: yes
     toc_depth: 2
-header-includes:
-  \allowdisplaybreaks
-indent: yes
 csl: ieee.csl
 bibliography: refs.bib
 vignette: >
-  %\VignetteIndexEntry{Imputation AR time series}
-  %\VignetteKeyword{imputation, AR time series}
+  %\VignetteIndexEntry{Imputation of Financial Time Series}
+  %\VignetteKeyword{imputation, time series, AR, random walk}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
@@ -37,31 +31,37 @@ opts_chunk$set(
   comment = "#>",
   fig.align = "center",
   fig.retina = 2,
-  out.width = "75%",
-  dpi = 96
+  out.width = "85%",
+  dpi = 96,
+  pngquant = "--speed=1"
 )
 knit_hooks$set(pngquant = hook_pngquant)
-#Help on bookdown: https://bookdown.org/yihui/bookdown/
-#rmarkdown::render("vignettes/ImputeFin-vignette.Rmd", "all")
-#rmarkdown::render("vignettes/ImputeFin-vignette.Rmd", "bookdown::html_document2")
-#rmarkdown::render("vignettes/ImputeFin-vignette.Rmd", "bookdown::pdf_document2")
-#tools::compactPDF("vignettes/ImputeFin-vignette.pdf", gs_quality = "ebook")
+# Help on bookdown: https://bookdown.org/yihui/bookdown/
+# rmarkdown::render("ImputeFinancialTimeSeries.Rmd", "prettydoc::html_pretty")
 ```
 
 -----------
-> This vignette illustrates the usage of the package `imputeFin` for imputation of missing Values in  incomplete AR time series. 
+> This vignette illustrates the usage of the package [`imputeFin`](https://CRAN.R-project.org/package=imputeFin) 
+for imputation of missing values in financial time series that fit a random walk model or an autoregressive (AR)
+model.
+
 
 # Installation
-The package can currently be installed from [GitHub](https://github.com/dppalomar/imputeFin):
-```{r, eval = FALSE}
-# install.packages("devtools")
+The package can be installed from [CRAN](https://CRAN.R-project.org/package=imputeFin) or [GitHub](https://github.com/dppalomar/imputeFin):
+```{r, eval=FALSE}
+# install stable version from CRAN
+install.packages("imputeFin")
+
+# install development version from GitHub
 devtools::install_github("dppalomar/imputeFin")
+
 # Getting help
 library(imputeFin)
 help(package = "imputeFin")
-package?imputeFin
-?imputeFin
+?imputeAR1Gaussian
 ```
+
+
 
 # Usage of the package
 ## Estimation and imputation for incomplete AR(1) time series
