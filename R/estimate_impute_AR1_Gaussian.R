@@ -1,30 +1,56 @@
-#' @title Fit Gaussian AR(1) Model to Time Series with Missing Values
+#' @title Fit Gaussian AR(1) model to time series with missing values.
 #'
-#' @description Estimate the parameters of a Gaussian AR(1) model from a time series with missing values
+#' @description Estimate the parameters of a Gaussian AR(1) model to fit the 
+#'              given univariate time series with missing values. 
+#'              For multivariate time series, the function will perform a 
+#'              number of indidivual univariate fittings without attempting 
+#'              to model the correlations among the time series.
+#'              If the time series does not contain missing values, the 
+#'              maximum likelihood (ML) estimation is done in one shot.
+#'              With missing values, the iterative EM algorithm is employed 
+#'              for the estimation until converge is achieved.
 #'
-#' @param y numeric vector, numeric matrix, or zoo object with missing values denoted by NA. The first and last values of a time series should not be NA.
-#' @param random_walk logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE. 
-#' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown. The default value is FALSE.
-#' @param iterates logical. If TRUE, then the iterates are outputted. If FALSE, they are ignored. The default value is FALSE.
-#' @param condMeanCov logical. If TRUE, the conditional mean and covariance matrix of the time series given the observed data and estimted parameters
-#'                    are outputted. If FALSE, they are ignored. The default value is FALSE.
-#' @param tol a positive number controlling the stopping criterion (default \code{1e-8}).
-#' @param maxiter a positive integer indicating the maximum number of iterations allowed (default \code{1000}).
-#' @return If the input y is a univariate time series, this function will return a list containing the following elements:
-#' \item{\code{phi0}}{real number, the estimate for phi0}
-#' \item{\code{phi1}}{real number, the estimate for phi1}
-#' \item{\code{sigma2}}{positive number, the estimate for sigma^2}
-#' \item{\code{phi0_iterate}}{numerical vector, the estimates for phi0 in each iteration, returned only when \code{iterates = TRUE}}
-#' \item{\code{phi1_iterate}}{numerical vector, the estimates for phi1 in each iteration, returned only when \code{iterates = TRUE}}
-#' \item{\code{sigma2_iterate}}{vector of positive numbers, the estimates for sigma^2 in each iteration, returned only when \code{iterates = TRUE}}
-#' \item{\code{f_iterate}}{numerical vector, the objective values in each iteration, returned only when \code{iterates = TRUE}}
-#' \item{\code{cond_mean_y}}{numerical vector, the conditional mean of the time series given the observed data and the estimated parameters, returned only when \code{condMeanCov = TRUE}}
-#' \item{\code{cond_cov_y}}{numerical matrix, the conditional covariance matrix of the time series given the observed data and estimted parameters, returned only when \code{condMeanCov = TRUE}}
-#' If the input y is multivariate time series (y has multiple columns), this function will return a list containing the above result for each univariate time series in y (each result is
-#' a list) and three vectors that combines the estimation results of all the time series as follows:
-#' \item{\code{phi0_vct}}{numeric vector, containing the estimate for phi0 for each univariate time series}
-#' \item{\code{phi1_vct}}{numeric vector, containing the estimate for phi1 for each univariate time series}
-#' \item{\code{sigma2_vct}}{vector of positive numbers, containing the estimate for sigma2 for each univariate time series}
+#' @param y Time series object coercible to either a numeric vector or numeric matrix 
+#'          (e.g., \code{\link{zoo}} or \code{\link{xts}}) with missing values denoted by \code{NA}. 
+#' @param random_walk Logical value indicating if the time series is assumed to be a random walk so that \code{phi1 = 1} 
+#'                    (default is \code{FALSE}).
+#' @param zero_mean Logical value indicating if the time series is assumed zero-mean so that \code{phi0 = 0} 
+#'                  (default is \code{FALSE}).
+#' @param return_iterates Logical value indicating if the iterates are to be returned (default is \code{FALSE}).
+#' @param return_condMeanCov Logical value indicating if the conditional mean and covariance matrix of the 
+#'                           time series given the observed data are to be returned (default is \code{FALSE}).
+#' @param tol Positive number denoting the relative tolerance used as stopping criterion (default is \code{1e-8}).
+#' @param maxiter Positive integer indicating the maximum number of iterations allowed (default is \code{1000}).
+#' 
+#' @return If the argument \code{y} is a univariate time series (i.e., coercible to a numeric vector), then this 
+#'         function will return a list with the following elements:
+#' \item{\code{phi0}}{The estimate for \code{phi0} (real number).}
+#' \item{\code{phi1}}{The estimate for \code{phi1} (real number).}
+#' \item{\code{sigma2}}{The estimate for \code{sigma^2} (positive number).}
+#' \item{\code{phi0_iterates}}{Numeric vector with the estimates for \code{phi0} at each iteration
+#'                            (returned only when \code{return_iterates = TRUE}).}
+#' \item{\code{phi1_iterates}}{Numeric vector with the estimates for \code{phi1} at each iteration
+#'                            (returned only when \code{return_iterates = TRUE}).}
+#' \item{\code{sigma2_iterates}}{Numeric vector with the estimates for \code{sigma^2} at each iteration
+#'                              (returned only when \code{return_iterates = TRUE}).}
+#' \item{\code{f_iterates}}{Numeric vector with the objective values at each iteration
+#'                          (returned only when \code{return_iterates = TRUE}).}
+#' \item{\code{cond_mean_y}}{Numeric vector (of same length as argument \code{y}) with the conditional mean of the time series
+#'                           given the observed data (returned only when \code{return_condMeanCov = TRUE}).}
+#' \item{\code{cond_cov_y}}{Numeric matrix (with number of columns/rows equal to the length of the argument \code{y})
+#'                          with the conditional covariance matrix of the time series given the observed data
+#'                           (returned only when \code{return_condMeanCov = TRUE}).}
+#'
+#' If the argument \code{y} is a multivariate time series (i.e., with multiple columns and coercible to a numeric matrix), 
+#' then this function will return a list with each element as in the case of univariate \code{y} corresponding to each
+#' of the columns (i.e., one list element per column of \code{y}), with the following additional elements that combine the 
+#' estimated values in a convenient vector form:
+#' \item{\code{phi0_vct}}{Numeric vector (with length equal to the number of columns of \code{y})
+#'                        with the estimates for \code{phi0} for each of the univariate time series.}
+#' \item{\code{phi1_vct}}{Numeric vector (with length equal to the number of columns of \code{y})
+#'                        with the estimates for \code{phi1} for each of the univariate time series.}
+#' \item{\code{sigma2_vct}}{Numeric vector (with length equal to the number of columns of \code{y})
+#'                        with the estimates for \code{sigma2} for each of the univariate time series.}
 #' 
 #' @author Junyan Liu and Daniel P. Palomar
 #' 
@@ -33,28 +59,27 @@
 #' 
 #' @examples 
 #' library(imputeFin)
-#' data(AR1_Gaussian) 
-#' y_missing <- AR1_Gaussian$y_missing  # zoo object with missing values
+#' data(ts_AR1_Gaussian)
+#' y_missing <- ts_AR1_Gaussian$y_missing
 #' estimation_result <- estimateAR1Gaussian(y_missing)
 #' 
-#' @export
 #' @import zoo
-
+#' @export
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
-                                iterates = FALSE, condMeanCov = FALSE,
+                                return_iterates = FALSE, return_condMeanCov = FALSE,
                                 tol = 1e-10,  maxiter = 1000) {
   if (NCOL(y) > 1) {
-    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, iterates, condMeanCov, tol, maxiter)
-    phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
-    phi1 <- unlist(lapply(estimation_list, function(x){x$phi1}))
-    sigma2 <- unlist(lapply(estimation_list, function(x){x$sigma2}))
-    return(c(estimation_list, list("phi0_vct" = phi0,
-                                   "phi1_vct" = phi1,
+    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, return_iterates, return_condMeanCov, tol, maxiter)
+    phi0 <- unlist(lapply(estimation_list, function(x) {x$phi0}))
+    phi1 <- unlist(lapply(estimation_list, function(x) {x$phi1}))
+    sigma2 <- unlist(lapply(estimation_list, function(x) {x$sigma2}))
+    return(c(estimation_list, list("phi0_vct"   = phi0,
+                                   "phi1_vct"   = phi1,
                                    "sigma2_vct" = sigma2)))
   }
   y <- as.numeric(y)
   
-  # trivial case with no NAs
+  # trivial case with no NAs (no need for EM algorithm)
   if (!anyNA(y)) {
     n <- length(y)
     s_y2 <- sum(y[-1])
@@ -77,8 +102,8 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
     }
     sigma2 <- (( s_y2y2 + (n - 1) * phi0^2 + phi1^2 * s_y1y1 
                         - 2 * phi0 * s_y2 - 2 * phi1 * s_y2y1 + 2 * phi0 * phi1 * s_y1 ) / (n - 1))
-    return(list("phi0" = phi0,
-                "phi1" = phi1,
+    return(list("phi0"   = phi0,
+                "phi1"   = phi1,
                 "sigma2" = sigma2))
   }
   
@@ -86,7 +111,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
   list2env(findMissingBlock(y), envir = environment())
   
   # objective function, the observed data log-likelihood
-  if (iterates)
+  if (return_iterates)
     obj <- function(phi0, phi1, sigma2) {
       sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
       for (i in 1:(n_obs-1)) {
@@ -104,7 +129,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
   phi1[1] <- estimation_heuristic$phi1
   phi0[1] <- estimation_heuristic$phi0
   sigma2[1] <- estimation_heuristic$sigma2
-  if (iterates) f[1] <- obj(phi0[1], phi1[1], sigma2[1])
+  if (return_iterates) f[1] <- obj(phi0[1], phi1[1], sigma2[1])
 
   for (k in 1:maxiter) {
     # E-step
@@ -137,7 +162,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                       - 2 * phi0[k + 1] * s_y2 - 2 * phi1[k + 1] * s_y2y1 + 2 * phi0[k + 1] * phi1[k + 1] * s_y1 ) / (n - 1))
     
     # computation of the objective function
-    if (iterates) f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
+    if (return_iterates) f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
 
     # termination criterion    
     if (abs(phi0[k + 1] - phi0[k]) <= tol * (abs(phi0[k + 1]) + abs(phi0[k]))/2
@@ -147,22 +172,22 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
     
   }
   
-  results <- list("phi0" = phi0[k + 1],
-                  "phi1" = phi1[k + 1],
+  results <- list("phi0"   = phi0[k + 1],
+                  "phi1"   = phi1[k + 1],
                   "sigma2" = sigma2[k + 1])
   
-  if (iterates) 
-    results <- c(results, list("phi0_iterate" = phi0,
-                               "phi1_iterate" = phi1,
-                               "sigma2_iterate" = sigma2,
-                               "f_iterate" = f))
+  if (return_iterates) 
+    results <- c(results, list("phi0_iterates"   = phi0,
+                               "phi1_iterates"   = phi1,
+                               "sigma2_iterates" = sigma2,
+                               "f_iterates"      = f))
 
-  if (condMeanCov) {
+  if (return_condMeanCov) {
     cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
                         phi0[k+1], phi1[k+1], sigma2[k+1], full_cov = TRUE)
     results <- c(results, list("cond_mean_y" = cond$mean_y,
-                               "cond_cov_y" = cond$cov_y))
+                               "cond_cov_y"  = cond$cov_y))
   }
   return(results)
 }
@@ -177,55 +202,66 @@ diag1 <- function(X) {
 }
 
 
-#' @title Missing Value Imputation Based on Gaussian AR(1) Model 
+#' @title Impute missing values of time series based on a Gaussian AR(1) model.
 #'
-#' @description Impute the missing values by drawing samples from the conditional disribution of missing values given the observed data based on Gaussian AR(1) model
-#'
-#' @param y  numeric vector, numeric matrix, or zoo object with missing values denoted by NA. The first and last values of a time series should not be NA.
-#' @param n_samples positive integer indicating the number of imputations (default \code{1}).
-#' @param random_walk logical. If TRUE, y is a random walk time series, and phi1 = 1. If FALSE, y is a general AR(1) time series, and phi1 is unknown. The default value is FALSE.
-#' @param zero_mean logical. If TRUE, y is a zero-mean time series, and phi0 = 1. If FALSE, y is a general AR(1) time series, and phi0 is unknown.
-#' @param estimates logical. If TRUE, then the estimates of the model parameters are outputted. If FALSE, they are ignored. The default value is FALSE.
-#' @return By default (n_samples = 1 and estimates = FALSE), the function will return an imputed time series y_imputed, which is a numeric vector, numeric matrix, 
-#' or zoo object (depending on the type of input y) with one attribute recording the locations of missing values.
+#' @description Impute missing values of time series by drawing samples from 
+#'              the conditional distribution of the missing values given the 
+#'              observed data based on a Gaussian AR(1) model as estimated 
+#'              with the function \code{\link{estimateAR1Gaussian}}. Leading
+#'              and trailing missing values are not imputed.
 #' 
-#' If n_samples > 1, the function will return a list consisting of n_sample imputed time series: y_imputed.1, y_imputed.2,... 
-#' 
-#' If estimates = TRUE, apart from the imputed time seris, the function will also return the parameter estimation result as follows:
-#' \item{\code{phi0}}{real number or numeric vector, containing the estimate for phi0 for each univariate time series}
-#' \item{\code{phi1}}{real number or numeric vector, containing the estimate for phi1 for each univariate time series}
-#' \item{\code{sigma2}}{positive number or vector of positive numbers, containing the estimate for sigma2 for each univariate time series}
+#' @inheritParams estimateAR1Gaussian
+#' @param n_samples Positive integer indicating the number of imputations (default is \code{1}).
+#' @param return_estimates Logical value indicating if the estimates of the model parameters 
+#'                         are to be returned (default is \code{FALSE}).
+#'                         
+#' @return By default (i.e., for \code{n_samples = 1} and \code{return_estimates = FALSE}), 
+#'         the function will return an imputed time series of the same class and dimensions 
+#'         as the argument \code{y} with one new attribute recording the locations of missing 
+#'         values (the function \code{\link{plotImputed}} will make use of such information
+#'         to indicate the imputed values).
+#'         
+#'         If \code{n_samples > 1}, the function will return a list consisting of \code{n_sample} 
+#'         imputed time series with names: y_imputed.1, y_imputed.2, ... 
+#'         If \code{return_estimates = TRUE}, in addition to the imputed time series \code{y_imputed}, 
+#'         the function will return the parameter estimated model parameters:
+#'         \item{\code{phi0}}{The estimate for \code{phi0} (numeric scalar or vector depending 
+#'                            on the number of time series).}
+#'         \item{\code{phi1}}{The estimate for \code{phi1} (numeric scalar or vector depending 
+#'                            on the number of time series).}
+#'         \item{\code{sigma2}}{The estimate for \code{sigma2} (numeric scalar or vector depending 
+#'                              on the number of time series).}
 #' 
 #' @author Junyan Liu and Daniel P. Palomar
 #' 
 #' @examples
 #' library(imputeFin)
-#' data(AR1_Gaussian) 
-#' y_missing <- AR1_Gaussian$y_missing  # zoo object with missing values
+#' data(ts_AR1_Gaussian) 
+#' y_missing <- ts_AR1_Gaussian$y_missing
 #' y_imputed <- imputeAR1Gaussian(y_missing)
 #' 
-#' @export
 #' @import zoo
 #' @import MASS
+#' @export
 imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
-                              estimates = FALSE) {
+                              return_estimates = FALSE) {
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i){imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, estimates)})
-    if (n_samples == 1 && !estimates) {
-      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result)$index_miss})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, return_estimates)})
+    if (n_samples == 1 && !return_estimates) {
+      index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
       attr(results, "index_miss") = index_miss_list
-    } else if (n_samples == 1 && estimates) {
-      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result$y_imputed)$index_miss})
+    } else if (n_samples == 1 && return_estimates) {
+      index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result$y_imputed)$index_miss})
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
       attr(results$y_imputed, "index_miss") = index_miss_list
     } else {
-      index_miss_list <- lapply(results_list, FUN = function(result){attributes(result$y_imputed.1)$index_miss})
+      index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result$y_imputed.1)$index_miss})
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
       for (i in 1:n_samples) {
         attr(results[[i]], "index_miss") = index_miss_list  
       }
-      if (estimates) {
+      if (return_estimates) {
         results$phi0 <- as.vector(results$phi0)
         results$phi1 <- as.vector(results$phi1)
         results$sigma2 <- as.vector(results$sigma2)
@@ -238,12 +274,12 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
   y <- as.numeric(y)
   
   # trivial case with no NAs
-  if (!anyNA(y)){
+  if (!anyNA(y)) {
     y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
-    if (estimates) estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
+    if (return_estimates) estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
     index_miss <- NULL
   } else {
-    estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
+    estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE)
     cond_mean_y <- estimation_result$cond_mean_y
     cond_cov_y <- estimation_result$cond_cov_y
     n <- length(y)  # length of the time series
@@ -259,7 +295,7 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
     attr(y_imputed, "index_miss") <- index_miss
-    if (!estimates) {
+    if (!return_estimates) {
       results <- y_imputed
     } else
       results <- list("y_imputed" = y_imputed)
@@ -270,15 +306,17 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
     results <- c("y_imputed" = y_imputed)
   }
   
-  if (estimates)  results <- c(results, list("phi0" = estimation_result$phi0,
-                                             "phi1" = estimation_result$phi1,
-                                             "sigma2" = estimation_result$sigma2))
+  if (return_estimates)  results <- c(results, list("phi0"   = estimation_result$phi0,
+                                                    "phi1"   = estimation_result$phi1,
+                                                    "sigma2" = estimation_result$sigma2))
   return(results)
 }
 
 
-# Compute the conditional mean and covariance matrix of y given the observed data and current estimates
 
+#
+# Compute the conditional mean and covariance matrix of y given the observed data and current estimates
+#
 condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block, 
                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
                         phi0, phi1, sigma2, full_cov = FALSE) {
@@ -337,8 +375,8 @@ condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block,
   #    browser()
   #  }
   
-  results <- list("mean_y" = cond_mean_y,
-                  "cov_y_diag" = cond_cov_y_diag,
+  results <- list("mean_y"      = cond_mean_y,
+                  "cov_y_diag"  = cond_cov_y_diag,
                   "cov_y_diag1" = cond_cov_y_diag1)
   if (full_cov) 
     results <- c(results, list("cov_y" = cond_cov_y))
@@ -346,8 +384,10 @@ condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block,
 }
 
 
+
+#
 # A heuristic method to compute the parameters of Gaussian AR(1) model from incomplete time series
- 
+#
 estimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = TRUE) {
   
   index_miss_p <- c(0, index_miss, length(y) + 1)
@@ -388,16 +428,17 @@ estimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zer
   sigma2 <- (( s_y_obs2_square + n_y_obs1 * phi0^2 + phi1^2 * s_y_obs1_square 
                - 2 * phi0 * s_y_obs2 - 2 * phi1 * s_y_obs2_y_obs1 + 2 * phi0 * phi1 * s_y_obs1 ) / n_y_obs1)
   
-  return(list("phi0" = phi0,
-              "phi1" = phi1,
+  return(list("phi0"   = phi0,
+              "phi1"   = phi1,
               "sigma2" = sigma2))
 }
 
 
+
+#
 # find the missing blocks in a time series with missing values
-
-findMissingBlock <- function(y){
-
+#
+findMissingBlock <- function(y) {
   n <- length(y)  # length of the time series
   index_obs <- which(!is.na(y))  # indexes of observed values
   index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
@@ -412,17 +453,17 @@ findMissingBlock <- function(y){
   previous_obs_before_block <- y[first_index_in_block - 1]  # previous observed value before each block
   next_obs_after_block <- y[last_index_in_block + 1]  # next observed value after each block
   
-  return(list("n" = n,
-              "index_obs" = index_obs,
-              "index_miss" = index_miss,
-              "n_obs" =  n_obs,
-              "y_obs" = y_obs,
-              "delta_index_obs" =  delta_index_obs,
-              "n_block" = n_block,
-              "n_in_block" = n_in_block,
-              "first_index_in_block" = first_index_in_block,
-              "last_index_in_block" = last_index_in_block,
+  return(list("n"                         = n,
+              "index_obs"                 = index_obs,
+              "index_miss"                = index_miss,
+              "n_obs"                     = n_obs,
+              "y_obs"                     = y_obs,
+              "delta_index_obs"           = delta_index_obs,
+              "n_block"                   = n_block,
+              "n_in_block"                = n_in_block,
+              "first_index_in_block"      = first_index_in_block,
+              "last_index_in_block"       = last_index_in_block,
               "previous_obs_before_block" = previous_obs_before_block,
-              "next_obs_after_block" = next_obs_after_block))
+              "next_obs_after_block"      = next_obs_after_block))
 }
 
