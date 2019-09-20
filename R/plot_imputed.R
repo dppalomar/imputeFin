@@ -55,14 +55,13 @@ plotImputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple")) {
            if (!requireNamespace("ggplot2", quietly = TRUE)) 
              stop("Please install package \"ggplot2\" or choose another plot type.", call. = FALSE)
            data_frm  <- data.frame(index = index_y, value = as.vector(y_imputed_i))
-           index <- value <- NULL  # ugly hack to deal with CRAN note
            # ggplot2::ggplot() +
            #   ggplot2::geom_line(data = data_frm, ggplot2::aes(x = index, y = value), col = "black") +
            #   ggplot2::geom_point(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value), col = "#DD3344") +
            #   ggplot2::labs(title = "Imputed time series", x = "time")  # + ggplot2::theme_bw()
            # http://zevross.com/blog/2014/08/04/beautiful-plotting-in-r-a-ggplot2-cheatsheet-3/#manually-adding-legend-items-guides-override.aes
            p <- ggplot2::ggplot() +
-             ggplot2::geom_line(data = data_frm, ggplot2::aes(x = index, y = value), col = "black") +
+             ggplot2::geom_line(data = data_frm, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
              ggplot2::labs(title = "Imputed time series", x = "time")
            if (any_index_miss)
              p <- p + ggplot2::geom_point(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value, col = "imputed values")) +
