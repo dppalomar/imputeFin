@@ -104,7 +104,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
   } else {
     # initialize the estimates and some parameters
     phi0 <- phi1 <- sigma2 <- nu <- gamma <- c()
-    estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = TRUE)
+    estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE)
     phi0[1] <- estimation_Gaussian$phi0
     phi1[1] <- estimation_Gaussian$phi1
     sigma2[1] <- estimation_Gaussian$sigma2
@@ -397,7 +397,7 @@ estimateAR1tComplete <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                  return_iterates = FALSE,
                                  tol = 1e-10,  maxiter = 1000) {
   phi0 <- phi1 <- sigma2 <- nu <- c()  
-  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = FALSE)
+  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, return_condMeanCov = FALSE)
   phi0[1] <- estimation_Gaussian$phi0
   phi1[1] <- estimation_Gaussian$phi1
   sigma2[1] <- estimation_Gaussian$sigma2
@@ -481,7 +481,7 @@ estimateAR1tHeuristic <- function(y, index_miss, random_walk = FALSE, zero_mean 
                                          tol = 1e-10,  maxiter = 1000) {
   # initialize the estimates and some parameters
   phi0 <- phi1 <- sigma2 <- nu <- gamma <- c()
-  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, condMeanCov = return_condMean_Gaussian)
+  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, return_condMeanCov = return_condMean_Gaussian)
   phi0[1] <- estimation_Gaussian$phi0
   phi1[1] <- estimation_Gaussian$phi1
   sigma2[1] <- estimation_Gaussian$sigma2
