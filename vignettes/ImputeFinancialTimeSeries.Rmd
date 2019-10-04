@@ -5,14 +5,14 @@ author: |
   | Hong Kong University of Science and Technology (HKUST)
 date: "`r Sys.Date()`"
 output:
-  prettydoc::html_pretty:
-    theme: tactile
-    highlight: vignette
-    toc: yes
-    toc_depth: 2
   html_document:
     theme: flatly
     highlight: pygments  
+    toc: yes
+    toc_depth: 2
+  prettydoc::html_pretty:
+    theme: tactile
+    highlight: vignette
     toc: yes
     toc_depth: 2
 csl: ieee.csl
@@ -87,34 +87,22 @@ y[index_miss] <- NA
 Then we use the function `estimateAR1t()` to estimate the parameters of Student's t AR(1) model from this incomplete time series.
 
 ```{r, message = FALSE}
-estimation_result <- estimateAR1t(y, zero_mean = FALSE)
+estimation_result <- estimateAR1t(y, random_walk = FALSE)
 estimation_result$phi0
 estimation_result$phi1
 estimation_result$sigma2
 estimation_result$nu
 
-imputation_result <- imputeAR1t(y, n_sample = 3, zero_mean = FALSE)
+imputation_result <- imputeAR1t(y, n_sample = 3, random_walk = FALSE)
 ```
 
 Next, we use the function `imputeAR1t()` to impute the missing values in the incomplete time series.
  
 ```{r}
 # we generate n_sample = 2 imputed time series
-imputation_result <- imputeAR1t(y, n_sample = 2, zero_mean = FALSE)
+imputation_result <- imputeAR1t(y, n_sample = 2, random_walk = FALSE)
 y_imputed <- imputation_result$y_imputed
-index_miss_bis <- (min(index_miss)-1):(max(index_miss)+1)
-{ plot(y, main = "original")
-  lines(y_orig[index_miss_bis, 1], col="blue", lwd=2) }  # plot the original time series
-{ plot(y, main="Imputed")
-  lines(y_imputed[index_miss_bis, 1], col="blue", lwd=2) }#plot the first imputed time series
 
-
-# if we have already known the parameters, then we can use this information when doing the imputation.
-param  <- list("phi0" = estimation_result$phi0,
-               "phi1" = estimation_result$phi1,
-               "sigma2" = estimation_result$sigma2,
-               "nu" = estimation_result$nu)
-imputation_result <- imputeAR1Gaussian(y, n_sample = 2, param, zero_mean = FALSE)
 ```
 
 The functions `estimateAR1t()` and `imputeAR1t()` can also deal with multivariate incomplete time series. They will do estimatation and imputation for each univariate time series seperately.
@@ -133,19 +121,19 @@ Y <- Y_orig
 Y[index_miss1, 1] <- NA
 Y[index_miss2, 2] <- NA
 
-estimation_result <- estimateAR1t(Y, zero_mean = FALSE)
-imputation_result <- imputeAR1t(Y, n_sample = 2, zero_mean = FALSE)
+estimation_result <- estimateAR1t(Y, random_walk = FALSE)
+imputation_result <- imputeAR1t(Y, n_sample = 2, random_walk = FALSE)
 ```
 
 The functions `estimateAR1Gaussian()` and `imputeAR1Gaussian()` can be used in a similar way. Instead of the Student's t AR(1) model, they fit the Gaussian AR(1) model to time series.
 
 ```{r, message = FALSE}
-estimation_result_g <- estimateAR1Gaussian(y,  zero_mean = FALSE)
+estimation_result_g <- estimateAR1Gaussian(y,  random_walk = FALSE)
 estimation_result_g$phi0
 estimation_result_g$phi1
 estimation_result_g$sigma2
 
-imputation_result_g <- imputeAR1Gaussian(y, n_sample = 2,  zero_mean = FALSE)
+imputation_result_g <- imputeAR1Gaussian(y, n_sample = 2,  random_walk = FALSE)
 ```
 
 
@@ -158,6 +146,7 @@ library("imputeTS")
 y_imputed_km = na.kalman(y)
 y_imputed_random = na.random(y)
 y_imputed_linear = na.interpolation(y, "spline")
+index_miss_bis = index_miss
 par(mfrow=c(2,2))
 #plot 1
 { plot(y, main="orignal")
@@ -172,17 +161,17 @@ par(mfrow=c(2,2))
 { plot(y, main="na.interpolation")
   lines(y_imputed_linear[index_miss_bis], col="blue", lwd=2) }
 
-par(mfrow=c(2,2))
-#plot 1
-{ plot(y, main="orignal")
-  lines(y_orig[index_miss_bis], col="blue", lwd=2) }
-#plot 2
-{ plot(y, main="imputeAR1t")
-  lines(y_imputed[index_miss_bis, 1], col="blue", lwd=2) }
-#plot 3
-{ plot(y, main="imputeAR1t")
-  lines(y_imputed[index_miss_bis, 1], col="blue", lwd=2) }
-#plot 4
-{ plot(y, main="imputeAR1t")
-  lines(y_imputed[index_miss_bis, 1], col="blue", lwd=2) }
+# par(mfrow=c(2,2))
+# #plot 1
+# { plot(y, main="orignal")
+#   lines(y_orig[index_miss_bis], col="blue", lwd=2) }
+# #plot 2
+# { plot(y, main="imputeAR1t")
+#   lines(y_imputed[index_miss_bis, 1], col="blue", lwd=2) }
+# #plot 3
+# { plot(y, main="imputeAR1t")
+#   lines(y_imputed[index_miss_bis, 1], col="blue", lwd=2) }
+# #plot 4
+# { plot(y, main="imputeAR1t")
+#   lines(y_imputed[index_miss_bis, 1], col="blue", lwd=2) }
 ```
