@@ -14,7 +14,7 @@
 #'
 #' @inheritParams estimateAR1Gaussian
 #' @param return_condMean_Gaussian Logical value indicating if the conditional mean and covariance matrix of the 
-#'                           time series given the observed data are to be returned (default is \code{FALSE}).
+#'                           time series (excluding the missing values at the head and tail) given the observed data are to be returned (default is \code{FALSE}).
 #' @param fast_and_heuristic Logical value indicating whether a heuristic but fast method is to be used to 
 #'                           estimate the parameters of the Student's t AR(1) model (default is \code{TRUE}).
 #' @param maxiter Positive integer indicating the maximum number of iterations allowed (default is \code{100}).
@@ -43,7 +43,7 @@
 #' \item{\code{f_iterates}}{Numeric vector with the objective values at each iteration
 #'                          (returned only when \code{return_iterates = TRUE}).}
 #' \item{\code{cond_mean_y_Gaussian}}{Numeric vector (of same length as argument \code{y}) with the conditional mean of the 
-#'                                    time series given the observed data based on Gaussian AR(1) model
+#'                                    time series (excluding the missing values at the head and tail) given the observed data based on Gaussian AR(1) model
 #'                                    (returned only when \code{return_condMean_Gaussian = TRUE}).}
 #'
 #' If the argument \code{y} is a multivariate time series (i.e., with multiple columns and coercible to a numeric matrix), 
@@ -91,6 +91,9 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
   }
   
   y <- as.numeric(y)
+  # remove the missing values at the head and tail of the time series since they do not affect the estimation result
+  index_obs <- which(!is.na(y))
+  y <- y[min(index_obs):max(index_obs)]
   
   # trivial case with no NAs
   if (!anyNA(y)) return(estimateAR1tComplete(y, random_walk, zero_mean, return_iterates))
@@ -237,7 +240,7 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
                        fast_and_heuristic = TRUE, return_estimates = FALSE,
                        n_burn = 100, n_thin = 50) {
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {imputeAR1t(y[, i], n_samples, random_walk, zero_mean, fast_and_heuristic, return_estimates, n_burn, n_thin)})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {imputeAR1t(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, fast_and_heuristic, return_estimates, n_burn, n_thin)})
     if (n_samples == 1 && !return_estimates) {
       index_miss_list <- lapply(results_list, FUN = function(result){attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
@@ -265,39 +268,60 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
 ##############################################################
   y_attrib <- attributes(y)
   y <- as.numeric(y)
+  y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
   
   # trivial case with no NAs
   if (!anyNA(y)){
-    y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
     if (return_estimates) estimation_result <- estimateAR1t(y, random_walk, zero_mean, fast_and_heuristic)
     index_miss = NULL
   } else {
     estimation_result <- estimateAR1t(y, random_walk, zero_mean, fast_and_heuristic, return_condMean_Gaussian = TRUE)
-    list2env(findMissingBlock(y), envir = environment())
-    y_tmp <- estimation_result$cond_mean_y_Gaussian
     phi0 <- estimation_result$phi0
     phi1 <- estimation_result$phi1
     sigma2 <- estimation_result$sigma2
     nu <- estimation_result$nu
-    y_imputed <- matrix(nrow = n, ncol = n_samples)
-
-    # browser()
     
-    # burn-in period
-    for (i in 1:n_burn) {
-      sample <- samplingLatentVariables(y_tmp, n_thin = 1, n_block, n_in_block,
-                                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
-                                        phi0, phi1, sigma2, nu) 
-      y_tmp <- sample$y
+    index_miss <- which(is.na(y))  # indexes of missing values
+    index_obs <- which(!is.na(y))
+    index_obs_min <- min(index_obs)
+    index_obs_max <- max(index_obs)
+    
+    # if there are missing values at the head of the time series, impute them.
+    index_miss_middle <- index_miss[index_miss>index_obs_min & index_miss<index_obs_max]
+    if (length(index_miss_middle) > 0) {
+      y_middle <- y[min(index_obs):max(index_obs)] # deleted the missing values at the head and tail
+      index_miss_deleted <- index_miss_middle - (index_obs_min - 1)
+      list2env(findMissingBlock(y_middle), envir = environment())
+      y_middle_tmp <- estimation_result$cond_mean_y_Gaussian
+      for (i in 1:n_burn) {
+        sample <- samplingLatentVariables(y_middle_tmp, n_thin = 1, n_block, n_in_block,
+                                          first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
+                                          phi0, phi1, sigma2, nu) 
+        y_middle_tmp <- sample$y
+      }
+      # sample every n_thin-th sample
+      for (j in 1:n_samples) {
+        sample <- samplingLatentVariables(y_middle_tmp, n_thin, n_block, n_in_block,
+                                          first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
+                                          phi0, phi1, sigma2, nu) 
+        y_imputed[index_miss_middle, j] <- sample$y[index_miss_deleted]
+      }
+      index_miss <- which(is.na(y))
     }
-    # sample every n_thin-th sample
-    for (j in 1:n_samples) {
-      sample <- samplingLatentVariables(y_tmp, n_thin, n_block, n_in_block,
-                                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
-                                        phi0, phi1, sigma2, nu) 
-      y_imputed[, j] <- sample$y
+    # browser()
+    # if there are missing values at the head of the time series, impute them.
+    if (index_obs_min > 1) { 
+      for (j in (index_obs_min - 1):1 )
+        y_imputed[j, ] <- ( y_imputed[j + 1, ] - rt(n_samples, nu) * sqrt(sigma2) - phi0 )/phi1
+    }
+
+    # if there are missing values at the tail of the time series, impute them.
+    if (index_obs_max < length(y)){
+      for (i in (index_obs_max + 1):length(y))
+        y_imputed[i, ] <- phi0 + phi1 * y_imputed[i - 1, ] +  rt(n_samples, nu) * sqrt(sigma2)
     }
   }
+
   
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib

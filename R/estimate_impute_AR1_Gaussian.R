@@ -18,7 +18,7 @@
 #'                  (default is \code{FALSE}).
 #' @param return_iterates Logical value indicating if the iterates are to be returned (default is \code{FALSE}).
 #' @param return_condMeanCov Logical value indicating if the conditional mean and covariance matrix of the 
-#'                           time series given the observed data are to be returned (default is \code{FALSE}).
+#'                           time series (excluding the missing values at the head and tail) given the observed data are to be returned (default is \code{FALSE}).
 #' @param tol Positive number denoting the relative tolerance used as stopping criterion (default is \code{1e-8}).
 #' @param maxiter Positive integer indicating the maximum number of iterations allowed (default is \code{1000}).
 #' 
@@ -35,10 +35,10 @@
 #'                              (returned only when \code{return_iterates = TRUE}).}
 #' \item{\code{f_iterates}}{Numeric vector with the objective values at each iteration
 #'                          (returned only when \code{return_iterates = TRUE}).}
-#' \item{\code{cond_mean_y}}{Numeric vector (of same length as argument \code{y}) with the conditional mean of the time series
+#' \item{\code{cond_mean_y}}{Numeric vector (of same length as argument \code{y}) with the conditional mean of the time series (excluding the missing values at the head and tail)
 #'                           given the observed data (returned only when \code{return_condMeanCov = TRUE}).}
 #' \item{\code{cond_cov_y}}{Numeric matrix (with number of columns/rows equal to the length of the argument \code{y})
-#'                          with the conditional covariance matrix of the time series given the observed data
+#'                          with the conditional covariance matrix of the time series (excluding the missing values at the head and tail) given the observed data
 #'                           (returned only when \code{return_condMeanCov = TRUE}).}
 #'
 #' If the argument \code{y} is a multivariate time series (i.e., with multiple columns and coercible to a numeric matrix), 
@@ -77,7 +77,11 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                    "phi1_vct"   = phi1,
                                    "sigma2_vct" = sigma2)))
   }
+  
   y <- as.numeric(y)
+  # remove the missing values at the head and tail of the time series since they do not affect the estimation result
+  index_obs <- which(!is.na(y))
+  y <- y[min(index_obs):max(index_obs)]
   
   # trivial case with no NAs (no need for EM algorithm)
   if (!anyNA(y)) {
@@ -107,7 +111,9 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                 "sigma2" = sigma2))
   }
   
-  # find the missing blocks
+  
+    
+  # find the missing blocks   
   list2env(findMissingBlock(y), envir = environment())
   
   # objective function, the observed data log-likelihood
@@ -182,6 +188,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                "sigma2_iterates" = sigma2,
                                "f_iterates"      = f))
 
+
   if (return_condMeanCov) {
     cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
                         first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
@@ -244,9 +251,9 @@ diag1 <- function(X) {
 #' @import MASS
 #' @export
 imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
-                              return_estimates = FALSE) {
+                              return_estimates = FALSE) {  
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {imputeAR1Gaussian(y[, i], n_samples, random_walk, zero_mean, return_estimates)})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {imputeAR1Gaussian(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, return_estimates)})
     if (n_samples == 1 && !return_estimates) {
       index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
@@ -272,25 +279,60 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
   
   y_attrib <- attributes(y)
   y <- as.numeric(y)
+  y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
   
-  # trivial case with no NAs
-  if (!anyNA(y)) {
-    y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
+  # browser()
+  
+  if (!anyNA(y)) { # trivial case with no NAs
+    # y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
     if (return_estimates) estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
     index_miss <- NULL
   } else {
     estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE)
-    cond_mean_y <- estimation_result$cond_mean_y
-    cond_cov_y <- estimation_result$cond_cov_y
-    n <- length(y)  # length of the time series
-    index_obs <- which(!is.na(y))  # indexes of observed values
-    index_miss <- setdiff(1:n, index_obs)  # indexes of missing values
-    y_obs <- y[index_obs]  # observed values
-    # impute the missing values by drawing samples from its conditional distribution
-    y_imputed <- matrix(nrow = n, ncol = n_samples)
-    y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_samples, cond_mean_y[index_miss], cond_cov_y[index_miss, index_miss]))
-    y_imputed[index_obs, ] <- rep(y_obs, times = n_samples)
+    index_miss <- which(is.na(y))  # indexes of missing values
+    index_obs <- which(!is.na(y))
+    index_obs_min <- min(index_obs)
+    index_obs_max <- max(index_obs)
+
+    # if there are missing values at the head of the time series, impute them.
+    index_miss_middle <- index_miss[index_miss>index_obs_min & index_miss<index_obs_max]
+    if (length(index_miss_middle) > 0) {
+      index_miss_deleted <- index_miss_middle - (index_obs_min - 1)
+      y_imputed[index_miss_middle, ] <- t(MASS::mvrnorm(n = n_samples, estimation_result$cond_mean_y[index_miss_deleted], estimation_result$cond_cov_y[index_miss_deleted, index_miss_deleted]))
+    }
+ 
+   # if there are missing values at the head of the time series, impute them.
+    if (index_obs_min > 1) { 
+      for (j in (index_obs_min - 1):1 )
+        y_imputed[j, ] <- ( y_imputed[j + 1, ] - MASS::mvrnorm(1, rep(0, n_samples), estimation_result$sigma2 * diag(n_samples)) - estimation_result$phi0 )/estimation_result$phi1
+    }
+    
+    # if there are missing values at the tail of the time series, impute them.
+    if (index_obs_max < length(y)){
+      for (i in (index_obs_max + 1):length(y))
+        y_imputed[i, ] <- estimation_result$phi0 + estimation_result$phi1 * y_imputed[i - 1, ] +  MASS::mvrnorm(1, rep(0, n_samples), estimation_result$sigma2 * diag(n_samples)) 
+    }
   }
+    
+  #   if (index_obs_min > 1 | index_obs_max < length(y)) { # when there are missing values in the head or tail
+  #     # impute the missing values in the middle
+  #     index_miss_middle <- index_miss[index_miss>index_obs_min & index_miss<index_obs_max]
+  #     index_miss_deleted <- index_miss_middle - (index_obs_min - 1)
+  #     y_imputed[index_miss_middle, ] <- t(MASS::mvrnorm(n = n_samples, cond_mean_y[index_miss_deleted], cond_cov_y[index_miss_deleted, index_miss_deleted]))
+  #     
+  #     # impute missing values at the tail
+  #     for (i in (index_obs_max + 1):length(y)){
+  #       y_imputed[i, ] <- estimation_result$phi0 + estimation_result$phi1 * y_imputed[i - 1, ] +  MASS::mvrnorm(1, rep(0, n_samples), estimation_result$sigma2 * diag(n_samples)) 
+  #     }
+  #     # impute missing values at the head
+  #     for (j in (index_obs_min - 1):1 ){
+  #       y_imputed[j, ] <- ( y_imputed[j + 1, ] - MASS::mvrnorm(1, rep(0, n_samples), estimation_result$sigma2 * diag(n_samples)) - estimation_result$phi0 )/estimation_result$phi1
+  #     } 
+  #   } else {
+  #     y_imputed[index_miss, ] <- t(MASS::mvrnorm(n = n_samples, cond_mean_y[index_miss], cond_cov_y[index_miss, index_miss]))
+  #   }
+  # }
+   
 
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
