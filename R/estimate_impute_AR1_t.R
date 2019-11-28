@@ -77,6 +77,15 @@
 estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE,
                          return_iterates = FALSE, return_condMean_Gaussian = FALSE,
                          tol = 1e-10,  maxiter = 100, n_chain = 10, n_thin = 1,  K = 30) {
+  # error control
+  if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
+  if (tol <= 0) stop("\"tol\" must be greater than 0.")
+  if (maxiter < 1) stop("\"maxiter\" must be greater than 1.")
+  if (round(n_chain)!=n_chain | n_chain<=0) stop("\"n_chain\" must be a positive integer.")
+  if (round(n_thin)!=n_thin | n_thin<=0) stop("\"n_thin\" must be a positive integer.")
+  if (round(K)!=K | K<=0) stop("\"K\" must be a positive integer.")
+  
+  
   if (NCOL(y) > 1) {
     estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1t, random_walk, zero_mean, fast_and_heuristic, 
                              return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
@@ -89,6 +98,10 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
                                    "sigma2_vct" = sigma2,
                                    "nu_vct"     = nu)))
   }
+  
+  # error control
+  if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
+  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
   
   y <- as.numeric(y)
   # remove the missing values at the head and tail of the time series since they do not affect the estimation result
@@ -239,6 +252,12 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
 imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE, 
                        fast_and_heuristic = TRUE, return_estimates = FALSE,
                        n_burn = 100, n_thin = 50) {
+  # error control
+  if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
+  if (round(n_samples)!=n_samples | n_samples<=0) stop("\"n_samples\" must be a positive integer.")
+  if (round(n_burn)!=n_burn | n_burn<=0) stop("\"n_burn\" must be a positive integer.")
+  if (round(n_thin)!=n_thin | n_thin<=0) stop("\"n_thin\" must be a positive integer.")
+  
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {imputeAR1t(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, fast_and_heuristic, return_estimates, n_burn, n_thin)})
     if (n_samples == 1 && !return_estimates) {
@@ -266,6 +285,10 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
   }  
   
 ##############################################################
+  # error control
+  if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
+  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
+  
   y_attrib <- attributes(y)
   y <- as.numeric(y)
   y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)

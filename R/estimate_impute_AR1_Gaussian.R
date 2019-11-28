@@ -68,6 +68,12 @@
 estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                 return_iterates = FALSE, return_condMeanCov = FALSE,
                                 tol = 1e-10,  maxiter = 1000) {
+  # error control
+  if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
+  if (tol <= 0) stop("\"tol\" must be greater than 0.")
+  if (maxiter < 1) stop("\"maxiter\" must be greater than 1.")
+  
+
   if (NCOL(y) > 1) {
     estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, return_iterates, return_condMeanCov, tol, maxiter)
     phi0 <- unlist(lapply(estimation_list, function(x) {x$phi0}))
@@ -78,7 +84,9 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                                    "sigma2_vct" = sigma2)))
   }
   
-  y <- as.numeric(y)
+  
+  if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
+  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
   # remove the missing values at the head and tail of the time series since they do not affect the estimation result
   index_obs <- which(!is.na(y))
   y <- y[min(index_obs):max(index_obs)]
@@ -251,7 +259,11 @@ diag1 <- function(X) {
 #' @import MASS
 #' @export
 imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
-                              return_estimates = FALSE) {  
+                              return_estimates = FALSE) { 
+  # error control
+  if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
+  if (round(n_samples)!=n_samples | n_samples<=0) stop("\"n_samples\" must be a positive integer.")
+
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {imputeAR1Gaussian(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, return_estimates)})
     if (n_samples == 1 && !return_estimates) {
@@ -276,6 +288,10 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
     }
     return(results)
   }
+  
+  # error control
+  if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
+  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
   
   y_attrib <- attributes(y)
   y <- as.numeric(y)
