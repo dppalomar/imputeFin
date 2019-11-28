@@ -15,19 +15,19 @@ for (i in 2:n_total) {
 }
 data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influence of initial point
 
-m <- 4
+m <- 3
 y_orig<- matrix(rep(data, m), nrow = n, ncol = m)
-colnames(y_orig) <- c("a", "b", "c", "d")
+colnames(y_orig) <- c("a", "b", "c")
 
 # creat missing values
 y_missing_numeric <- y_orig
 index_miss1 <- round(n/2) + 1:n_miss
 index_miss2 <- sort(sample(2:(n - 1), n_miss))
 # index_miss3 <- c(1,sort(sample(2:(n - 1), n_miss - 2)), n)
-index_miss3 <- c(1,2,3,10)
+# index_miss3 <- c(1,2,3,10)
 y_missing_numeric[index_miss1, 1] <- NA
 y_missing_numeric[index_miss2, 2] <- NA
-y_missing_numeric[index_miss3, 3] <- NA
+# y_missing_numeric[index_miss3, 3] <- NA
 y_missing <- zoo(y_missing_numeric, seq(as.Date("2016-01-01"), length = n, by = "days"))
 ts_AR1_Gaussian <- list("y_missing" = y_missing,
                         "phi0"      = phi0,

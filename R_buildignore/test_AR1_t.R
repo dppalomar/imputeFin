@@ -5,8 +5,8 @@ library(imputeFin)
 data(ts_AR1_t)
 
 # test the estimation function
-#y_missing <- ts_AR1_t$y_missing
-y_missing <- ts_AR1_t$y_missing[, 3, drop = FALSE]
+y_missing <- ts_AR1_t$y_missing
+#y_missing <- ts_AR1_t$y_missing[, 3, drop = FALSE]
 estimation_result1 <- estimateAR1t(y_missing, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE,
                                    return_iterates = FALSE, return_condMean_Gaussian = FALSE,
                                   tol = 1e-10,  maxiter = 100, n_chain = 10, n_thin = 1, K = 30)

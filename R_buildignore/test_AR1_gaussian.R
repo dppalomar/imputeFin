@@ -3,15 +3,17 @@ library(imputeFin)
 data(ts_AR1_Gaussian)
 
 # test the estimation function
-#y_missing <- ts_AR1_t$y_missing
-y_missing <- ts_AR1_t$y_missing[, 3, drop = FALSE]
+# y_missing <- ts_AR1_Gaussian$y_missing[, 4, drop = FALSE]
+y_missing <- ts_AR1_Gaussian$y_missing
 estimation_result <- estimateAR1Gaussian(y_missing, random_walk = FALSE, zero_mean = FALSE,
                                          return_iterates = TRUE, return_condMeanCov = TRUE,
                                          tol = 1e-10,  maxiter = 1000)
 
+# y_missing <- ts_AR1_Gaussian$y_missing[,1, drop = FALSE]
+# estimation_result <- estimateAR1Gaussian(y_missing)
 
 # test the imputation function
-imputation_result <- imputeAR1Gaussian(y_missing[ , 1], n_samples = 3, random_walk = FALSE, zero_mean = FALSE,
+imputation_result <- imputeAR1Gaussian(y_missing, n_samples = 3, random_walk = FALSE, zero_mean = FALSE,
                                        return_estimates = TRUE)
 y_imputed <- imputation_result$y_imputed.1
 plotImputed(y_imputed, column = 1, type = "simple")

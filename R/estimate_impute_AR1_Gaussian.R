@@ -88,6 +88,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
   if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
   # remove the missing values at the head and tail of the time series since they do not affect the estimation result
+  y <- as.numeric(y)
   index_obs <- which(!is.na(y))
   y <- y[min(index_obs):max(index_obs)]
   
