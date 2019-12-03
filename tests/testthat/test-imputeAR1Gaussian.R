@@ -17,7 +17,7 @@ test_that("imputation works", {
   expect_true(!anyNA(imputation_Gaussian))
   
   # time series with NA's at the head and tail
-  imputation_Gaussian <- imputeAR1Gaussian(y_missing_numeric[,2], impute_head_NAs = TRUE, impute_tail_NAs = TRUE)
+  imputation_Gaussian <- imputeAR1Gaussian(y_missing_numeric[,2], impute_leading_NAs = TRUE, impute_trailing_NAs = TRUE)
   expect_true(!anyNA(imputation_Gaussian))
   
   
