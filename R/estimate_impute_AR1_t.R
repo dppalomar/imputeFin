@@ -101,7 +101,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
   
   # error control
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
-  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
+  if (sum(!is.na(y))<5) stop("Each time series in \"y\" must have at least five observations.")
   
   y <- as.numeric(y)
   # remove the missing values at the head and tail of the time series since they do not affect the estimation result
@@ -249,7 +249,8 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
 #' @import zoo
 #' @import MASS
 #' @export
-imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE, 
+imputeAR1t <- function(y, n_samples = 1, impute_head_NAs = FALSE, impute_tail_NAs = FALSE,
+                       random_walk = FALSE, zero_mean = FALSE, 
                        fast_and_heuristic = TRUE, return_estimates = FALSE,
                        n_burn = 100, n_thin = 50) {
   # error control
@@ -287,7 +288,7 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
 ##############################################################
   # error control
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
-  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
+  if (sum(!is.na(y))<5) stop("Each time series in \"y\" must have at least five observations.")
   
   y_attrib <- attributes(y)
   y <- as.numeric(y)
@@ -333,13 +334,13 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
     }
     # browser()
     # if there are missing values at the head of the time series, impute them.
-    if (index_obs_min > 1) { 
+    if (index_obs_min > 1 & impute_head_NAs) { 
       for (j in (index_obs_min - 1):1 )
         y_imputed[j, ] <- ( y_imputed[j + 1, ] - rt(n_samples, nu) * sqrt(sigma2) - phi0 )/phi1
     }
 
     # if there are missing values at the tail of the time series, impute them.
-    if (index_obs_max < length(y)){
+    if (index_obs_max < length(y) & impute_tail_NAs){
       for (i in (index_obs_max + 1):length(y))
         y_imputed[i, ] <- phi0 + phi1 * y_imputed[i - 1, ] +  rt(n_samples, nu) * sqrt(sigma2)
     }

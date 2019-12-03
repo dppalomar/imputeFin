@@ -86,7 +86,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
   
   
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
-  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
+  if (sum(!is.na(y))<5) stop("Each time series in \"y\" must have at least five observations.")
   # remove the missing values at the head and tail of the time series since they do not affect the estimation result
   y <- as.numeric(y)
   index_obs <- which(!is.na(y))
@@ -228,6 +228,10 @@ diag1 <- function(X) {
 #' 
 #' @inheritParams estimateAR1Gaussian
 #' @param n_samples Positive integer indicating the number of imputations (default is \code{1}).
+#' @param impute_head_NAs Logical value indicating if the missing values at the head of time 
+#'                        series are to be imputed (default is \code{FALSE}).
+#' @param impute_tail_NAs Logical value indicating if the missing values at the tail of time 
+#'                        series are to be imputed (default is \code{FALSE}).                      
 #' @param return_estimates Logical value indicating if the estimates of the model parameters 
 #'                         are to be returned (default is \code{FALSE}).
 #'                         
@@ -259,8 +263,8 @@ diag1 <- function(X) {
 #' @import zoo
 #' @import MASS
 #' @export
-imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
-                              return_estimates = FALSE) { 
+imputeAR1Gaussian <- function(y, n_samples = 1, impute_head_NAs = FALSE, impute_tail_NAs = FALSE,
+                              random_walk = FALSE, zero_mean = FALSE, return_estimates = FALSE) { 
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
   if (round(n_samples)!=n_samples | n_samples<=0) stop("\"n_samples\" must be a positive integer.")
@@ -292,7 +296,7 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
   
   # error control
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
-  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
+  if (sum(!is.na(y))<5) stop("Each time series in \"y\" must have at least five observations.")
   
   y_attrib <- attributes(y)
   y <- as.numeric(y)
@@ -319,13 +323,13 @@ imputeAR1Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean =
     }
  
    # if there are missing values at the head of the time series, impute them.
-    if (index_obs_min > 1) { 
+    if (index_obs_min > 1 & impute_head_NAs) { 
       for (j in (index_obs_min - 1):1 )
         y_imputed[j, ] <- ( y_imputed[j + 1, ] - MASS::mvrnorm(1, rep(0, n_samples), estimation_result$sigma2 * diag(n_samples)) - estimation_result$phi0 )/estimation_result$phi1
     }
     
     # if there are missing values at the tail of the time series, impute them.
-    if (index_obs_max < length(y)){
+    if (index_obs_max < length(y) & impute_tail_NAs){
       for (i in (index_obs_max + 1):length(y))
         y_imputed[i, ] <- estimation_result$phi0 + estimation_result$phi1 * y_imputed[i - 1, ] +  MASS::mvrnorm(1, rep(0, n_samples), estimation_result$sigma2 * diag(n_samples)) 
     }
