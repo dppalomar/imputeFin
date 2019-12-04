@@ -14,7 +14,7 @@
 #'                    time series with 10% consecutive missing values; the
 #'                    second column contains a time series with 10% missing 
 #'                    values randomly distributed; and the third column contains 
-#'                    a complete time series.}
+#'                    the union of the previous missing values.}
 #'   \item{phi0}{Value of \code{phi0} used to generate the time series.}
 #'   \item{phi1}{Value of \code{phi1} used to generate the time series.}
 #'   \item{sigma2}{Value of \code{sigma2} used to generate the time series.}
