@@ -52,7 +52,7 @@ devtools::install_github("dppalomar/imputeFin")
 # Getting help
 library(imputeFin)
 help(package = "imputeFin")
-?imputeAR1Gaussian
+?impute_AR1_Gaussian
 ```
 
 
