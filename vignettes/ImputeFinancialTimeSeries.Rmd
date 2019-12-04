@@ -57,142 +57,115 @@ help(package = "imputeFin")
 
 
 # Usage of the package
-This package can be used to impute missing values in time series that fit AR(1) model. Besides, it can also be used to estimate the model parameters of AR(1) model from incomplete time serie with missing values.
+This package can be used to impute missing values in time series that fit a random walk or an AR(1) model. Besides, it can be used to estimate the model parameters of the models from incomplete time series with missing values.
 
 
-## Dataset
-To use this package, the time series objects with missing values should be coercible to either a numeric vector or numeric matrix (e.g., zoo or xts) with missing values denoted by NA. For convienience of illustration and testing purposes, we provide two zoo time series objects with missing values in the package. One of the time series objects is generated from an AR(1) model with Gaussian distributed innovations. The generated incomplete time series object with missing values, together with the model parameters, are stored in `ts_AR1_Gaussian`. The other time series object is generated from an AR(1) model with Student's t distributed innovations. The generated time series object and model parameters are stored in `ts_AR1_t`. These data can be loaded as follows:
-```{r, message = FALSE}
-library(imputeFin)
-data(ts_AR1_Gaussian) 
-data(ts_AR1_t) 
-```
+## Datasets
+To use this package, the time series object with missing values should be coercible to either a numeric vector or numeric matrix (e.g., `zoo` or `xts`) with missing values denoted by NA. For convenience, the package contains two time series objects with missing values:
 
-## Parameter estimation of Gaussian AR(1) model
-In this part, we show how to use the function `estimateAR1Gaussian()` to estimate the parameters of the Gaussian AR(1) model from incomplete time series with missing values. 
+- `ts_AR1_Gaussian` is a list containing a time series with missing values `y_missing` generated from an AR(1) model with Gaussian distributed innovations, and the parameters of the model `phi0`, `phi1`, and `sigma2`;
+- `ts_AR1_t` is a list containing a time series with missing values `y_missing` generated from an AR(1) model with Student's $t$ distributed innovations, and the parameters of the model `phi0`, `phi1`, `sigma2`, and `nu`.
 
-We start with univariate Gaussian AR(1) time series. In the following example, we first load package and a univariate Gaussian AR(1) time series object with missing values.  Then we use the function `estimateAR1Gaussian()` to estimate the parameters of Gaussian AR(1) model. The function returns a list consisting of the estimated values of the parameters.
-
-```{r, message = FALSE}
+```{r, message=FALSE}
 library(imputeFin)
 data(ts_AR1_Gaussian)
-y_missing <- ts_AR1_Gaussian$y_missing[,2]
-estimation_result <- estimateAR1Gaussian(y_missing)
-estimation_result$phi0
-estimation_result$phi1
-estimation_result$sigma2
-```
-If you know that the time series is from a random walk model, which means that the `phi1 = 1`, then you can set the argument `random_walk = TRUE` (it is `FALSE` by default). Or if the time series is from a Gaussian AR(1) model with zero mean, then you should set the argument `zero_mean = TRUE` (it is `FALSE` by default).
-
-```{r, message = FALSE}
-estimation_result <- estimateAR1Gaussian(y_missing, random_walk = TRUE)
-estimation_result$phi0
-estimation_result$phi1
-estimation_result$sigma2
-```
-
-For multiple time series, the function `estimateAR1Gaussian()` can be used in the same way. In the following example, the object `y_missing` contains three different time series: 'a', 'b', and 'c'. The function `estimateAR1Gaussian()` estimates model parameters for each time series separately. The returned value is a list consisting of the estimation results for each time series and additional elements that combine the estimated values in a convenient vector form.
-
-```{r, message = FALSE}
-y_missing <- ts_AR1_Gaussian$y_missing
-estimation_result <- estimateAR1Gaussian(y_missing)
-estimation_result$a
-estimation_result$b
-estimation_result$c
-estimation_result$phi0_vct
-estimation_result$phi1_vct
-estimation_result$sigma2_vct
-```
-
-## Parameter estimation of Student's t AR(1) model
-The function `estimateAR1t()` can be used to estimate the parameters of the Student's t AR(1) model from incomplete time series with missing values. Its usage is similar to the usage of `estimateAR1Gaussian()`. When using `estimateAR1t()`, there is an argument `fast_and_heuristic`, which indicates whether a heuristic but fast method is to be used to estimate the parameters. By default, it is `TRUE`.
-```{r, message = FALSE}
-library(imputeFin)
 data(ts_AR1_t)
-y_missing <- ts_AR1_t$y_missing
-estimation_result <- estimateAR1t(y_missing)
-estimation_result$a
-estimation_result$b
-estimation_result$c
-estimation_result$phi0_vct
-estimation_result$phi1_vct
-estimation_result$sigma2_vct
-estimation_result$nu_vct
+names(ts_AR1_t)
 ```
 
+## Fitting a Gaussian AR(1) model
+We start with the function `fit_AR1_Gaussian()` to fit a univariate Gaussian AR(1) model and estimate the parameters:
+```{r}
+y_missing <- ts_AR1_Gaussian$y_missing[, 2]
+fitted <- fit_AR1_Gaussian(y_missing)
+fitted
+```
 
-## Imputation of missing values based on Gaussian AR(1) model
-In this part, we show how to use the function `imputeAR1Gaussian()` to impute the missing values in time series based on Gaussian AR(1) model. First, we load package and a Gaussian AR(1) time series object with missing values. Then we use the function `imputeAR1Gaussian()` to impute the missing values. Finally, we use the function `plotImputed` to plot the imputed time series. 
+If instead we want to fit a random walk model, which means that `phi1 = 1`, then we can set the argument `random_walk = TRUE` (similarly, if we want to force a zero mean, then we can set `zero_mean = TRUE`):
+```{r}
+fitted <- fit_AR1_Gaussian(y_missing, random_walk = TRUE)
+fitted
+```
 
-              
-```{r, message = FALSE}
-library(imputeFin)
-data(ts_AR1_Gaussian)
+For multivariate time series, the function `fit_AR1_Gaussian()` can still be used but it simply works on each univariate time series individually (thus no multivariate fitting, just univariate fitting). In the following example, the object `y_missing` contains three different time series named 'a', 'b', and 'c'. The function `fit_AR1_Gaussian()` fits each time series separately and the returned value is a list consisting of the estimation results for each time series and additional elements that combine the estimated values in a convenient vector form:
+```{r}
 y_missing <- ts_AR1_Gaussian$y_missing
-y_imputed <- imputeAR1Gaussian(y_missing)
-plotImputed(y_imputed, column = 1, type = "ggplot2")
+fitted <- fit_AR1_Gaussian(y_missing)
+names(fitted)
+fitted$a
+fitted$phi0_vct
+```
+
+## Fitting a Student's t AR(1) model
+The function `fit_AR1_t()` works similarly to `fit_AR1_Gaussian()` but assuming that the residuals follow a Student's $t$ distribution:
+```{r}
+y_missing <- ts_AR1_t$y_missing[, 2]
+fitted <- fit_AR1_t(y_missing)
+fitted
+```
+It is important to note the argument `fast_and_heuristic`, which indicates whether a heuristic but fast method is to be used to estimate the parameters (by default, it is `TRUE`).
+
+## Imputation of missing values from Gaussian AR(1) model
+We now show how to use the function `impute_AR1_Gaussian()` to impute the missing values in the time series based on the Gaussian AR(1) model, and how to conveniently plot the imputed time series with the function `plot_imputed()`:
+```{r, fig.width = 9, fig.height = 5, out.width = "100%"}
+y_missing <- ts_AR1_Gaussian$y_missing[, 1]
+y_imputed <- impute_AR1_Gaussian(y_missing)
+plot_imputed(y_imputed)
+```
+
+The function `impute_AR1_Gaussian()` first fits the Gaussian AR(1) model to the incomplete time series data with missing values, and then imputes the missing values by drawing samples from the conditional distribution of the missing values given the observed data based on the estimated Gaussian AR(1) model. By default, the number of imputations is 1 (`n_samples = 1`), and the function `impute_AR1_Gaussian()` returns an imputed time series of the same class and dimensions as the input data but with one new attribute recording the locations of the missing values (the function `plot_imputed()` makes use of such information to indicate the imputed values).
+
+If multiple imputations are desired, simply set the argument `n_samples` to the desired number. Then the function will return a list consisting of each imputed time series:
+```{r}
+res <- impute_AR1_Gaussian(y_missing, n_samples = 3)
+names(res)
+```
+
+In addition to the imputed time series, the function can return the estimated parameters of the model by setting the argument `return_estimates = TRUE` (by default, it is `FALSE`):
+```{r}
+res <- impute_AR1_Gaussian(y_missing, n_samples = 3, return_estimates = TRUE)
+names(res)
 ```
 
 
-The function `imputeAR1Gaussian()`  first estimate the model parameters of Gaussian AR(1) model from the input incomplete time series with missing values, and then impute missing values of time series by drawing samples from the conditional distribution of the missing values given the observed data based on the estimated Gaussian AR(1) model. By default, the number of imputations is 1 (`n_samples = 1`), and the function `imputeAR1Gaussian()` return an imputed time series of the same class and dimensions with the input `y_missing` with one new attribute recording the locations of missing values (the function `plotImputed()` make use of such information to indicate the imputed values).
-
-If you want multiple imputations, for example, three imputations, you can set the argument `n_samples = 3`. Then the function will return a list consisting of three imputed time series with names: y_imputed.1, y_imputed.2, and y_imputed.3 
-
-```{r, message = FALSE}
-imputation_result <- imputeAR1Gaussian(y_missing, n_samples = 3)
-y_imputed1 = imputation_result$y_imputed.1
-y_imputed2 = imputation_result$y_imputed.2
-y_imputed3 = imputation_result$y_imputed.3
+## Imputation of missing values from Student's t AR(1) model
+The function `impute_AR1_t()` works similarly to `impute_AR1_Gaussian()` but assuming that the residuals follow a Student's $t$ distribution:
+```{r, fig.width = 9, fig.height = 5, out.width = "100%"}
+y_missing <- ts_AR1_t$y_missing[, 1]
+res <- impute_AR1_t(y_missing, n_samples = 3, return_estimates = TRUE)
+names(res)
+y_imputed1 <- res$y_imputed.1
+plot_imputed(y_imputed1)
 ```
 
-In addition to the imputed time series, the function can return the estimated parameters of Gaussian AR(1) model if you set the argument `return_estimates = TRUE` (by default, it is `FALSE`).
 
-```{r, message = FALSE}
-imputation_result <- imputeAR1Gaussian(y_missing, n_samples = 3, return_estimates = TRUE)
-phi0 = imputation_result$phi0
-phi1 = imputation_result$phi1
-sigma2 = imputation_result$sigma2
-```
 
-## Imputation of missing values based on Student's t AR(1) model
-
-The imputation function `imputeAR1t()` is developed to impute the missing values in time series based on  Student's t AR(1) model. Instead of the Gaussian AR(1) model, the function `imputeAR1t()` fits the Student's t AR(1) model to time series and impute the missing values. The usage of  `imputeAR1t()` is similar to the usage of `imputeAR1Gaussian()`.
-
-```{r, message = FALSE}
-library(imputeFin)
-data(ts_AR1_t)
-y_missing <- ts_AR1_t$y_missing
-imputation_result <- imputeAR1t(y_missing, n_samples = 3, return_estimates = TRUE)
-y_imputed1 = imputation_result$y_imputed.1
-y_imputed2 = imputation_result$y_imputed.2
-y_imputed3 = imputation_result$y_imputed.3
-phi0 = imputation_result$phi0
-phi1 = imputation_result$phi1
-sigma2 = imputation_result$sigma2
-nu = imputation_result$nu
-plotImputed(y_imputed1, column = 1, type = "ggplot2")
-```
 
 # Comparison with other packages
-We compare our package with the existing package `imputeTS`. We download the adjusted price of S&P 500 index from 2012-01-01 to 2015-07-08, and compute the log prices. Some log prices are deleted to generate missing values. Then we plot the imputed time series obtained by functions in package `imputeTS` and our function `imputeAR1t()`，respectively.
-
-```{r, message = FALSE}
+We compare our package with the existing package `imputeTS`. We first download the adjusted prices of the S&P 500 index from 2012-01-01 to 2015-07-08, compute the log-prices, and intentionally delete some of them for illustrative purposes. 
+```{r, message=FALSE}
 # download data
 library(quantmod)
-y_orig <- log(Ad(getSymbols("^GSPC", from = "2012-01-01", to = "2015-07-08", auto.assign = FALSE)))
-n <- nrow(y_orig)
-miss_pct <- 0.2 # the percentage of missing values
-n_miss <- floor(miss_pct*n)
-index_miss <- round(n/2) + 1:n_miss
+y_orig <- log(Ad(getSymbols("^GSPC", 
+                            from = "2012-01-01", to = "2015-07-08", auto.assign = FALSE)))
+T <- nrow(y_orig)
+
+# introduce 20% of missing values artificially
+miss_pct <- 0.2
+T_miss <- floor(miss_pct*T)
+index_miss <- round(T/2) + 1:T_miss
 y_missing <- y_orig
 y_missing[index_miss] <- NA
+```
 
+Now we plot the imputed time series obtained by functions in package `imputeTS` and our function `impute_AR1_t()`:
+```{r, message=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
 # impute using package imputeTS
-library("imputeTS")
-y_imputed_km = na.kalman(y_missing)
-y_imputed_random = na.random(y_missing)
-y_imputed_linear = na.interpolation(y_missing, "spline")
-index_miss_bis = index_miss
+library(imputeTS)
+y_imputed_km <- na.kalman(y_missing)
+y_imputed_random <- na.random(y_missing)
+y_imputed_linear <- na.interpolation(y_missing, "spline")
+index_miss_bis <- index_miss
 par(mfrow=c(2,2))
 { plot(y_missing, main="orignal")
   lines(y_orig[index_miss_bis], col="red", lwd=2) }
@@ -205,23 +178,33 @@ par(mfrow=c(2,2))
 
 # impute using our package
 library(imputeFin)
-imputation_result <- imputeAR1t(y_missing, n_samples = 3)
-y_imputed1 = imputation_result$y_imputed.1
-y_imputed2 = imputation_result$y_imputed.2
-y_imputed3 = imputation_result$y_imputed.3
-par(mfrow=c(2,2))
-{ plot(y_missing, main="orignal")
-  lines(y_orig[index_miss_bis], col="red", lwd=2) }
-{ plot(y_missing, main="AR1t")
-  lines(y_imputed1[index_miss_bis], col="red", lwd=2) }
-{ plot(y_missing, main="AR1t")
-  lines(y_imputed2[index_miss_bis], col="red", lwd=2) }
-{ plot(y_missing, main="AR1t")
-  lines(y_imputed3[index_miss_bis], col="red", lwd=2) }
+res <- impute_AR1_t(y_missing, n_samples = 3)
+y_imputed1 <- res$y_imputed.1
+y_imputed2 <- res$y_imputed.2
+y_imputed3 <- res$y_imputed.3
 
+
+library(gridExtra)
+p11 <- plot_imputed(y_orig, title = "Original")
+p12 <- plot_imputed(res$y_imputed.1, title = "Imputation 1")
+p21 <- plot_imputed(res$y_imputed.2, title = "Imputation 2")
+p22 <- plot_imputed(res$y_imputed.3, title = "Imputation 3")
+grid.arrange(p11, p12, p21, p22, ncol = 2, nrow = 2)
 ```
 
-# Parameter Estimation Approaches
+```{r, echo=FALSE, eval=FALSE}
+par(mfrow = c(2, 2))
+{ plot(y_missing, main="orignal")
+  lines(y_orig[index_miss_bis], col="red", lwd=2) }
+plot_imputed(res$y_imputed.1, title = "AR1 t", type = "simple")
+plot_imputed(res$y_imputed.2, title = "AR1 t", type = "simple")
+plot_imputed(res$y_imputed.3, title = "AR1 t", type = "simple")
+```
+
+
+
+# Algorithms
+## Parameter estimation
 The parameter estimation for the AR(1) models with Gaussian and Student's t distributed innovations are based on the maximum likelihood estimation (MLE) given the observed data. Suppose we have a univariate time series $y_{1}$, $y_{2}$,$\ldots$,
 $y_{T}$ from the Gaussian AR($1$) model 
 $$
@@ -254,6 +237,10 @@ where $f_{t}\left(\cdot\right)$ denotes the probability density function
 (pdf) of a Gaussian distribution.
 
 The objective function in the above optimization problems are very complicated, and there are no closed-formed solution for them. Thus, it is necessary to resort to the expectation-maximization (EM) framework to derive efficient iterative algorithms to solve these MLE problems. An EM agorithm has been developed to estimate parameters for the Gaussian case [@LittleRubin2002]. A stochastic version of EM algorithm has been derived to deal with the Student's t case [@LiuKumarPalomar2019].
+
+## Imputation
+TBD
+
 
 
 # References {-}
