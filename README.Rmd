@@ -1,10 +1,10 @@
 ---
 output:
+  md_document:
+    variant: markdown_github
   html_document:
     variant: markdown_github
     keep_md: true
-  md_document:
-    variant: markdown_github
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -72,8 +72,21 @@ citation("imputeFin")
 
 
 
-## Usage of `imputeFin`
-TBD
+## Quick Start
+Let's load some time series data with missing values for illustration purposes:
+```{r, message=FALSE}
+library(imputeFin)
+data(ts_AR1_Gaussian)
+names(ts_AR1_Gaussian)
+```
+
+We can then impute one of the time series and plot it:
+```{r, warning=FALSE, fig.width = 9, fig.height = 5, out.width = "80%"}
+y_missing <- ts_AR1_Gaussian$y_missing[, 3]
+y_imputed <- impute_AR1_Gaussian(y_missing)
+plot_imputed(y_imputed)
+```
+
 
 
 
