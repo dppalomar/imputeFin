@@ -244,7 +244,12 @@ where $f_{t}\left(\cdot\right)$ denotes the probability density function
 The objective function in the above optimization problems are very complicated, and there are no closed-formed solution for them. Thus, it is necessary to resort to the expectation-maximization (EM) framework to derive efficient iterative algorithms to solve these MLE problems. An EM agorithm has been developed to estimate parameters for the Gaussian case [@LittleRubin2002]. A stochastic version of EM algorithm has been derived to deal with the Student's t case [@LiuKumarPalomar2019].
 
 ## Imputation
-TBD
+For the imputation, we impute the missing values by randomly drawing
+samples from the conditional distribution $p\left(\mathbf{y}_{\mathsf{miss}}|\mathbf{y}_{\mathsf{obs}},\boldsymbol{\theta}^{\mathsf{ML}}\right)$,
+where $\mathbf{y}_{\mathsf{obs}}$ is the observed values and $\boldsymbol{\theta}^{\mathsf{ML}}$
+is the MLE result for the model parameters. Due to the complexity
+of the conditional distribution $p\left(\mathbf{y}_{\mathsf{miss}}|\mathbf{y}_{\mathsf{obs}},\boldsymbol{\theta}^{\mathsf{ML}}\right)$,
+we cannot sample from it direcly, and a Gibbs sampling scheme is designed to draw realizations. 
 
 
 

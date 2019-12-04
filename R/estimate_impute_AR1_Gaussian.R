@@ -276,14 +276,14 @@ diag1 <- function(X) {
 #' @import MASS
 #' @export
 impute_AR1_Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trailing_NAs = FALSE,
-                                random_walk = FALSE, zero_mean = FALSE, return_estimates = FALSE) { 
+                                random_walk = FALSE, zero_mean = FALSE, return_estimates = FALSE, tol = 1e-10, maxiter = 1000) { 
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
   if (round(n_samples)!=n_samples | n_samples<=0) stop("\"n_samples\" must be a positive integer.")
 
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {
-      impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, impute_leading_NAs, impute_trailing_NAs, random_walk, zero_mean, return_estimates)
+      impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, impute_leading_NAs, impute_trailing_NAs, random_walk, zero_mean, return_estimates, tol, maxiter)
       })
     if (n_samples == 1 && !return_estimates) {
       index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result)$index_miss})
@@ -318,10 +318,10 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, im
   
   
   if (!anyNA(y)) { # trivial case with no NAs
-    if (return_estimates) estimation_result <- fit_AR1_Gaussian(y, random_walk, zero_mean)
+    if (return_estimates) estimation_result <- fit_AR1_Gaussian(y, random_walk, zero_mean, tol = tol, maxiter = maxiter)
     index_miss <- NULL
   } else {
-    estimation_result <- fit_AR1_Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE)
+    estimation_result <- fit_AR1_Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE, tol = tol, maxiter = maxiter)
     index_miss <- which(is.na(y))  # indexes of missing values
     index_obs <- which(!is.na(y))
     index_obs_min <- min(index_obs)

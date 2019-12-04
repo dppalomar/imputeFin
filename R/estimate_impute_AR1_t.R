@@ -109,7 +109,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   y <- y[min(index_obs):max(index_obs)]
   
   # trivial case with no NAs
-  if (!anyNA(y)) return(fit_AR1_t_complete(y, random_walk, zero_mean, return_iterates))
+  if (!anyNA(y)) return(fit_AR1_t_complete(y, random_walk, zero_mean, return_iterates, tol,  maxiter))
   
   # find the missing blocks
   list2env(findMissingBlock(y), envir = environment())
@@ -253,6 +253,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
 impute_AR1_t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trailing_NAs = FALSE,
                          random_walk = FALSE, zero_mean = FALSE, 
                          fast_and_heuristic = TRUE, return_estimates = FALSE,
+                         tol = 1e-10,  maxiter = 100, K = 30,
                          n_burn = 100, n_thin = 50) {
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
@@ -261,7 +262,7 @@ impute_AR1_t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_tr
   if (round(n_thin)!=n_thin | n_thin<=0) stop("\"n_thin\" must be a positive integer.")
   
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {impute_AR1_t(y[, i, drop = FALSE], n_samples, impute_leading_NAs, impute_trailing_NAs,  random_walk, zero_mean, fast_and_heuristic, return_estimates, n_burn, n_thin)})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {impute_AR1_t(y[, i, drop = FALSE], n_samples, impute_leading_NAs, impute_trailing_NAs,  random_walk, zero_mean, fast_and_heuristic, return_estimates, tol,  maxiter , K, n_burn, n_thin)})
     if (n_samples == 1 && !return_estimates) {
       index_miss_list <- lapply(results_list, FUN = function(result){attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
@@ -297,10 +298,10 @@ impute_AR1_t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_tr
   
   # trivial case with no NAs
   if (!anyNA(y)){
-    if (return_estimates) estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic)
+    if (return_estimates) estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, tol = tol,  maxiter = maxiter, K = K)
     index_miss = NULL
   } else {
-    estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, return_condMean_Gaussian = TRUE)
+    estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, return_condMean_Gaussian = TRUE, tol = tol,  maxiter = maxiter, K = K)
     phi0 <- estimation_result$phi0
     phi1 <- estimation_result$phi1
     sigma2 <- estimation_result$sigma2
