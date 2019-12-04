@@ -14,7 +14,7 @@
 #'
 #' @inheritParams estimateAR1Gaussian
 #' @param return_condMean_Gaussian Logical value indicating if the conditional mean and covariance matrix of the 
-#'                           time series (excluding the missing values at the head and tail) given the observed data are to be returned (default is \code{FALSE}).
+#'                           time series (excluding the leading and trailing missing values) given the observed data are to be returned (default is \code{FALSE}).
 #' @param fast_and_heuristic Logical value indicating whether a heuristic but fast method is to be used to 
 #'                           estimate the parameters of the Student's t AR(1) model (default is \code{TRUE}).
 #' @param maxiter Positive integer indicating the maximum number of iterations allowed (default is \code{100}).
@@ -62,8 +62,8 @@
 #' @author Junyan Liu and Daniel P. Palomar
 #' 
 #' @references 
-#' J. Liu, S. Kumar, and D. P. Palomar, “Parameter estimation of heavy-tailed AR model with missing 
-#' data via stochastic EM,” IEEE Trans. on Signal Processing, vol. 67, no. 8, pp. 2159-2172, 15 April, 2019. 
+#' J. Liu, S. Kumar, and D. P. Palomar, "Parameter estimation of heavy-tailed AR model with missing 
+#' data via stochastic EM," IEEE Trans. on Signal Processing, vol. 67, no. 8, pp. 2159-2172, 15 April, 2019. 
 #'
 #' @examples 
 #' library(imputeFin)
@@ -101,7 +101,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
   
   # error control
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
-  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
+  if (sum(!is.na(y))<5) stop("Each time series in \"y\" must have at least five observations.")
   
   y <- as.numeric(y)
   # remove the missing values at the head and tail of the time series since they do not affect the estimation result
@@ -205,8 +205,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
 #' @description Impute missing values of time series by drawing samples from 
 #'              the conditional distribution of the missing values given the 
 #'              observed data based on a Student's t AR(1) model as estimated 
-#'              with the function \code{\link{estimateAR1t}}. Leading
-#'              and trailing missing values are not imputed.
+#'              with the function \code{\link{estimateAR1t}}.
 #'
 #' @inheritParams imputeAR1Gaussian
 #' @inheritParams estimateAR1t
@@ -237,8 +236,8 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
 #' @author Junyan Liu and Daniel P. Palomar
 #' 
 #' @references 
-#' J. Liu, S. Kumar, and D. P. Palomar, “Parameter estimation of heavy-tailed AR model with missing 
-#' data via stochastic EM,” IEEE Trans. on Signal Processing, vol. 67, no. 8, pp. 2159-2172, 15 April, 2019. 
+#' J. Liu, S. Kumar, and D. P. Palomar, "Parameter estimation of heavy-tailed AR model with missing 
+#' data via stochastic EM," IEEE Trans. on Signal Processing, vol. 67, no. 8, pp. 2159-2172, 15 April, 2019. 
 #' 
 #' @examples
 #' library(imputeFin)
@@ -249,7 +248,8 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
 #' @import zoo
 #' @import MASS
 #' @export
-imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE, 
+imputeAR1t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trailing_NAs = FALSE,
+                       random_walk = FALSE, zero_mean = FALSE, 
                        fast_and_heuristic = TRUE, return_estimates = FALSE,
                        n_burn = 100, n_thin = 50) {
   # error control
@@ -287,7 +287,7 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
 ##############################################################
   # error control
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
-  if (sum(!is.na(y))<5) stop("Each column of \"y\" must have at least five observations.")
+  if (sum(!is.na(y))<5) stop("Each time series in \"y\" must have at least five observations.")
   
   y_attrib <- attributes(y)
   y <- as.numeric(y)
@@ -309,7 +309,6 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
     index_obs_min <- min(index_obs)
     index_obs_max <- max(index_obs)
     
-    # if there are missing values at the head of the time series, impute them.
     index_miss_middle <- index_miss[index_miss>index_obs_min & index_miss<index_obs_max]
     if (length(index_miss_middle) > 0) {
       y_middle <- y[min(index_obs):max(index_obs)] # deleted the missing values at the head and tail
@@ -331,15 +330,15 @@ imputeAR1t <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE,
       }
       index_miss <- which(is.na(y))
     }
-    # browser()
-    # if there are missing values at the head of the time series, impute them.
-    if (index_obs_min > 1) { 
+
+    # if there are missing values at the head of the time series and impute_leading_NAs == TRUE, impute them.
+    if (index_obs_min > 1 & impute_leading_NAs) { 
       for (j in (index_obs_min - 1):1 )
         y_imputed[j, ] <- ( y_imputed[j + 1, ] - rt(n_samples, nu) * sqrt(sigma2) - phi0 )/phi1
     }
 
-    # if there are missing values at the tail of the time series, impute them.
-    if (index_obs_max < length(y)){
+    # if there are missing values at the tail of the time series and impute_trailing_NAs == TRUE, impute them.
+    if (index_obs_max < length(y) & impute_trailing_NAs){
       for (i in (index_obs_max + 1):length(y))
         y_imputed[i, ] <- phi0 + phi1 * y_imputed[i - 1, ] +  rt(n_samples, nu) * sqrt(sigma2)
     }
