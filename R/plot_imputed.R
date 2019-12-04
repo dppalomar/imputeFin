@@ -43,41 +43,51 @@ plot_imputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple"), t
     if (any_index_miss)
       index_miss <- attributes(y_imputed)$index_miss
   }
-  
-  index_y <- index(y_imputed_i)
+
+  # separate missing values into isolated and nonisolated
+  if (any_index_miss) {
+    index_miss_nonisolated <- NULL
+    for (i in index_miss)
+      if (any(c(i-1, i+1) %in% index_miss))  # any neighbor
+        index_miss_nonisolated <- c(index_miss_nonisolated, i)
+    index_miss_isolated <- setdiff(index_miss, index_miss_nonisolated)
+  }
+
   switch(match.arg(type),
          "simple" = {
            #p <- plot(index_y, y_imputed_i, type = "l",  col = "black", xlab = "", ylab = "", main = title)
            #grid()
            p <- plot(y_imputed_i)
            if (any_index_miss) {
+             p <- points(y_imputed_i[index_miss], pch = 20, size = 5, col = color_imputed)
              #p <- lines(index_y[index_miss], y_imputed_i[index_miss], col = color_imputed)
-             # points(index_y[index_miss], y_imputed_i[index_miss], pch = 19, col = "red")
-             # legend(x = "topleft", legend = "imputed values", col = "red", pch = 19)
-             p <- lines(y_imputed_i[index_miss], col = color_imputed)
+             # points(index_y[index_miss], y_imputed_i[index_miss], pch = 20, col = "red")
+             # legend(x = "topleft", legend = "imputed values", col = "red", pch = 20)
            }
            p
          },
          "ggplot2" = {
            if (!requireNamespace("ggplot2", quietly = TRUE)) 
              stop("Please install package \"ggplot2\" or choose another plot type.", call. = FALSE)
-           data_frm  <- data.frame(index = index_y, value = as.vector(y_imputed_i))
-           # ggplot2::ggplot() +
-           #   ggplot2::geom_line(data = data_frm, ggplot2::aes(x = index, y = value), col = "black") +
-           #   ggplot2::geom_point(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value), col = "#DD3344") +
-           #   ggplot2::labs(title = "Imputed time series", x = "time")  # + ggplot2::theme_bw()
-           # http://zevross.com/blog/2014/08/04/beautiful-plotting-in-r-a-ggplot2-cheatsheet-3/#manually-adding-legend-items-guides-override.aes
+           data_frm  <- data.frame(index = index(y_imputed_i), value = as.vector(y_imputed_i))
            p <- ggplot2::ggplot() +
              ggplot2::geom_line(data = data_frm, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
              ggplot2::labs(title = title, x = NULL, y = NULL)
              #ggplot2::scale_x_date(date_breaks = "6 months", date_labels = "%b %Y")
-           if (any_index_miss)
-             p <- p + ggplot2::geom_line(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value), col = color_imputed)
-             #ggplot2::geom_point(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value), col = "red", size = 0.1)
-             # p <- p + ggplot2::geom_point(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value, col = "imputed values")) +
-             #   ggplot2::theme(legend.title = ggplot2::element_blank(), legend.justification = c(0.9, 0), legend.position = c(0.98, 0.02)) +
-             #   ggplot2::scale_colour_manual(name = "", values = c("imputed values" = "#DD3344"))
+           if (any_index_miss) {
+             p <- p + ggplot2::geom_point(data = data_frm[index_miss_isolated, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8)
+             if (!is.null(index_miss_nonisolated)) {
+               data_frm$value[-index_miss_nonisolated] <- NA
+               p <- p + suppressWarnings(ggplot2::geom_line(data = data_frm, ggplot2::aes(x = index, y = value), col = color_imputed))
+             }
+           }
            p
          },
          stop("Plot type unknown"))
 }
+
+# http://zevross.com/blog/2014/08/04/beautiful-plotting-in-r-a-ggplot2-cheatsheet-3/#manually-adding-legend-items-guides-override.aes
+# p <- p + ggplot2::geom_point(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value, col = "imputed values")) +
+#   ggplot2::theme(legend.title = ggplot2::element_blank(), legend.justification = c(0.9, 0), legend.position = c(0.98, 0.02)) +
+#   ggplot2::scale_colour_manual(name = "", values = c("imputed values" = "#DD3344"))
+
