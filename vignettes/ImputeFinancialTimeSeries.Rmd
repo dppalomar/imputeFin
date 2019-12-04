@@ -2,26 +2,21 @@
 title: "Imputation of Financial Time Series"
 author: |
   | Junyan Liu and Daniel P. Palomar
-  | Hong Kong University of Science and Technology (HKUST)
+  | The Hong Kong University of Science and Technology (HKUST)
 date: "`r Sys.Date()`"
 output:
-  html_document:
-    highlight: pygments
-    theme: flatly
-    toc: yes
-    toc_depth: 2
-  pdf_document:
-    toc: yes
-    toc_depth: '2'
   prettydoc::html_pretty:
-    highlight: vignette
     theme: tactile
+    highlight: vignette
     toc: yes
     toc_depth: 2
 csl: ieee.csl
 bibliography: refs.bib
 vignette: |
-  %\VignetteIndexEntry{Imputation of Financial Time Series} %\VignetteKeyword{imputation, time series, AR, random walk} %\VignetteEncoding{UTF-8} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Imputation of Financial Time Series}
+  %\VignetteKeyword{imputation, time series, missing values, AR, random walk, econometrics}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 ---
 
 ```{r, echo = FALSE}
@@ -36,14 +31,13 @@ opts_chunk$set(
   pngquant = "--speed=1"
 )
 knit_hooks$set(pngquant = hook_pngquant)
-# Help on bookdown: https://bookdown.org/yihui/bookdown/
-# rmarkdown::render("ImputeFinancialTimeSeries.Rmd", "prettydoc::html_pretty")
+# rmarkdown::render("vignettes/ImputeFinancialTimeSeries.Rmd", "prettydoc::html_pretty")
 ```
 
 -----------
 > This vignette illustrates the usage of the package [`imputeFin`](https://CRAN.R-project.org/package=imputeFin) 
-for imputation of missing values in time series that fit an autoregressive (AR)
-model and also the parameter estimation of AR model from from incomplete time series with missing values. 
+for imputation of missing values in time series that fit a random walk or an autoregressive (AR)
+model. As a side result, the parameters of the model are estimated from the incomplete time series.
 
 
 # Installation
@@ -60,8 +54,11 @@ library(imputeFin)
 help(package = "imputeFin")
 ?imputeAR1Gaussian
 ```
+
+
 # Usage of the package
 This package can be used to impute missing values in time series that fit AR(1) model. Besides, it can also be used to estimate the model parameters of AR(1) model from incomplete time serie with missing values.
+
 
 ## Dataset
 To use this package, the time series objects with missing values should be coercible to either a numeric vector or numeric matrix (e.g., zoo or xts) with missing values denoted by NA. For convienience of illustration and testing purposes, we provide two zoo time series objects with missing values in the package. One of the time series objects is generated from an AR(1) model with Gaussian distributed innovations. The generated incomplete time series object with missing values, together with the model parameters, are stored in `ts_AR1_Gaussian`. The other time series object is generated from an AR(1) model with Student's t distributed innovations. The generated time series object and model parameters are stored in `ts_AR1_t`. These data can be loaded as follows:
