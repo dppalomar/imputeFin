@@ -78,7 +78,7 @@ plot_imputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple"), t
              p <- p + ggplot2::geom_point(data = data_frm[index_miss_isolated, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8)
              if (!is.null(index_miss_nonisolated)) {
                data_frm$value[-index_miss_nonisolated] <- NA
-               p <- p + suppressWarnings(ggplot2::geom_line(data = data_frm, ggplot2::aes(x = index, y = value), col = color_imputed))
+               p <- p + ggplot2::geom_line(data = data_frm, ggplot2::aes(x = index, y = value), col = color_imputed)
              }
            }
            p

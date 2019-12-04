@@ -107,7 +107,7 @@ It is important to note the argument `fast_and_heuristic`, which indicates wheth
 
 ## Imputation of missing values from Gaussian AR(1) model
 We now show how to use the function `impute_AR1_Gaussian()` to impute the missing values in the time series based on the Gaussian AR(1) model, and how to conveniently plot the imputed time series with the function `plot_imputed()`:
-```{r, fig.width = 9, fig.height = 5, out.width = "100%"}
+```{r, warning=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
 y_missing <- ts_AR1_Gaussian$y_missing[, 1]
 y_imputed <- impute_AR1_Gaussian(y_missing)
 plot_imputed(y_imputed)
@@ -130,7 +130,7 @@ names(res)
 
 ## Imputation of missing values from Student's t AR(1) model
 The function `impute_AR1_t()` works similarly to `impute_AR1_Gaussian()` but assuming that the residuals follow a Student's $t$ distribution:
-```{r, fig.width = 9, fig.height = 5, out.width = "100%"}
+```{r, warning=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
 y_missing <- ts_AR1_t$y_missing[, 1]
 res <- impute_AR1_t(y_missing, n_samples = 3, return_estimates = TRUE)
 names(res)
@@ -146,8 +146,8 @@ We compare our package with the existing packages `zoo` and `imputeTS`. We first
 ```{r, message=FALSE}
 # download data
 library(quantmod)
-y_orig <- log(Ad(getSymbols("^GSPC", 
-                            from = "2012-01-01", to = "2015-07-08", auto.assign = FALSE)))
+y_orig <- log(Ad(getSymbols("^GSPC", from = "2012-01-01", to = "2015-07-08", 
+                            auto.assign = FALSE)))
 T <- nrow(y_orig)
 
 # introduce 20% of missing values artificially
@@ -160,16 +160,16 @@ y_missing[index_miss] <- NA
 ```
 
 Now we plot the imputed time series obtained by functions in existing packages `zoo` and `imputeTS`. Basically, all these interpolation methods look artificial and destroy the time series statistics:
-```{r, message=FALSE, fig.width = 9, fig.height = 7.5, out.width = "100%"}
+```{r, message=FALSE, warning=FALSE, fig.width = 9, fig.height = 7.5, out.width = "100%"}
 # impute using packages zoo and imputeTS
 library(zoo)
 library(imputeTS)
 y_imputed_locf   <- zoo::na.locf(y_missing)
 y_imputed_linear <- zoo::na.approx(y_missing)
-y_imputed_ma     <- imputeTS::na.ma(y_missing)
-y_imputed_spline <- imputeTS::na.interpolation(y_missing, "spline")
-y_imputed_stine  <- imputeTS::na.interpolation(y_missing, "stine")
-y_imputed_kalman <- imputeTS::na.kalman(y_missing)
+y_imputed_ma     <- imputeTS::na_ma(y_missing)
+y_imputed_spline <- imputeTS::na_interpolation(y_missing, "spline")
+y_imputed_stine  <- imputeTS::na_interpolation(y_missing, "stine")
+y_imputed_kalman <- imputeTS::na_kalman(y_missing)
 
 # plots
 p1 <- plot_imputed(y_orig, title = "Original")
@@ -182,7 +182,7 @@ gridExtra::grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 2)
 ```
 
 On the other hand, the function `impute_AR1_t()` from the package [`imputeFin`](https://CRAN.R-project.org/package=imputeFin) preserves the time series statistics and looks realistic:
-```{r, message=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
+```{r, message=FALSE, warning=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
 # impute using  package imputeFin
 library(imputeFin)
 res <- impute_AR1_t(y_missing, n_samples = 3)
