@@ -260,7 +260,7 @@ impute_AR1_t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_tr
   if (round(n_thin)!=n_thin | n_thin<=0) stop("\"n_thin\" must be a positive integer.")
   
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {impute_AR1_t(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, fast_and_heuristic, return_estimates, n_burn, n_thin)})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {impute_AR1_t(y[, i, drop = FALSE], n_samples, impute_leading_NAs, impute_trailing_NAs,  random_walk, zero_mean, fast_and_heuristic, return_estimates, n_burn, n_thin)})
     if (n_samples == 1 && !return_estimates) {
       index_miss_list <- lapply(results_list, FUN = function(result){attributes(result)$index_miss})
       results <- do.call(cbind, results_list)

@@ -17,7 +17,7 @@ estimation_result2 <- estimateAR1t(y_missing, random_walk = FALSE, zero_mean = F
 
 
 # test the imputation function and plot function
-imputation_result <- imputeAR1t(y_missing, n_samples = 3, random_walk = FALSE, zero_mean = FALSE, 
+imputation_result <- impute_AR1_t(y_missing, n_samples = 3, random_walk = FALSE, zero_mean = FALSE, 
                                 fast_and_heuristic = FALSE, return_estimates = FALSE,
                                 n_burn = 100, n_thin = 50)
 y_imputed = imputation_result$y_imputed.1

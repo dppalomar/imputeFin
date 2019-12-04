@@ -269,7 +269,7 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, im
   if (round(n_samples)!=n_samples | n_samples<=0) stop("\"n_samples\" must be a positive integer.")
 
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, return_estimates)})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, impute_leading_NAs, impute_trailing_NAs, random_walk, zero_mean, return_estimates)})
     if (n_samples == 1 && !return_estimates) {
       index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
@@ -346,7 +346,6 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, im
                                                                              return(x) })
     results <- c("y_imputed" = y_imputed)
   }
-  
   if (return_estimates)  results <- c(results, list("phi0"   = estimation_result$phi0,
                                                     "phi1"   = estimation_result$phi1,
                                                     "sigma2" = estimation_result$sigma2))

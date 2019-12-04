@@ -25,7 +25,7 @@ library(imputeFin)
 
 # Documentation
 devtools::document()  #to generate all documentation via roxygen
-?imputeAR1Gaussian
+?impute_AR1_Gaussian
 
 
 # Code tests
