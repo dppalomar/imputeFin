@@ -70,6 +70,7 @@ plot_imputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple"), t
            p <- ggplot2::ggplot() +
              ggplot2::geom_line(data = data_frm, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
              ggplot2::labs(title = title, x = NULL, y = NULL)
+             #ggplot2::scale_x_date(date_breaks = "6 months", date_labels = "%b %Y")
            if (any_index_miss)
              p <- p + ggplot2::geom_line(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value), col = color_imputed)
              #ggplot2::geom_point(data = data_frm[index_miss, ], ggplot2::aes(x = index, y = value), col = "red", size = 0.1)

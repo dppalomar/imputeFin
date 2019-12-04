@@ -142,7 +142,7 @@ plot_imputed(y_imputed1)
 
 
 # Comparison with other packages
-We compare our package with the existing package `imputeTS`. We first download the adjusted prices of the S&P 500 index from 2012-01-01 to 2015-07-08, compute the log-prices, and intentionally delete some of them for illustrative purposes. 
+We compare our package with the existing packages `zoo` and `imputeTS`. We first download the adjusted prices of the S&P 500 index from 2012-01-01 to 2015-07-08, compute the log-prices, and intentionally delete some of them for illustrative purposes. 
 ```{r, message=FALSE}
 # download data
 library(quantmod)
@@ -154,43 +154,48 @@ T <- nrow(y_orig)
 miss_pct <- 0.2
 T_miss <- floor(miss_pct*T)
 index_miss <- round(T/2) + 1:T_miss
+attr(y_orig, "index_miss") = index_miss
 y_missing <- y_orig
 y_missing[index_miss] <- NA
 ```
 
-Now we plot the imputed time series obtained by functions in package `imputeTS` and our function `impute_AR1_t()`:
-```{r, message=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
-# impute using package imputeTS
+Now we plot the imputed time series obtained by functions in existing packages `zoo` and `imputeTS`. Basically, all these interpolation methods look artificial and destroy the time series statistics:
+```{r, message=FALSE, fig.width = 9, fig.height = 7.5, out.width = "100%"}
+# impute using packages zoo and imputeTS
+library(zoo)
 library(imputeTS)
-y_imputed_km <- na.kalman(y_missing)
-y_imputed_random <- na.random(y_missing)
-y_imputed_linear <- na.interpolation(y_missing, "spline")
-index_miss_bis <- index_miss
-par(mfrow=c(2,2))
-{ plot(y_missing, main="orignal")
-  lines(y_orig[index_miss_bis], col="red", lwd=2) }
-{ plot(y_missing, main="kalman")
-  lines(y_imputed_km[index_miss_bis], col="red", lwd=2) }
-{ plot(y_missing, main="random")
-  lines(y_imputed_random [index_miss_bis], col="red", lwd=2) }
-{ plot(y_missing, main="spline")
-  lines(y_imputed_linear[index_miss_bis], col="red", lwd=2) }
+y_imputed_locf   <- zoo::na.locf(y_missing)
+y_imputed_linear <- zoo::na.approx(y_missing)
+y_imputed_ma     <- imputeTS::na.ma(y_missing)
+y_imputed_spline <- imputeTS::na.interpolation(y_missing, "spline")
+y_imputed_stine  <- imputeTS::na.interpolation(y_missing, "stine")
+y_imputed_kalman <- imputeTS::na.kalman(y_missing)
 
-# impute using our package
+# plots
+p1 <- plot_imputed(y_orig, title = "Original")
+p2 <- plot_imputed(y_imputed_locf, title = "Imputation with LOCF")
+p3 <- plot_imputed(y_imputed_ma, title = "Imputation with MA")
+p4 <- plot_imputed(y_imputed_linear, title = "Imputation with linear interpolation")
+p5 <- plot_imputed(y_imputed_spline, title = "Imputation with spline interpolation")
+p6 <- plot_imputed(y_imputed_stine, title = "Imputation with Stineman interpolation")
+gridExtra::grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 2)
+```
+
+On the other hand, the function `impute_AR1_t()` from the package [`imputeFin`](https://CRAN.R-project.org/package=imputeFin) preserves the time series statistics and looks realistic:
+```{r, message=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
+# impute using  package imputeFin
 library(imputeFin)
 res <- impute_AR1_t(y_missing, n_samples = 3)
-y_imputed1 <- res$y_imputed.1
-y_imputed2 <- res$y_imputed.2
-y_imputed3 <- res$y_imputed.3
 
-
-library(gridExtra)
-p11 <- plot_imputed(y_orig, title = "Original")
-p12 <- plot_imputed(res$y_imputed.1, title = "Imputation 1")
-p21 <- plot_imputed(res$y_imputed.2, title = "Imputation 2")
-p22 <- plot_imputed(res$y_imputed.3, title = "Imputation 3")
-grid.arrange(p11, p12, p21, p22, ncol = 2, nrow = 2)
+# plots
+p1 <- plot_imputed(y_orig, title = "Original")
+p2 <- plot_imputed(res$y_imputed.1, title = "Imputation 1")
+p3 <- plot_imputed(res$y_imputed.2, title = "Imputation 2")
+p4 <- plot_imputed(res$y_imputed.3, title = "Imputation 3")
+gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2)
 ```
+
+
 
 ```{r, echo=FALSE, eval=FALSE}
 par(mfrow = c(2, 2))
