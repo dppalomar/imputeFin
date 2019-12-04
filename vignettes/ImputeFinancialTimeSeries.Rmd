@@ -210,7 +210,7 @@ plot_imputed(res$y_imputed.3, title = "AR1 t", type = "simple")
 
 # Algorithms
 ## Parameter estimation
-The parameter estimation for the AR(1) models with Gaussian and Student's t distributed innovations are based on the maximum likelihood estimation (MLE) given the observed data. Suppose we have a univariate time series $y_{1}$, $y_{2}$,$\ldots$,
+The parameter estimation for the AR(1) models with Gaussian and Student's $t$ distributed innovations are based on the maximum likelihood estimation (MLE) given the observed data. Suppose we have a univariate time series $y_{1}$, $y_{2}$,$\ldots$,
 $y_{T}$ from the Gaussian AR($1$) model 
 $$
 \begin{equation}
@@ -220,14 +220,14 @@ $$
 where $\varepsilon_{t}\overset{i.i.d.}{\sim}\mathcal{N}\left(0,\sigma^{2}\right)$.
 Some values are missing during the collection, and we denote the missing
 values by $\mathbf{y}_{\mathsf{miss}}$. Then MLE problem for the
-parameters of the Gaussian AR($1$) model takes the form:
+parameters of the Gaussian AR(1) model takes the form:
 
 $$
 \begin{equation}
-\begin{aligned}\mathsf{\underset{\varphi_{0},\varphi_{1},\sigma^{2}}{maximize}} & \thinspace\thinspace\thinspace\log\left(\int\prod_{t=2}^{T}f_{g}\left(y_{t};\varphi_{0}+\varphi_{1}y_{t-1},\sigma^{2}\right)\mathsf{d}\mathbf{y}_{\mathsf{miss}}\right),\end{aligned}
+\begin{aligned}\mathsf{\underset{\varphi_{0},\varphi_{1},\sigma^{2}}{maximize}} & \thinspace\thinspace\thinspace\log\left(\int\prod_{t=2}^{T}f_{G}\left(y_{t};\varphi_{0}+\varphi_{1}y_{t-1},\sigma^{2}\right)\mathsf{d}\mathbf{y}_{\mathsf{miss}}\right),\end{aligned}
 \end{equation}
 $$
-where $f_{g}\left(\cdot\right)$ denotes the probability density function
+where $f_{G}\left(\cdot\right)$ denotes the probability density function
 (pdf) of a Gaussian distribution. 
 
 For Student's $t$ AR(1) model with $\varepsilon_{t}\overset{i.i.d.}{\sim}t\left(0,\sigma^{2},\nu\right)$,
@@ -241,7 +241,7 @@ $$
 where $f_{t}\left(\cdot\right)$ denotes the probability density function
 (pdf) of a Gaussian distribution.
 
-The objective function in the above optimization problems are very complicated, and there are no closed-formed solution for them. Thus, it is necessary to resort to the expectation-maximization (EM) framework to derive efficient iterative algorithms to solve these MLE problems. An EM agorithm has been developed to estimate parameters for the Gaussian case [@LittleRubin2002]. A stochastic version of EM algorithm has been derived to deal with the Student's t case [@LiuKumarPalomar2019].
+The objective functions in the above optimization problems are very complicated, and there are no closed-form solutions for them. Thus, it is necessary to resort to the expectation-maximization (EM) framework to derive efficient iterative algorithms to solve these MLE problems. An EM agorithm was developed to estimate the parameters for the Gaussian case [@LittleRubin2002]. The stochastic version of the EM algorithm has been derived to deal with the Student's $t$ case [@LiuKumarPalomar2019].
 
 ## Imputation
 For the imputation, we impute the missing values by randomly drawing
