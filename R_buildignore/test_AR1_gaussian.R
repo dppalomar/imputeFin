@@ -7,14 +7,14 @@ data(ts_AR1_Gaussian)
 y_missing <- ts_AR1_Gaussian$y_missing
 estimation_result <- fit_AR1_Gaussian(y_missing, random_walk = FALSE, zero_mean = FALSE,
                                          return_iterates = TRUE, return_condMeanCov = TRUE,
-                                         tol = 1e-10,  maxiter = 1000)
+                                         tol = 1e-11,  maxiter = 100)
 
 # y_missing <- ts_AR1_Gaussian$y_missing[,1, drop = FALSE]
 # estimation_result <- estimateAR1Gaussian(y_missing)
 
 # test the imputation function
 imputation_result <- impute_AR1_Gaussian(y_missing, n_samples = 3, random_walk = FALSE, zero_mean = FALSE,
-                                         return_estimates = TRUE)
+                                         return_estimates = TRUE, tol = 1e-11,  maxiter = 100)
 
 y_imputed <- imputation_result$y_imputed.1
 plotImputed(y_imputed, column = 1, type = "simple")
