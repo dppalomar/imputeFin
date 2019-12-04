@@ -2,20 +2,20 @@
 #'
 #' @description Plot single imputed time series (as returned by functions 
 #'              \code{\link{impute_AR1_Gaussian}} and \code{\link{impute_AR1_t}}),
-#'              indicating the imputed values with red dots.
+#'              highlighting the imputed values in a different color.
 #'
 #' @param y_imputed Imputed time series (can be any object coercible to a numeric vector 
 #'                  or a numeric matrix). If it has the attribute \code{"index_miss"} (as
 #'                  returned by any of the imputation functions 
 #'                  \code{\link{impute_AR1_Gaussian}} and \code{\link{impute_AR1_t}}), then
-#'                  it will indicate the imputed values with red dots.
+#'                  it will highlight the imputed values in a different color.
 #' @param column Positive integer indicating the column index to be plotted (only valid if 
 #'               the argument \code{y_imputed} is coercible to a matrix with more than one 
 #'               column). Default is \code{1}.
 #' @param type Type of plot. Valid options: \code{"ggplot2"} and \code{"simple"}. Default is 
 #'             \code{"ggplot2"} (the package \code{ggplot2} must be installed).
-#' @param title Title of the plot (default is \code{"red"}).
-#' @param color_imputed Color for the imputed values (default is \code{"Imputed time series"}).
+#' @param title Title of the plot (default is \code{"Imputed time series"}).
+#' @param color_imputed Color for the imputed values (default is \code{"red"}).
 #' 
 #' @author Daniel P. Palomar and Junyan Liu
 #' 
@@ -24,7 +24,7 @@
 #' data(ts_AR1_t) 
 #' y_missing <- ts_AR1_t$y_missing
 #' y_imputed <- impute_AR1_t(y_missing)
-#' plot_imputed(y_missing)
+#' plot_imputed(y_missing, title = "Original time series with missing values")
 #' plot_imputed(y_imputed)
 #' 
 #' @import zoo

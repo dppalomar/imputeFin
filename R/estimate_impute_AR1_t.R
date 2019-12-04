@@ -1,7 +1,7 @@
-#' @title Fit Student's t AR(1) model to time series with missing values.
+#' @title Fit Student's t AR(1) model to time series with missing values
 #'
-#' @description Estimate the parameters of a Student's t AR(1) model to fit the 
-#'              given univariate time series with missing values. 
+#' @description Estimate the parameters of a univariate Student's t AR(1) 
+#'              model to fit the given time series with missing values. 
 #'              For multivariate time series, the function will perform a 
 #'              number of indidivual univariate fittings without attempting 
 #'              to model the correlations among the time series.
@@ -10,12 +10,12 @@
 #'              EM algorithm until converge is achieved.
 #'              With missing values, the stochastic EM algorithm is employed 
 #'              for the estimation (currently the maximum number of iterations
-#'              will be executed without attempting to chech early converge).
+#'              will be executed without attempting to check early converge).
 #'
 #' @inheritParams fit_AR1_Gaussian
 #' @param return_condMean_Gaussian Logical value indicating if the conditional mean and covariance matrix of the 
-#'                           time series (excluding the leading and trailing missing values) given the observed 
-#'                           data are to be returned (default is \code{FALSE}).
+#'                                 time series (excluding the leading and trailing missing values) given the observed 
+#'                                 data are to be returned (default is \code{FALSE}).
 #' @param fast_and_heuristic Logical value indicating whether a heuristic but fast method is to be used to 
 #'                           estimate the parameters of the Student's t AR(1) model (default is \code{TRUE}).
 #' @param maxiter Positive integer indicating the maximum number of iterations allowed (default is \code{100}).
@@ -85,7 +85,6 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   if (round(n_chain)!=n_chain | n_chain<=0) stop("\"n_chain\" must be a positive integer.")
   if (round(n_thin)!=n_thin | n_thin<=0) stop("\"n_thin\" must be a positive integer.")
   if (round(K)!=K | K<=0) stop("\"K\" must be a positive integer.")
-  
   
   if (NCOL(y) > 1) {
     estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_t, random_walk, zero_mean, fast_and_heuristic, 
@@ -201,7 +200,8 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
 
 
 
-#' @title Impute missing values of time series based on Student's t AR(1) model.
+
+#' @title Impute missing values of time series based on a Student's t AR(1) model
 #'
 #' @description Impute missing values of time series by drawing samples from 
 #'              the conditional distribution of the missing values given the 
@@ -210,7 +210,6 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
 #'
 #' @inheritParams impute_AR1_Gaussian
 #' @inheritParams fit_AR1_t
-#' 
 #' @param n_burn Positive integer controlling the length of the burn-in period of the Gibb sampling 
 #'               (default is \code{100}). The first \code{(n_burn * n_thin)} samples generated will 
 #'               be ignored.
@@ -222,9 +221,10 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
 #'         to indicate the imputed values).
 #'         
 #'         If \code{n_samples > 1}, the function will return a list consisting of \code{n_sample} 
-#'         imputed time series with names: y_imputed.1, y_imputed.2, ... 
+#'         imputed time series with names: y_imputed.1, y_imputed.2, etc.
+#'         
 #'         If \code{return_estimates = TRUE}, in addition to the imputed time series \code{y_imputed}, 
-#'         the function will return the parameter estimated model parameters:
+#'         the function will return the estimated model parameters:
 #'         \item{\code{phi0}}{The estimate for \code{phi0} (numeric scalar or vector depending 
 #'                            on the number of time series).}
 #'         \item{\code{phi1}}{The estimate for \code{phi1} (numeric scalar or vector depending 
@@ -245,6 +245,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
 #' data(ts_AR1_t) 
 #' y_missing <- ts_AR1_t$y_missing
 #' y_imputed <- impute_AR1_t(y_missing)
+#' plot_imputed(y_imputed)
 #' 
 #' @import zoo
 #' @import MASS

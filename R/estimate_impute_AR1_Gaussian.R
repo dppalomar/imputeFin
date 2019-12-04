@@ -1,9 +1,9 @@
-#' @title Fit Gaussian AR(1) model to time series with missing values.
+#' @title Fit Gaussian AR(1) model to time series with missing values
 #'
-#' @description Estimate the parameters of a Gaussian AR(1) model to fit the 
-#'              given univariate time series with missing values. 
+#' @description Estimate the parameters of a univariate Gaussian AR(1) model 
+#'              to fit the given time series with missing values. 
 #'              For multivariate time series, the function will perform a 
-#'              number of indidivual univariate fittings without attempting 
+#'              number of individual univariate fittings without attempting 
 #'              to model the correlations among the time series.
 #'              If the time series does not contain missing values, the 
 #'              maximum likelihood (ML) estimation is done in one shot.
@@ -57,6 +57,9 @@
 #' @references
 #' R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
 #' 
+#' J. Liu, S. Kumar, and D. P. Palomar, "Parameter estimation of heavy-tailed AR model with missing 
+#' data via stochastic EM," IEEE Trans. on Signal Processing, vol. 67, no. 8, pp. 2159-2172, 15 April, 2019. 
+#' 
 #' @examples 
 #' library(imputeFin)
 #' data(ts_AR1_Gaussian)
@@ -67,7 +70,7 @@
 #' @export
 fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                              return_iterates = FALSE, return_condMeanCov = FALSE,
-                             tol = 1e-10,  maxiter = 1000) {
+                             tol = 1e-10, maxiter = 1000) {
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
   if (tol <= 0) stop("\"tol\" must be greater than 0.")
@@ -218,7 +221,9 @@ diag1 <- function(X) {
 }
 
 
-#' @title Impute missing values of time series based on a Gaussian AR(1) model.
+
+
+#' @title Impute missing values of time series based on a Gaussian AR(1) model
 #'
 #' @description Impute missing values of time series by drawing samples from 
 #'              the conditional distribution of the missing values given the 
@@ -228,9 +233,9 @@ diag1 <- function(X) {
 #' @inheritParams fit_AR1_Gaussian
 #' @param n_samples Positive integer indicating the number of imputations (default is \code{1}).
 #' @param impute_leading_NAs Logical value indicating if the leading missing values of time 
-#'                        series are to be imputed (default is \code{FALSE}).
+#'                           series are to be imputed (default is \code{FALSE}).
 #' @param impute_trailing_NAs Logical value indicating if the trailing missing values of time 
-#'                        series are to be imputed (default is \code{FALSE}).                      
+#'                            series are to be imputed (default is \code{FALSE}).                      
 #' @param return_estimates Logical value indicating if the estimates of the model parameters 
 #'                         are to be returned (default is \code{FALSE}).
 #'                         
@@ -241,9 +246,10 @@ diag1 <- function(X) {
 #'         to indicate the imputed values).
 #'         
 #'         If \code{n_samples > 1}, the function will return a list consisting of \code{n_sample} 
-#'         imputed time series with names: y_imputed.1, y_imputed.2, ... 
+#'         imputed time series with names: y_imputed.1, y_imputed.2, etc. 
+#'         
 #'         If \code{return_estimates = TRUE}, in addition to the imputed time series \code{y_imputed}, 
-#'         the function will return the parameter estimated model parameters:
+#'         the function will return the estimated model parameters:
 #'         \item{\code{phi0}}{The estimate for \code{phi0} (numeric scalar or vector depending 
 #'                            on the number of time series).}
 #'         \item{\code{phi1}}{The estimate for \code{phi1} (numeric scalar or vector depending 
@@ -253,11 +259,18 @@ diag1 <- function(X) {
 #' 
 #' @author Junyan Liu and Daniel P. Palomar
 #' 
+#' @references
+#' R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
+#' 
+#' J. Liu, S. Kumar, and D. P. Palomar, "Parameter estimation of heavy-tailed AR model with missing 
+#' data via stochastic EM," IEEE Trans. on Signal Processing, vol. 67, no. 8, pp. 2159-2172, 15 April, 2019. 
+#' 
 #' @examples
 #' library(imputeFin)
 #' data(ts_AR1_Gaussian) 
 #' y_missing <- ts_AR1_Gaussian$y_missing
 #' y_imputed <- impute_AR1_Gaussian(y_missing)
+#' plot_imputed(y_imputed)
 #' 
 #' @import zoo
 #' @import MASS
@@ -269,7 +282,9 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, im
   if (round(n_samples)!=n_samples | n_samples<=0) stop("\"n_samples\" must be a positive integer.")
 
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, impute_leading_NAs, impute_trailing_NAs, random_walk, zero_mean, return_estimates)})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {
+      impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, impute_leading_NAs, impute_trailing_NAs, random_walk, zero_mean, return_estimates)
+      })
     if (n_samples == 1 && !return_estimates) {
       index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result)$index_miss})
       results <- do.call(cbind, results_list)

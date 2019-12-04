@@ -9,10 +9,10 @@ Description: Missing values often occur in financial data due to a variety
     with missing values. One convenient way to deal with this issue without 
     having to redesign the data analysis method is to impute the missing 
     values. This package provides an efficient way to impute the missing 
-    values based on modeling the time series with an autoregressive (AR) model,
-    convenient to model log-prices and log-volume in financial data. In the
-    current version, the imputation is univariate-based (so no asset correlation 
-    is used). 
+    values based on modeling the time series with a random walk or an 
+    autoregressive (AR) model, convenient to model log-prices and log-volumes 
+    in financial data. In the current version, the imputation is 
+    univariate-based (so no asset correlation is used). 
     The package is based on the paper:
     J. Liu, S. Kumar, and D. P. Palomar (2019). Parameter Estimation of 
     Heavy-Tailed AR Model With Missing Data Via Stochastic EM. IEEE Trans. on 
