@@ -1,4 +1,5 @@
 context("Conditional Mean and Covariance Matrix")
+#library(testthat)
 
 library(xts)
 
