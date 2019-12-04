@@ -27,7 +27,6 @@ index_miss3 <- union(index_miss1, index_miss2)
 y_missing_numeric[index_miss1, 1] <- NA
 y_missing_numeric[index_miss2, 2] <- NA
 y_missing_numeric[index_miss3, 3] <- NA
-# y_missing_numeric[index_miss3, 3] <- NA
 y_missing <- zoo(y_missing_numeric, seq(as.Date("2016-01-01"), length = n, by = "days"))
 ts_AR1_Gaussian <- list("y_missing" = y_missing,
                         "phi0"      = phi0,
