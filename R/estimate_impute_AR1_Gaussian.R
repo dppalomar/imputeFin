@@ -61,13 +61,13 @@
 #' library(imputeFin)
 #' data(ts_AR1_Gaussian)
 #' y_missing <- ts_AR1_Gaussian$y_missing
-#' estimation_result <- estimateAR1Gaussian(y_missing)
+#' fitted <- fit_AR1_Gaussian(y_missing)
 #' 
 #' @import zoo
 #' @export
-estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
-                                return_iterates = FALSE, return_condMeanCov = FALSE,
-                                tol = 1e-10,  maxiter = 1000) {
+fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
+                             return_iterates = FALSE, return_condMeanCov = FALSE,
+                             tol = 1e-10,  maxiter = 1000) {
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
   if (tol <= 0) stop("\"tol\" must be greater than 0.")
@@ -75,7 +75,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
   
 
   if (NCOL(y) > 1) {
-    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1Gaussian, random_walk, zero_mean, return_iterates, return_condMeanCov, tol, maxiter)
+    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_Gaussian, random_walk, zero_mean, return_iterates, return_condMeanCov, tol, maxiter)
     phi0 <- unlist(lapply(estimation_list, function(x) {x$phi0}))
     phi1 <- unlist(lapply(estimation_list, function(x) {x$phi1}))
     sigma2 <- unlist(lapply(estimation_list, function(x) {x$sigma2}))
@@ -140,7 +140,7 @@ estimateAR1Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
   
   # initialize the estimates
   phi0 <- phi1 <- sigma2 <- f <- c()
-  estimation_heuristic <- estimateAR1GaussianHeuristic(y, index_miss, random_walk, zero_mean)
+  estimation_heuristic <- fit_AR1_Gaussian_heuristic(y, index_miss, random_walk, zero_mean)
   phi1[1] <- estimation_heuristic$phi1
   phi0[1] <- estimation_heuristic$phi0
   sigma2[1] <- estimation_heuristic$sigma2
@@ -223,9 +223,9 @@ diag1 <- function(X) {
 #' @description Impute missing values of time series by drawing samples from 
 #'              the conditional distribution of the missing values given the 
 #'              observed data based on a Gaussian AR(1) model as estimated 
-#'              with the function \code{\link{estimateAR1Gaussian}}. 
+#'              with the function \code{\link{fit_AR1_Gaussian}}. 
 #' 
-#' @inheritParams estimateAR1Gaussian
+#' @inheritParams fit_AR1_Gaussian
 #' @param n_samples Positive integer indicating the number of imputations (default is \code{1}).
 #' @param impute_leading_NAs Logical value indicating if the leading missing values of time 
 #'                        series are to be imputed (default is \code{FALSE}).
@@ -237,7 +237,7 @@ diag1 <- function(X) {
 #' @return By default (i.e., for \code{n_samples = 1} and \code{return_estimates = FALSE}), 
 #'         the function will return an imputed time series of the same class and dimensions 
 #'         as the argument \code{y} with one new attribute recording the locations of missing 
-#'         values (the function \code{\link{plotImputed}} will make use of such information
+#'         values (the function \code{\link{plot_imputed}} will make use of such information
 #'         to indicate the imputed values).
 #'         
 #'         If \code{n_samples > 1}, the function will return a list consisting of \code{n_sample} 
@@ -257,19 +257,19 @@ diag1 <- function(X) {
 #' library(imputeFin)
 #' data(ts_AR1_Gaussian) 
 #' y_missing <- ts_AR1_Gaussian$y_missing
-#' y_imputed <- imputeAR1Gaussian(y_missing)
+#' y_imputed <- impute_AR1_Gaussian(y_missing)
 #' 
 #' @import zoo
 #' @import MASS
 #' @export
-imputeAR1Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trailing_NAs = FALSE,
-                              random_walk = FALSE, zero_mean = FALSE, return_estimates = FALSE) { 
+impute_AR1_Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trailing_NAs = FALSE,
+                                random_walk = FALSE, zero_mean = FALSE, return_estimates = FALSE) { 
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
   if (round(n_samples)!=n_samples | n_samples<=0) stop("\"n_samples\" must be a positive integer.")
 
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {imputeAR1Gaussian(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, return_estimates)})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, return_estimates)})
     if (n_samples == 1 && !return_estimates) {
       index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
@@ -303,10 +303,10 @@ imputeAR1Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impu
   
   
   if (!anyNA(y)) { # trivial case with no NAs
-    if (return_estimates) estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean)
+    if (return_estimates) estimation_result <- fit_AR1_Gaussian(y, random_walk, zero_mean)
     index_miss <- NULL
   } else {
-    estimation_result <- estimateAR1Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE)
+    estimation_result <- fit_AR1_Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE)
     index_miss <- which(is.na(y))  # indexes of missing values
     index_obs <- which(!is.na(y))
     index_obs_min <- min(index_obs)
@@ -429,7 +429,7 @@ condMeanCov <- function(y_obs, index_obs, n, n_block, n_in_block,
 #
 # A heuristic method to compute the parameters of Gaussian AR(1) model from incomplete time series
 #
-estimateAR1GaussianHeuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = TRUE) {
+fit_AR1_Gaussian_heuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = TRUE) {
   
   index_miss_p <- c(0, index_miss, length(y) + 1)
   delta_index_miss_p <- diff(index_miss_p)

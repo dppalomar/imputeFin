@@ -12,9 +12,10 @@
 #'              for the estimation (currently the maximum number of iterations
 #'              will be executed without attempting to chech early converge).
 #'
-#' @inheritParams estimateAR1Gaussian
+#' @inheritParams fit_AR1_Gaussian
 #' @param return_condMean_Gaussian Logical value indicating if the conditional mean and covariance matrix of the 
-#'                           time series (excluding the leading and trailing missing values) given the observed data are to be returned (default is \code{FALSE}).
+#'                           time series (excluding the leading and trailing missing values) given the observed 
+#'                           data are to be returned (default is \code{FALSE}).
 #' @param fast_and_heuristic Logical value indicating whether a heuristic but fast method is to be used to 
 #'                           estimate the parameters of the Student's t AR(1) model (default is \code{TRUE}).
 #' @param maxiter Positive integer indicating the maximum number of iterations allowed (default is \code{100}).
@@ -69,12 +70,12 @@
 #' library(imputeFin)
 #' data(ts_AR1_t) 
 #' y_missing <- ts_AR1_t$y_missing
-#' estimation_result <- estimateAR1t(y_missing)
+#' fitted <- fit_AR1_t(y_missing)
 #' 
 #' @import zoo
 #' @import MASS
 #' @export
-estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE,
+fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE,
                          return_iterates = FALSE, return_condMean_Gaussian = FALSE,
                          tol = 1e-10,  maxiter = 100, n_chain = 10, n_thin = 1,  K = 30) {
   # error control
@@ -87,7 +88,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
   
   
   if (NCOL(y) > 1) {
-    estimation_list <- apply(y, MARGIN = 2, FUN = estimateAR1t, random_walk, zero_mean, fast_and_heuristic, 
+    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_t, random_walk, zero_mean, fast_and_heuristic, 
                              return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
     phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
     phi1 <- unlist(lapply(estimation_list, function(x){x$phi1}))
@@ -109,18 +110,18 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
   y <- y[min(index_obs):max(index_obs)]
   
   # trivial case with no NAs
-  if (!anyNA(y)) return(estimateAR1tComplete(y, random_walk, zero_mean, return_iterates))
+  if (!anyNA(y)) return(fit_AR1_t_complete(y, random_walk, zero_mean, return_iterates))
   
   # find the missing blocks
   list2env(findMissingBlock(y), envir = environment())
   if (fast_and_heuristic) {
-    return(estimateAR1tHeuristic(y, index_miss, random_walk, zero_mean,
+    return(fit_AR1_t_heuristic(y, index_miss, random_walk, zero_mean,
                                  return_iterates, return_condMean_Gaussian, tol, maxiter))
     
   } else {
     # initialize the estimates and some parameters
     phi0 <- phi1 <- sigma2 <- nu <- gamma <- c()
-    estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE)
+    estimation_Gaussian <- fit_AR1_Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE)
     phi0[1] <- estimation_Gaussian$phi0
     phi1[1] <- estimation_Gaussian$phi1
     sigma2[1] <- estimation_Gaussian$sigma2
@@ -132,7 +133,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
     for (k in 1:maxiter) {
       # draw realizations of the missing values from their posterior distribution
       for (j in 1:n_chain) {
-        sample <- samplingLatentVariables(y_sample_init = y_samples[, j], n_thin, n_block, n_in_block,
+        sample <- sampling_latent_variables(y_sample_init = y_samples[, j], n_thin, n_block, n_in_block,
                                           first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
                                           phi0[k], phi1[k], sigma2[k], nu[k])
         y_samples[, j] <- sample$y
@@ -205,10 +206,10 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
 #' @description Impute missing values of time series by drawing samples from 
 #'              the conditional distribution of the missing values given the 
 #'              observed data based on a Student's t AR(1) model as estimated 
-#'              with the function \code{\link{estimateAR1t}}.
+#'              with the function \code{\link{fit_AR1_t}}.
 #'
-#' @inheritParams imputeAR1Gaussian
-#' @inheritParams estimateAR1t
+#' @inheritParams impute_AR1_Gaussian
+#' @inheritParams fit_AR1_t
 #' 
 #' @param n_burn Positive integer controlling the length of the burn-in period of the Gibb sampling 
 #'               (default is \code{100}). The first \code{(n_burn * n_thin)} samples generated will 
@@ -217,7 +218,7 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
 #' @return By default (i.e., for \code{n_samples = 1} and \code{return_estimates = FALSE}), 
 #'         the function will return an imputed time series of the same class and dimensions 
 #'         as the argument \code{y} with one new attribute recording the locations of missing 
-#'         values (the function \code{\link{plotImputed}} will make use of such information
+#'         values (the function \code{\link{plot_imputed}} will make use of such information
 #'         to indicate the imputed values).
 #'         
 #'         If \code{n_samples > 1}, the function will return a list consisting of \code{n_sample} 
@@ -243,15 +244,15 @@ estimateAR1t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heu
 #' library(imputeFin)
 #' data(ts_AR1_t) 
 #' y_missing <- ts_AR1_t$y_missing
-#' y_imputed <- imputeAR1t(y_missing)
+#' y_imputed <- impute_AR1_t(y_missing)
 #' 
 #' @import zoo
 #' @import MASS
 #' @export
-imputeAR1t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trailing_NAs = FALSE,
-                       random_walk = FALSE, zero_mean = FALSE, 
-                       fast_and_heuristic = TRUE, return_estimates = FALSE,
-                       n_burn = 100, n_thin = 50) {
+impute_AR1_t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trailing_NAs = FALSE,
+                         random_walk = FALSE, zero_mean = FALSE, 
+                         fast_and_heuristic = TRUE, return_estimates = FALSE,
+                         n_burn = 100, n_thin = 50) {
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
   if (round(n_samples)!=n_samples | n_samples<=0) stop("\"n_samples\" must be a positive integer.")
@@ -259,7 +260,7 @@ imputeAR1t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trai
   if (round(n_thin)!=n_thin | n_thin<=0) stop("\"n_thin\" must be a positive integer.")
   
   if (NCOL(y) > 1) {
-    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {imputeAR1t(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, fast_and_heuristic, return_estimates, n_burn, n_thin)})
+    results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {impute_AR1_t(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, fast_and_heuristic, return_estimates, n_burn, n_thin)})
     if (n_samples == 1 && !return_estimates) {
       index_miss_list <- lapply(results_list, FUN = function(result){attributes(result)$index_miss})
       results <- do.call(cbind, results_list)
@@ -295,10 +296,10 @@ imputeAR1t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trai
   
   # trivial case with no NAs
   if (!anyNA(y)){
-    if (return_estimates) estimation_result <- estimateAR1t(y, random_walk, zero_mean, fast_and_heuristic)
+    if (return_estimates) estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic)
     index_miss = NULL
   } else {
-    estimation_result <- estimateAR1t(y, random_walk, zero_mean, fast_and_heuristic, return_condMean_Gaussian = TRUE)
+    estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, return_condMean_Gaussian = TRUE)
     phi0 <- estimation_result$phi0
     phi1 <- estimation_result$phi1
     sigma2 <- estimation_result$sigma2
@@ -316,14 +317,14 @@ imputeAR1t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trai
       list2env(findMissingBlock(y_middle), envir = environment())
       y_middle_tmp <- estimation_result$cond_mean_y_Gaussian
       for (i in 1:n_burn) {
-        sample <- samplingLatentVariables(y_middle_tmp, n_thin = 1, n_block, n_in_block,
+        sample <- sampling_latent_variables(y_middle_tmp, n_thin = 1, n_block, n_in_block,
                                           first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
                                           phi0, phi1, sigma2, nu) 
         y_middle_tmp <- sample$y
       }
       # sample every n_thin-th sample
       for (j in 1:n_samples) {
-        sample <- samplingLatentVariables(y_middle_tmp, n_thin, n_block, n_in_block,
+        sample <- sampling_latent_variables(y_middle_tmp, n_thin, n_block, n_in_block,
                                           first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
                                           phi0, phi1, sigma2, nu) 
         y_imputed[index_miss_middle, j] <- sample$y[index_miss_deleted]
@@ -382,7 +383,7 @@ imputeAR1t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trai
 #   sigma2: a positive number, a parameter of the student's t AR(1) model.
 #   nu: a positive number indicating the degree of freedom, a parameter of the student's t AR(1) model.
 #' @import MASS
-samplingLatentVariables <- function(y_sample_init, n_thin, n_block, n_in_block,
+sampling_latent_variables <- function(y_sample_init, n_thin, n_block, n_in_block,
                                     first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
                                     phi0, phi1, sigma2, nu) {
   n <- length(y_sample_init)
@@ -439,11 +440,11 @@ samplingLatentVariables <- function(y_sample_init, n_thin, n_block, n_in_block,
 #  y: numeric vector.
 
 
-estimateAR1tComplete <- function(y, random_walk = FALSE, zero_mean = FALSE, 
+fit_AR1_t_complete <- function(y, random_walk = FALSE, zero_mean = FALSE, 
                                  return_iterates = FALSE,
                                  tol = 1e-10,  maxiter = 1000) {
   phi0 <- phi1 <- sigma2 <- nu <- c()  
-  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, return_condMeanCov = FALSE)
+  estimation_Gaussian <- fit_AR1_Gaussian(y, random_walk, zero_mean, return_condMeanCov = FALSE)
   phi0[1] <- estimation_Gaussian$phi0
   phi1[1] <- estimation_Gaussian$phi1
   sigma2[1] <- estimation_Gaussian$sigma2
@@ -522,12 +523,12 @@ estimateAR1tComplete <- function(y, random_walk = FALSE, zero_mean = FALSE,
 #  heuristic method to estimate the parameters of a Student's t AR(1) model from a incomplete time series
 #  y: numeric vector.
 
-estimateAR1tHeuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = TRUE,
+fit_AR1_t_heuristic <- function(y, index_miss, random_walk = FALSE, zero_mean = TRUE,
                                          return_iterates = FALSE, return_condMean_Gaussian = FALSE,
                                          tol = 1e-10,  maxiter = 1000) {
   # initialize the estimates and some parameters
   phi0 <- phi1 <- sigma2 <- nu <- gamma <- c()
-  estimation_Gaussian <- estimateAR1Gaussian(y, random_walk, zero_mean, return_condMeanCov = return_condMean_Gaussian)
+  estimation_Gaussian <- fit_AR1_Gaussian(y, random_walk, zero_mean, return_condMeanCov = return_condMean_Gaussian)
   phi0[1] <- estimation_Gaussian$phi0
   phi1[1] <- estimation_Gaussian$phi1
   sigma2[1] <- estimation_Gaussian$sigma2
