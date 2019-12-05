@@ -14,7 +14,7 @@ csl: ieee.csl
 bibliography: refs.bib
 vignette: |
   %\VignetteIndexEntry{Imputation of Financial Time Series}
-  %\VignetteKeyword{imputation, time series, missing values, AR, random walk, econometrics}
+  %\VignetteKeyword{imputation, time series, missing values, AR, random walk, heavy tail, Student t, econometrics}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---

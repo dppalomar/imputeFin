@@ -1,0 +1,10 @@
+%\VignetteIndexEntry{Imputation of Financial Time Series}
+%\VignetteEngine{R.rsp::asis}
+%\VignetteKeyword{imputation}
+%\VignetteKeyword{time series}
+%\VignetteKeyword{missing values}
+%\VignetteKeyword{AR}
+%\VignetteKeyword{random walk}
+%\VignetteKeyword{heavy tail}
+%\VignetteKeyword{Student t}
+%\VignetteKeyword{econometrics}
