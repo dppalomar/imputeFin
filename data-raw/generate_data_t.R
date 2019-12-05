@@ -41,9 +41,7 @@ ts_AR1_t = list("y_missing" = y_missing,
 #index_miss3 <- union(index_miss1, index_miss2)
 #ts_AR1_t$y_missing[index_miss3, 3] <- NA
 
-#
-# this is to save the data to the package
-#
-#save(y_missing, file = "data-raw/y_missing.RData")
-usethis::use_data_raw()
-usethis::use_data(ts_AR1_t, overwrite = TRUE)
+
+
+# save the data to the package
+save(ts_AR1_t, file = "data/ts_AR1_t.RData", version = 2)

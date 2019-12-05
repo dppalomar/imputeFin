@@ -37,8 +37,7 @@ ts_AR1_Gaussian <- list("y_missing" = y_missing,
 #index_miss3 <- union(index_miss1, index_miss2)
 #ts_AR1_Gaussian$y_missing[index_miss3, 3] <- NA
 
-#
-# this is to save the data to the package
-#
-usethis::use_data_raw()
-usethis::use_data(ts_AR1_Gaussian, overwrite = TRUE)
+
+
+# save the data to the package
+save(ts_AR1_Gaussian, file = "data/ts_AR1_Gaussian.RData", version = 2)
