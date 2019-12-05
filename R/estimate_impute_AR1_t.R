@@ -74,6 +74,7 @@
 #' 
 #' @import zoo
 #' @import MASS
+#' @import stats
 #' @export
 fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE,
                          return_iterates = FALSE, return_condMean_Gaussian = FALSE,
@@ -112,7 +113,10 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   if (!anyNA(y)) return(fit_AR1_t_complete(y, random_walk, zero_mean, return_iterates, tol,  maxiter))
   
   # find the missing blocks
+  n <- index_obs <- index_miss <- n_obs <- y_obs <- delta_index_obs <- n_block <- n_in_block <- 
+    first_index_in_block <- last_index_in_block <- previous_obs_before_block <- next_obs_after_block <- NULL
   list2env(findMissingBlock(y), envir = environment())
+  
   if (fast_and_heuristic) {
     return(fit_AR1_t_heuristic(y, index_miss, random_walk, zero_mean,
                                  return_iterates, return_condMean_Gaussian, tol, maxiter))
@@ -249,6 +253,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
 #' 
 #' @import zoo
 #' @import MASS
+#' @import stats
 #' @export
 impute_AR1_t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trailing_NAs = FALSE,
                          random_walk = FALSE, zero_mean = FALSE, 
@@ -316,6 +321,8 @@ impute_AR1_t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_tr
     if (length(index_miss_middle) > 0) {
       y_middle <- y[min(index_obs):max(index_obs)] # deleted the missing values at the head and tail
       index_miss_deleted <- index_miss_middle - (index_obs_min - 1)
+      n <- index_obs <- index_miss <- n_obs <- y_obs <- delta_index_obs <- n_block <- n_in_block <- 
+        first_index_in_block <- last_index_in_block <- previous_obs_before_block <- next_obs_after_block <- NULL
       list2env(findMissingBlock(y_middle), envir = environment())
       y_middle_tmp <- estimation_result$cond_mean_y_Gaussian
       for (i in 1:n_burn) {

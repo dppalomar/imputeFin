@@ -28,6 +28,7 @@
 #' plot_imputed(y_imputed)
 #' 
 #' @import zoo
+#' @import graphics
 #' @export
 plot_imputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple"), title = NULL, color_imputed = "red") {
   any_index_miss <- !is.null(attr(y_imputed, "index_miss"))
@@ -69,6 +70,7 @@ plot_imputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple"), t
          "ggplot2" = {
            if (!requireNamespace("ggplot2", quietly = TRUE)) 
              stop("Please install package \"ggplot2\" or choose another plot type.", call. = FALSE)
+           index <- value <- NULL  # to avoid CRAN note
            data_frm  <- data.frame(index = index(y_imputed_i), value = as.vector(y_imputed_i))
            p <- ggplot2::ggplot() +
              ggplot2::geom_line(data = data_frm, ggplot2::aes_string(x = "index", y = "value"), col = "black") +

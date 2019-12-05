@@ -11,7 +11,7 @@
 #'              for the estimation until converge is achieved.
 #'
 #' @param y Time series object coercible to either a numeric vector or numeric matrix 
-#'          (e.g., \code{\link{zoo}} or \code{\link{xts}}) with missing values denoted by \code{NA}. 
+#'          (e.g., \code{zoo} or \code{xts}) with missing values denoted by \code{NA}. 
 #' @param random_walk Logical value indicating if the time series is assumed to be a random walk so that \code{phi1 = 1} 
 #'                    (default is \code{FALSE}).
 #' @param zero_mean Logical value indicating if the time series is assumed zero-mean so that \code{phi0 = 0} 
@@ -123,9 +123,10 @@ fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
                 "sigma2" = sigma2))
   }
   
-  
     
-  # find the missing blocks   
+  # find the missing blocks
+  n <- index_obs <- index_miss <- n_obs <- y_obs <- delta_index_obs <- n_block <- n_in_block <- 
+    first_index_in_block <- last_index_in_block <- previous_obs_before_block <- next_obs_after_block <- NULL
   list2env(findMissingBlock(y), envir = environment())
   
   # objective function, the observed data log-likelihood
@@ -187,7 +188,6 @@ fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
         && abs(phi1[k + 1] - phi1[k]) <= tol * (abs(phi1[k + 1]) + abs(phi1[k]))/2
         && abs(sigma2[k + 1] - sigma2[k]) <= tol * (abs(sigma2[k + 1]) + abs(sigma2[k]))/2) 
     break
-    
   }
   
   results <- list("phi0"   = phi0[k + 1],
