@@ -11,21 +11,18 @@ install.packages("imputeFin")
 library(imputeFin)
 help(package = "imputeFin")
 package?imputeFin
-?imputeAR1Gaussian
+?impute_AR1_Gaussian
 citation("imputeFin")
 vignette(package = "imputeFin")
 
 
 ##
-## Developer commands (http://r-pkgs.had.co.nz/)
+## Developer commands (https://r-pkgs.org/)
 ##
 devtools::load_all()  #or Ctrl-Shift-L
+devtools::document()  #to generate all documentation via roxygen
 devtools::install()
 library(imputeFin)
-
-# Documentation
-devtools::document()  #to generate all documentation via roxygen
-?impute_AR1_Gaussian
 
 
 # Code tests
@@ -33,7 +30,7 @@ devtools::test()
 #covr::package_coverage()  #coverage of tests
 
 
-# CRAN check and submission (http://r-pkgs.had.co.nz/release.html)
+# CRAN check and submission (https://r-pkgs.org/release.html)
 #  checklist: https://kalimu.github.io/post/checklist-for-r-package-submission-to-cran/
 devtools::check()
 rcmdcheck::rcmdcheck()
