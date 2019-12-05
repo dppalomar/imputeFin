@@ -1,10 +1,10 @@
 ---
 output:
+  md_document:
+    variant: markdown_github
   html_document:
     variant: markdown_github
     keep_md: true
-  md_document:
-    variant: markdown_github
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -45,7 +45,8 @@ univariate-based (so no asset correlation is used).
 The package is based on the paper:   
 J. Liu, S. Kumar, and D. P. Palomar (2019). Parameter Estimation of 
 Heavy-Tailed AR Model With Missing Data Via Stochastic EM. _IEEE Trans. on 
-Signal Processing_, vol. 67, no. 8, pp. 2159-2172. <doi:10.1109/TSP.2019.2899816>
+Signal Processing_, vol. 67, no. 8, pp. 2159-2172.
+https://doi.org/10.1109/TSP.2019.2899816
 
 
 ## Installation
