@@ -11,8 +11,8 @@
 #' \describe{
 #'   \item{y_missing}{300 x 3 \code{zoo} object with three AR(1) Gaussian time 
 #'                    series along the columns: the first column contains a
-#'                    time series with 10% consecutive missing values; the
-#'                    second column contains a time series with 10% missing 
+#'                    time series with 10\% consecutive missing values; the
+#'                    second column contains a time series with 10\% missing 
 #'                    values randomly distributed; and the third column contains 
 #'                    the union of the previous missing values.}
 #'   \item{phi0}{Value of \code{phi0} used to generate the time series.}
