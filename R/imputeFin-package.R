@@ -24,6 +24,9 @@
 #' For a quick help see the README file:
 #' \href{https://github.com/dppalomar/imputeFin/blob/master/README.md}{GitHub-README}.
 #'
+#' For more details see the vignette:
+#' \href{https://CRAN.R-project.org/package=imputeFin/vignettes/ImputeFinancialTimeSeries.html}{CRAN-vignette}.
+#'
 #' @author Junyan LIU and Daniel P. Palomar
 #' 
 #' @references
