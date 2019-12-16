@@ -1,14 +1,20 @@
+---
+output:
+  html_document:
+    variant: markdown_github
+    keep_md: true
+  md_document:
+    variant: markdown_github
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 
 
 # imputeFin
-<!---
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/imputeFin)](https://CRAN.R-project.org/package=imputeFin)
 [![CRAN Downloads](https://cranlogs.r-pkg.org/badges/imputeFin)](https://CRAN.R-project.org/package=imputeFin)
 [![CRAN Downloads Total](https://cranlogs.r-pkg.org/badges/grand-total/imputeFin?color=brightgreen)](https://CRAN.R-project.org/package=imputeFin)
---->
 
 Missing values often occur in financial data due to a variety 
 of reasons (errors in the collection process or in the processing stage, 
@@ -77,13 +83,9 @@ plot_imputed(y_imputed)
 <img src="man/figures/README-unnamed-chunk-6-1.png" width="80%" style="display: block; margin: auto;" />
 
 
-
-
-<!---
 ## Documentation
 For more detailed information, please check the
 [vignette](https://CRAN.R-project.org/package=imputeFin/vignettes/ImputeFinancialTimeSeries.html).
---->
 
 ## Links
 Package: [CRAN](https://CRAN.R-project.org/package=imputeFin) and [GitHub](https://github.com/dppalomar/imputeFin).
