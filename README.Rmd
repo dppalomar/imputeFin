@@ -96,7 +96,5 @@ Package: [CRAN](https://CRAN.R-project.org/package=imputeFin) and [GitHub](https
 
 README file: [GitHub-readme](https://github.com/dppalomar/imputeFin/blob/master/README.md).
 
-<!---
 Vignette: [CRAN-vignette](https://CRAN.R-project.org/package=imputeFin/vignettes/ImputeFinancialTimeSeries.html).
---->
 
