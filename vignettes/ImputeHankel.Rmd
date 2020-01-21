@@ -77,9 +77,9 @@ library(imputeFin)
 y_imputed_lowrank <- y_missing
 n <- T/2
 H_mis <- hankel.matrix(n, as.numeric(y_missing))
-a <- softImpute(H_mis, rank.max = 1)
+a <- softImpute(H_mis, rank.max = 3)
 H_imputed <- complete(H_mis, a)
-y_imputed_lowrank[,1] <- c(H_imputed[1,],H_imputed[2:n, n], y_missing[T])
+y_imputed_lowrank[, 1] <- c(H_imputed[1, ], H_imputed[2:n, n], y_missing[T])
 
 # impute using our package imputeFin 
 y_imputed_ARt <- impute_AR1_t(y_missing, n_samples = 2)
