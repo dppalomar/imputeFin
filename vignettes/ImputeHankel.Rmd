@@ -1,0 +1,94 @@
+---
+title: "Imputation of AR(1) Time Series using Hankel Representation"
+author: |
+  | Junyan Liu and Daniel P. Palomar
+  | The Hong Kong University of Science and Technology (HKUST)
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: tactile
+    highlight: vignette
+    toc: yes
+    toc_depth: 2
+csl: ieee.csl
+bibliography: refs.bib
+vignette: |
+  %\VignetteIndexEntry{}
+  %\VignetteKeyword{}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r, echo = FALSE}
+library(knitr)
+opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.align = "center",
+  fig.retina = 2,
+  out.width = "85%",
+  dpi = 96,
+  pngquant = "--speed=1"
+)
+knit_hooks$set(pngquant = hook_pngquant)
+# rmarkdown::render("vignettes/ImputeFinancialTimeSeries.Rmd", "prettydoc::html_pretty")
+```
+
+-----------
+# Method desciption
+Suppose we have an AR(1) time series $y_{1}, y_{2}, ..., y_{T}$. Let us define a Hankel matrix $H$  $$ H=\left[\begin{array}{cccc} y_{1} & y_{2} & \cdots & y_{T_{1}}\\
+y_{2} & y_{3} & \cdots & y_{T_{1}+1}\\
+\vdots & \vdots & \ddots & \vdots\\
+y_{T_{1}} & y_{T_{1}+1} & \ldots & y_{T}
+\end{array}\right],$$
+where $T_{1}$ is a positive number not larger than $T$. If there is no noise in this AR(1) model, i.e., $$y_{t}=\varphi_{0}+\varphi_{1}y_{t-1}$$ for $t=2,..., T$, then the Hankel matrix $H$ is a matrix with rank one.
+
+In practice, there are usually some noises in the samples, and there may be some missing values in this time series. Suppose that we have an AR(1) time series with missing values and noises, and it can be represented as a Hankel matrix $H_{mis}$. Let $\Omega$ contain the pairs of indices $(i,j)$ where $H$ is observed, and let $P_\Omega(H)$ denote a matrix with the entries in $\Omega$ left alone, and all other entries set to zero. Since the original matrix $H$ is a low-rank matrix, we can recover $H$ using the package [`softImpute`](https://cran.r-project.org/web/packages/softImpute). Basically, this package recovers $H$ by solving the following problem:
+ 
+ $$\min_H\frac12\|P_\Omega(H)-P_\Omega(H_{mis})\|^2_F+\lambda\|H\|_*,$$
+where $\|H\|_*$ is the nucelar norm of $H$ (sum of singular values). When using the package, there is a parameter `rank.max` for you to restrict the rank of the solution. After obtaing $H$, you then get the original time series.
+ 
+
+# Simulation
+ We first download the adjusted prices of the S&P 500 index from 2012-01-01 to 2015-07-08, compute the log-prices, and intentionally delete some of them for illustrative purposes. 
+```{r, message=FALSE}
+# download data
+library(quantmod)
+y_orig <- log(Ad(getSymbols("^GSPC", from = "2012-01-01", to = "2015-07-08", 
+                            auto.assign = FALSE)))
+T <- nrow(y_orig)
+
+# introduce 20% of missing values artificially
+miss_pct <- 0.2
+T_miss <- floor(miss_pct*T)
+index_miss <- round(T/2) + 1:T_miss
+attr(y_orig, "index_miss") = index_miss
+y_missing <- y_orig
+y_missing[index_miss] <- NA
+```
+
+Now we plot the imputed time series obtained by Hankel representation and low-rank completion, and also the imputed time series obtained by the function `impute_AR1_t()` from the package [`imputeFin`](https://CRAN.R-project.org/package=imputeFin). 
+```{r, message=FALSE, warning=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
+library(matrixcalc)
+library(softImpute)
+library(imputeFin)
+
+# impute using Hankel representation and low-rank completion
+y_imputed_lowrank <- y_missing
+n <- T/2
+H_mis <- hankel.matrix(n, as.numeric(y_missing))
+a <- softImpute(H_mis, rank.max = 1)
+H_imputed <- complete(H_mis, a)
+y_imputed_lowrank[,1] <- c(H_imputed[1,],H_imputed[2:n, n], y_missing[T])
+
+# impute using our package imputeFin 
+y_imputed_ARt <- impute_AR1_t(y_missing, n_samples = 2)
+
+
+p1 <- plot_imputed(y_orig, title = "Original")
+p2 <- plot_imputed(y_imputed_lowrank, title = "Imputation with low-rank matrix completion")
+p3 <- plot_imputed(y_imputed_ARt$y_imputed.1, title = "Imputation with ImputeFin 1")
+p4 <- plot_imputed(y_imputed_ARt$y_imputed.2, title = "Imputation with ImputeFin 2")
+
+gridExtra::grid.arrange(p1, p2, p3, p4, nrow = 2)
+```
