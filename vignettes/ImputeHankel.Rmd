@@ -47,7 +47,7 @@ y_{T_{1}} & y_{T_{1}+1} & \ldots & y_{T}
 \end{array}\right],$$
 where $T_{1}$ is any positive number not larger than $T$. If there is no noise in this AR(1) time series, i.e., $$y_{t}=\varphi_{0}+\varphi_{1}y_{t-1}$$ for $t=2,..., T$, then the Hankel matrix $\mathbf{H}$ is a matrix with rank 2 [@CaiWangWei2019].
 
-In practice, there are usually some noises in the samples, and there may be some missing values in this time series. Let us denote an AR(1) time series with missing values by $\mathbf{y}_{mis}$, and $\mathbf{H}_{mis}=\mathcal{H}(\mathbf{y}_{mis})$.  In the following, we introduce two methods to recover the missing values.
+In practice, there are usually some noises in the samples, and there may be some missing values in this time series. Let us denote an AR(1) time series with missing values by $\mathbf{y}_{mis}$ and $\mathbf{H}_{mis}=\mathcal{H}(\mathbf{y}_{mis})$.  In the following, we introduce two methods to recover the missing values.
 
 ## Two-stage method.
 Since the original matrix $\mathbf{H}$ is a low-rank matrix, we can recover $\mathbf{H}$ using the package [`softImpute`](https://cran.r-project.org/web/packages/softImpute). Let $\Omega_{1}$ contain the pairs of indices $(i,j)$ where $\mathbf{H}$ is observed, and let $P_{\Omega_{1}}(\mathbf{H})$ denote a matrix with the entries in $\Omega_{1}$ left alone, and all other entries set to zero. Basically, the packag [`softImpute`](https://cran.r-project.org/web/packages/softImpute) recovers $H$ by solving the following problem:

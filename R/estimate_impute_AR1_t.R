@@ -75,8 +75,9 @@
 #' @import zoo
 #' @import MASS
 #' @import stats
+#' @import mvtnorm
 #' @export
-fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE,
+fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE, remove_outliers = FALSE,
                          return_iterates = FALSE, return_condMean_Gaussian = FALSE,
                          tol = 1e-10,  maxiter = 100, n_chain = 10, n_thin = 1,  K = 30) {
   # error control
@@ -88,7 +89,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   if (round(K)!=K | K<=0) stop("\"K\" must be a positive integer.")
   
   if (NCOL(y) > 1) {
-    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_t, random_walk, zero_mean, fast_and_heuristic, 
+    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_t, random_walk, zero_mean, fast_and_heuristic, remove_outliers,
                              return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
     phi0 <- unlist(lapply(estimation_list, function(x){x$phi0}))
     phi1 <- unlist(lapply(estimation_list, function(x){x$phi1}))
@@ -117,7 +118,32 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
     first_index_in_block <- last_index_in_block <- previous_obs_before_block <- next_obs_after_block <- NULL
   list2env(findMissingBlock(y), envir = environment())
   
-  if (fast_and_heuristic) {
+  # outlier detection
+  if(remove_outliers) {
+#    browser()
+    index_outlier <- NULL
+    # estimate the parameters without removing the outliers
+    estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers = FALSE,
+                                   return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
+    # check the observations one by one. If observation lies outside the 95% confidence interval, we think it is an outlier, and will set it to NA. 
+    for (i in 2:length(index_obs)) {
+      delta_i <- index_obs[i] - index_obs[i-1]
+      mu_expected <- sum( estimation_result$phi1^( 0:(delta_i - 1) ) ) * estimation_result$phi0 + estimation_result$phi1^delta_i * y[index_obs[i-1]]
+      upper <- max(y[index_obs[i]], 2 * mu_expected - y[index_obs[i]])
+      lower <- min(y[index_obs[i]], 2 * mu_expected - y[index_obs[i]])
+      # compute the probability of the obervation in [lower, uppper]
+      p <- mvtnorm::pmvt(lower = lower, upper = upper, delta = mu_expected, df = max(round(estimation_result$nu),1), sigma = estimation_result$sigma2) 
+      # if p larger than 95%, then the observation lies ourside the 95% confidence interval.
+      if (p > 0.95 ) index_outlier <- c(index_outlier, index_obs[i])
+    }
+    y[index_outlier] <- NA
+    # re-identifying the missing groups after removing the outliers
+    list2env(findMissingBlock(y), envir = environment())
+  }
+
+  
+ # estimation
+ if (fast_and_heuristic) {
     return(fit_AR1_t_heuristic(y, index_miss, random_walk, zero_mean,
                                  return_iterates, return_condMean_Gaussian, tol, maxiter))
     
@@ -303,10 +329,10 @@ impute_AR1_t <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_tr
   
   # trivial case with no NAs
   if (!anyNA(y)){
-    if (return_estimates) estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, tol = tol,  maxiter = maxiter, K = K)
+    if (return_estimates) estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers, tol = tol,  maxiter = maxiter, K = K)
     index_miss = NULL
   } else {
-    estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, return_condMean_Gaussian = TRUE, tol = tol,  maxiter = maxiter, K = K)
+    estimation_result <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers, return_condMean_Gaussian = TRUE, tol = tol,  maxiter = maxiter, K = K)
     phi0 <- estimation_result$phi0
     phi1 <- estimation_result$phi1
     sigma2 <- estimation_result$sigma2
