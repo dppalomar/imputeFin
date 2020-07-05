@@ -23,7 +23,8 @@ Authors@R: c(
   )
 Maintainer: Daniel P. Palomar <daniel.p.palomar@gmail.com>
 URL: https://CRAN.R-project.org/package=imputeFin,
-     https://github.com/dppalomar/imputeFin
+     https://github.com/dppalomar/imputeFin,
+     https://doi.org/10.1109/TSP.2019.2899816
 BugReports: https://github.com/dppalomar/imputeFin/issues
 License: GPL-3
 Encoding: UTF-8

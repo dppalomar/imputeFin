@@ -13,3 +13,6 @@
 ^vignettes/ImputeFinancialTimeSeries\.Rmd$
 ^vignettes/ieee\.csl$
 ^vignettes/refs\.bib$
+^vignettes/ImputeHankel\.Rmd$
+^vignettes/ImputeHankel\.html$
+
