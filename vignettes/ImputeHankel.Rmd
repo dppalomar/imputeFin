@@ -31,26 +31,44 @@ opts_chunk$set(
   pngquant = "--speed=1"
 )
 knit_hooks$set(pngquant = hook_pngquant)
-# rmarkdown::render("vignettes/ImputeFinancialTimeSeries.Rmd", "prettydoc::html_pretty")
+# rmarkdown::render("vignettes/ImputeHankel.Rmd", "prettydoc::html_pretty")
 ```
 
 -----------
 # Method desciption
-Suppose we have an AR(1) time series $y_{1}, y_{2}, ..., y_{T}$. Let us define a Hankel matrix $H$  $$ H=\left[\begin{array}{cccc} y_{1} & y_{2} & \cdots & y_{T_{1}}\\
+Suppose we have an AR(1) time series $y_{1}, y_{2}, ..., y_{T}$. Let us denote $\mathbf{y}=\left[y_{1},y_{2},...,y_{T}\right]$, and define $\mathcal{H}$ as a linear operator which maps the vector $\mathbf{y}$ to a Hankel matrix as follows
+
+$$ H=\mathcal{H}(\mathbf{y})=\left[\begin{array}{cccc}
+1 & 1 & \cdots & 1\\
+y_{1} & y_{2} & \cdots & y_{T_{1}}\\
 y_{2} & y_{3} & \cdots & y_{T_{1}+1}\\
 \vdots & \vdots & \ddots & \vdots\\
 y_{T_{1}} & y_{T_{1}+1} & \ldots & y_{T}
 \end{array}\right],$$
-where $T_{1}$ is a positive number not larger than $T$. If there is no noise in this AR(1) model, i.e., $$y_{t}=\varphi_{0}+\varphi_{1}y_{t-1}$$ for $t=2,..., T$, then the Hankel matrix $H$ is a matrix with rank one.
+where $T_{1}$ is any positive number not larger than $T$. If there is no noise in this AR(1) time series, i.e., $$y_{t}=\varphi_{0}+\varphi_{1}y_{t-1}$$ for $t=2,..., T$, then the Hankel matrix $\mathbf{H}$ is a matrix with rank 2 [@CaiWangWei2019].
 
-In practice, there are usually some noises in the samples, and there may be some missing values in this time series. Suppose that we have an AR(1) time series with missing values and noises, and it can be represented as a Hankel matrix $H_{mis}$. Let $\Omega$ contain the pairs of indices $(i,j)$ where $H$ is observed, and let $P_\Omega(H)$ denote a matrix with the entries in $\Omega$ left alone, and all other entries set to zero. Since the original matrix $H$ is a low-rank matrix, we can recover $H$ using the package [`softImpute`](https://cran.r-project.org/web/packages/softImpute). Basically, this package recovers $H$ by solving the following problem:
+In practice, there are usually some noises in the samples, and there may be some missing values in this time series. Let us denote an AR(1) time series with missing values by $\mathbf{y}_{mis}$ and $\mathbf{H}_{mis}=\mathcal{H}(\mathbf{y}_{mis})$.  In the following, we introduce two methods to recover the missing values.
+
+## Two-stage method.
+Since the original matrix $\mathbf{H}$ is a low-rank matrix, we can recover $\mathbf{H}$ using the package [`softImpute`](https://cran.r-project.org/web/packages/softImpute). Let $\Omega_{1}$ contain the pairs of indices $(i,j)$ where $\mathbf{H}$ is observed, and let $P_{\Omega_{1}}(\mathbf{H})$ denote a matrix with the entries in $\Omega_{1}$ left alone, and all other entries set to zero. Basically, the packag [`softImpute`](https://cran.r-project.org/web/packages/softImpute) recovers $H$ by solving the following problem:
  
- $$\min_H\frac12\|P_\Omega(H)-P_\Omega(H_{mis})\|^2_F+\lambda\|H\|_*,$$
-where $\|H\|_*$ is the nucelar norm of $H$ (sum of singular values). When using the package, there is a parameter `rank.max` for you to restrict the rank of the solution. After obtaing $H$, you then get the original time series.
+ $$\begin{aligned}\underset{\mathbf{H}}{\mathsf{maximize}} & \thinspace\thinspace\thinspace\|P_{\Omega_{1}}(\mathbf{H})-P_{\Omega_{1}}(\mathbf{H}_{mis})\|_{F}^{2}\\
+\mathsf{subject\thinspace to} & \thinspace\thinspace\thinspace\mathsf{rank}(\mathbf{H})\leq r,
+\end{aligned}$$
+where $\|\mathbf{H}\|_*$ is the nucelar norm of $\mathbf{\mathbf{H}}$ (sum of singular values), and $r$  is a parameter used for restricting the rank of the solution (we set $r=2$). After obtaing $\mathbf{H}$, we can then recover the original time series $\mathbf{y}$ based on $\mathbf{H}$.
+
+## All-in-one method
+In the previous method, we first recover $\mathbf{H}$, and then recover $\mathbf{y}$. Actually, we can also directly recover $\mathbf{y}$. Let $\Omega_{2}$ contain the pairs of indices $i$ where $\mathbf{y}$ is observed, and let $P_{\Omega_{2}}(\mathbf{y})$ denote a vector with the entries in $\Omega_{2}$ left alone, and all other entries set to zero. We can recover $\mathbf{y}$ by solving the following optimization problem:
+$$\begin{aligned}\underset{\mathbf{y}}{\mathsf{maximize}} & \thinspace\thinspace\thinspace\|P_{\Omega_{2}}(\mathbf{y})-P_{\Omega_{2}}(\mathbf{y}_{mis})\|_{2}^{2}\\
+\mathsf{subject\thinspace to} & \thinspace\thinspace\thinspace\mathsf{rank}(\mathcal{H}(\mathbf{y}))=2.
+\end{aligned}$$
+This optimization problem can be solved by the Algorithms 1 and 2 in [@CaiWangWei2019].
+
  
 
 # Simulation
- We first download the adjusted prices of the S&P 500 index from 2012-01-01 to 2015-07-08, compute the log-prices, and intentionally delete some of them for illustrative purposes. 
+In this part, we compare the missing values recovery result of the two-stage recovery method with the missing values imputation result generated by package [`imputeFin`].
+We first download the adjusted prices of the S&P 500 index from 2012-01-01 to 2015-07-08, compute the log-prices, and intentionally delete some of them for illustrative purposes. 
 ```{r, message=FALSE}
 # download data
 library(quantmod)
@@ -67,7 +85,7 @@ y_missing <- y_orig
 y_missing[index_miss] <- NA
 ```
 
-Now we plot the imputed time series obtained by Hankel representation and low-rank completion, and also the imputed time series obtained by the function `impute_AR1_t()` from the package [`imputeFin`](https://CRAN.R-project.org/package=imputeFin). 
+Now we plot the imputed time series obtained by the two-stage method descibed above, and also the imputed time series obtained by the function `impute_AR1_t()` from the package [`imputeFin`](https://CRAN.R-project.org/package=imputeFin). 
 ```{r, message=FALSE, warning=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
 library(matrixcalc)
 library(softImpute)
@@ -76,10 +94,11 @@ library(imputeFin)
 # impute using Hankel representation and low-rank completion
 y_imputed_lowrank <- y_missing
 n <- T/2
-H_mis <- hankel.matrix(n, as.numeric(y_missing))
-a <- softImpute(H_mis, rank.max = 3)
+H_mis <- matrix(1, nrow = n + 1, ncol = n)
+H_mis[2:(n + 1), ] <- hankel.matrix(n, as.numeric(y_missing))
+a <- softImpute(H_mis, rank.max = 2)
 H_imputed <- complete(H_mis, a)
-y_imputed_lowrank[, 1] <- c(H_imputed[1, ], H_imputed[2:n, n], y_missing[T])
+y_imputed_lowrank[, 1] <- c(H_imputed[2, ], H_imputed[3:(n + 1), n], y_missing[T])
 
 # impute using our package imputeFin 
 y_imputed_ARt <- impute_AR1_t(y_missing, n_samples = 2)
@@ -92,3 +111,10 @@ p4 <- plot_imputed(y_imputed_ARt$y_imputed.2, title = "Imputation with ImputeFin
 
 gridExtra::grid.arrange(p1, p2, p3, p4, nrow = 2)
 ```
+
+
+# References {-}
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+\noindent
