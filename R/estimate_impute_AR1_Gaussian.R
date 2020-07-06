@@ -1,7 +1,7 @@
-#' @title Fit Gaussian AR(1) model to time series with missing values
+#' @title Fit Gaussian AR(1) model to time series with missing values and/or outliers
 #'
 #' @description Estimate the parameters of a univariate Gaussian AR(1) model 
-#'              to fit the given time series with missing values. 
+#'              to fit the given time series with missing values and/or outliers. 
 #'              For multivariate time series, the function will perform a 
 #'              number of individual univariate fittings without attempting 
 #'              to model the correlations among the time series.
@@ -16,11 +16,12 @@
 #'                    (default is \code{FALSE}).
 #' @param zero_mean Logical value indicating if the time series is assumed zero-mean so that \code{phi0 = 0} 
 #'                  (default is \code{FALSE}).
+#' @param remove_outliers Logical value indicating whether to detect and remove outliers.
 #' @param return_iterates Logical value indicating if the iterates are to be returned (default is \code{FALSE}).
 #' @param return_condMeanCov Logical value indicating if the conditional mean and covariance matrix of the 
 #'                           time series (excluding the leading and trailing missing values) given the observed data are to be returned (default is \code{FALSE}).
 #' @param tol Positive number denoting the relative tolerance used as stopping criterion (default is \code{1e-8}).
-#' @param maxiter Positive integer indicating the maximum number of iterations allowed (default is \code{1000}).
+#' @param maxiter Positive integer indicating the maximum number of iterations allowed (default is \code{100}).
 #' 
 #' @return If the argument \code{y} is a univariate time series (i.e., coercible to a numeric vector), then this 
 #'         function will return a list with the following elements:
@@ -35,12 +36,14 @@
 #'                              (returned only when \code{return_iterates = TRUE}).}
 #' \item{\code{f_iterates}}{Numeric vector with the objective values at each iteration
 #'                          (returned only when \code{return_iterates = TRUE}).}
-#' \item{\code{cond_mean_y}}{Numeric vector (of same length as argument \code{y}) with the conditional mean of the time series (excluding the leading and trailing missing values)
+#' \item{\code{cond_mean_y}}{Numeric vector (of same length as argument \code{y}) with the conditional mean of the time series 
+#'                           (excluding the leading and trailing missing values)
 #'                           given the observed data (returned only when \code{return_condMeanCov = TRUE}).}
 #' \item{\code{cond_cov_y}}{Numeric matrix (with number of columns/rows equal to the length of the argument \code{y})
-#'                          with the conditional covariance matrix of the time series (excluding the leading and trailing missing values) given the observed data
-#'                           (returned only when \code{return_condMeanCov = TRUE}).}
-#'
+#'                          with the conditional covariance matrix of the time series (excluding the leading and trailing missing values) 
+#'                          given the observed data (returned only when \code{return_condMeanCov = TRUE}).}
+#' \item{\code{index_outliers}}{Indices of outliers detected (returned only when \code{remove_outliers = TRUE} and outliers are detected).}
+#' 
 #' If the argument \code{y} is a multivariate time series (i.e., with multiple columns and coercible to a numeric matrix), 
 #' then this function will return a list with each element as in the case of univariate \code{y} corresponding to each
 #' of the columns (i.e., one list element per column of \code{y}), with the following additional elements that combine the 
@@ -53,6 +56,8 @@
 #'                        with the estimates for \code{sigma2} for each of the univariate time series.}
 #' 
 #' @author Junyan Liu and Daniel P. Palomar
+#' 
+#' @seealso \code{\link{impute_AR1_Gaussian}}, \code{\link{fit_AR1_t}}
 #' 
 #' @references
 #' R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
@@ -68,157 +73,207 @@
 #' 
 #' @import zoo
 #' @export
-fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE,
+fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, remove_outliers = FALSE,
                              return_iterates = FALSE, return_condMeanCov = FALSE,
-                             tol = 1e-10, maxiter = 1000) {
+                             tol = 1e-8, maxiter = 100) {
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
   if (tol <= 0) stop("\"tol\" must be greater than 0.")
   if (maxiter < 1) stop("\"maxiter\" must be greater than 1.")
   
-
+  # manage multiple columns
   if (NCOL(y) > 1) {
-    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_Gaussian, random_walk, zero_mean, return_iterates, return_condMeanCov, tol, maxiter)
-    phi0 <- unlist(lapply(estimation_list, function(x) {x$phi0}))
-    phi1 <- unlist(lapply(estimation_list, function(x) {x$phi1}))
-    sigma2 <- unlist(lapply(estimation_list, function(x) {x$sigma2}))
-    return(c(estimation_list, list("phi0_vct"   = phi0,
-                                   "phi1_vct"   = phi1,
-                                   "sigma2_vct" = sigma2)))
+    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_Gaussian, random_walk, zero_mean, remove_outliers, 
+                             return_iterates, return_condMeanCov, tol, maxiter)
+    phi0_vct   <- unlist(lapply(estimation_list, function(x) x$phi0))
+    phi1_vct   <- unlist(lapply(estimation_list, function(x) x$phi1))
+    sigma2_vct <- unlist(lapply(estimation_list, function(x) x$sigma2))
+    return(c(estimation_list, list("phi0_vct"   = phi0_vct,
+                                   "phi1_vct"   = phi1_vct,
+                                   "sigma2_vct" = sigma2_vct)))
   }
   
-  
+  #
+  #   code for y single-column
+  #
+  # error control
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
-  if (sum(!is.na(y))<5) stop("Each time series in \"y\" must have at least five observations.")
-  # remove the missing values at the head and tail of the time series since they do not affect the estimation result
+  if (sum(!is.na(y)) < 5L) stop("Each time series in \"y\" must have at least 5 observations.")
   y <- as.numeric(y)
+  
+  # remove the missing values at the head and tail of the time series since they do not affect the estimation result
   index_obs <- which(!is.na(y))
   y <- y[min(index_obs):max(index_obs)]
-  
-  # trivial case with no NAs (no need for EM algorithm)
-  if (!anyNA(y)) {
-    n <- length(y)
-    s_y2 <- sum(y[-1])
-    s_y1 <- sum(y[-n])
-    s_y2y2 <- sum(y[-1]^2) 
-    s_y1y1 <- sum(y[-n]^2) 
-    s_y2y1 <- sum(y[-1]*y[-n])
-    if (!random_walk && !zero_mean) {
-      phi1 <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
-      phi0 <- (s_y2 - phi1 * s_y1) / (n - 1)
-    } else if (random_walk && !zero_mean){
-      phi1 <- 1
-      phi0 <- (s_y2 - s_y1) / (n - 1)
-    } else if (!random_walk && zero_mean){
-      phi1 <- s_y2y1 / s_y1y1 
-      phi0 <- 0
-    } else{
-      phi1 <- 1
-      phi0 <- 0
-    }
-    sigma2 <- (( s_y2y2 + (n - 1) * phi0^2 + phi1^2 * s_y1y1 
-                        - 2 * phi0 * s_y2 - 2 * phi1 * s_y2y1 + 2 * phi0 * phi1 * s_y1 ) / (n - 1))
-    return(list("phi0"   = phi0,
-                "phi1"   = phi1,
-                "sigma2" = sigma2))
+  idx_offset <- min(index_obs) - 1L
+  index_obs <- which(!is.na(y))
+
+  # outlier detection
+  if(remove_outliers) {
+    fitted_with_outliers <- if (!anyNA(y)) fit_AR1_Gaussian_complete(y, random_walk, zero_mean)
+                            else fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = FALSE, return_iterates, return_condMeanCov, tol, maxiter)
+    idx_outliers <- find_outliers_AR1_Gaussian(y, index_obs, fitted_with_outliers, p_confidence = 0.95)
+    if (!is.null(idx_outliers))
+      y[idx_outliers] <- NA  # substitute outliers with NAs
   }
   
-    
-  # find the missing blocks
-  n <- index_obs <- index_miss <- n_obs <- y_obs <- delta_index_obs <- n_block <- n_in_block <- 
-    first_index_in_block <- last_index_in_block <- previous_obs_before_block <- next_obs_after_block <- NULL
-  list2env(findMissingBlock(y), envir = environment())
-  
-  # objective function, the observed data log-likelihood
-  if (return_iterates)
-    obj <- function(phi0, phi1, sigma2) {
-      sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
-      for (i in 1:(n_obs-1)) {
-        sum_phi1[i] <- sum(phi1^(0:(delta_index_obs[i] - 1)))
-        sum2_phi1[i] <- sum(phi1^((0:(delta_index_obs[i] - 1))*2))
+  # estimation (after possibly setting outliers to NA)
+  if (!anyNA(y))   # trivial case with no NAs
+    results <- fit_AR1_Gaussian_complete(y, random_walk, zero_mean)
+  else {
+    # if there are NAs find the missing blocks
+    n <- index_obs <- index_miss <- n_obs <- y_obs <- delta_index_obs <- n_block <- n_in_block <- 
+      first_index_in_block <- last_index_in_block <- previous_obs_before_block <- next_obs_after_block <- NULL
+    list2env(findMissingBlock(y), envir = environment())
+
+    # objective function, the observed data log-likelihood
+    if (return_iterates)
+      obj <- function(phi0, phi1, sigma2) {
+        sum_phi1 <- sum2_phi1 <- rep(NA, n_obs-1)
+        for (i in 1:(n_obs-1)) {
+          sum_phi1[i] <- sum(phi1^(0:(delta_index_obs[i] - 1)))
+          sum2_phi1[i] <- sum(phi1^((0:(delta_index_obs[i] - 1))*2))
+        }
+        return(-sum((y_obs[2:n_obs] - phi1^delta_index_obs * y_obs[1:(n_obs - 1)] 
+                     - phi0 * sum_phi1)^2 / (2 * sum2_phi1 * sigma2))
+               -0.5 * (n_obs - 1) * log(sigma2) - 0.5 * sum(log(sum2_phi1)))
       }
-      return(-sum((y_obs[2:n_obs] - phi1^delta_index_obs * y_obs[1:(n_obs - 1)] 
-                   - phi0 * sum_phi1)^2 / (2 * sum2_phi1 * sigma2))
-             -0.5 * (n_obs - 1) * log(sigma2) - 0.5 * sum(log(sum2_phi1)))
-    }
-  
-  # initialize the estimates
-  phi0 <- phi1 <- sigma2 <- f <- c()
-  estimation_heuristic <- fit_AR1_Gaussian_heuristic(y, index_miss, random_walk, zero_mean)
-  phi1[1] <- estimation_heuristic$phi1
-  phi0[1] <- estimation_heuristic$phi0
-  sigma2[1] <- estimation_heuristic$sigma2
-  if (return_iterates) f[1] <- obj(phi0[1], phi1[1], sigma2[1])
-
-  for (k in 1:maxiter) {
-    # E-step
-    # computation of mean and covariance of y conditional on all the observed data
-    cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
-                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                        phi0[k], phi1[k], sigma2[k], full_cov = FALSE)
-    # computation of sufficient statistics
-    s_y2 <- sum(cond$mean_y[-1])
-    s_y1 <- sum(cond$mean_y[-n])
-    s_y2y2 <- sum(cond$cov_y_diag[-1] + cond$mean_y[-1]^2)  #slow version: s_y2y2 <- sum(diag(cond_cov_y[2:n, 2:n]) + cond_mean_y[2:n]^2)
-    s_y1y1 <- sum(cond$cov_y_diag[-n]  + cond$mean_y[-n]^2)  #slow version: s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
-    s_y2y1 <- sum(cond$cov_y_diag1 + cond$mean_y[-1] * cond$mean_y[-n])  #slow version: s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
     
-    # M-step (update the estimates)
-    if (!random_walk && !zero_mean) {
-      phi1[k + 1] <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
-      phi0[k + 1] <- (s_y2 - phi1[k +1] * s_y1) / (n - 1)
-    } else if (random_walk && !zero_mean){
-      phi1[k + 1] <- 1
-      phi0[k + 1] <- (s_y2 - s_y1) / (n - 1)
-    } else if (!random_walk && zero_mean){
-      phi1[k + 1] <- s_y2y1 / s_y1y1 
-      phi0[k + 1] <- 0
-    } else{
-      phi1[k + 1] <- 1
-      phi0[k + 1] <- 0
-    }
-    sigma2[k + 1] <- (( s_y2y2 + (n - 1) * phi0[k + 1]^2 + phi1[k + 1]^2 * s_y1y1 
-                      - 2 * phi0[k + 1] * s_y2 - 2 * phi1[k + 1] * s_y2y1 + 2 * phi0[k + 1] * phi1[k + 1] * s_y1 ) / (n - 1))
+    # initialize the estimates
+    phi0 <- phi1 <- sigma2 <- f <- c()
+    estimation_heuristic <- fit_AR1_Gaussian_heuristic(y, index_miss, random_walk, zero_mean)
+    phi1[1] <- estimation_heuristic$phi1
+    phi0[1] <- estimation_heuristic$phi0
+    sigma2[1] <- estimation_heuristic$sigma2
+    if (return_iterates) f[1] <- obj(phi0[1], phi1[1], sigma2[1])    
     
-    # computation of the objective function
-    if (return_iterates) f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
-
-    # termination criterion    
-    if (abs(phi0[k + 1] - phi0[k]) <= tol * (abs(phi0[k + 1]) + abs(phi0[k]))/2
-        && abs(phi1[k + 1] - phi1[k]) <= tol * (abs(phi1[k + 1]) + abs(phi1[k]))/2
-        && abs(sigma2[k + 1] - sigma2[k]) <= tol * (abs(sigma2[k + 1]) + abs(sigma2[k]))/2) 
-    break
+    # loop
+    for (k in 1:maxiter) {
+      # E-step
+      # computation of mean and covariance of y conditional on all the observed data
+      cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                          first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                          phi0[k], phi1[k], sigma2[k], full_cov = FALSE)
+      # computation of sufficient statistics
+      s_y2   <- sum(cond$mean_y[-1])
+      s_y1   <- sum(cond$mean_y[-n])
+      s_y2y2 <- sum(cond$cov_y_diag[-1] + cond$mean_y[-1]^2)  #slow version: s_y2y2 <- sum(diag(cond_cov_y[2:n, 2:n]) + cond_mean_y[2:n]^2)
+      s_y1y1 <- sum(cond$cov_y_diag[-n]  + cond$mean_y[-n]^2)  #slow version: s_y1y1 <- sum(diag(cond_cov_y[1:(n - 1), 1:(n - 1)])  + cond_mean_y[1:(n - 1)]^2)
+      s_y2y1 <- sum(cond$cov_y_diag1 + cond$mean_y[-1] * cond$mean_y[-n])  #slow version: s_y2y1 <- sum(diag(cond_cov_y[1:(n - 1), 2:n]) + cond_mean_y[2:n] * cond_mean_y[1:(n - 1)])
+      
+      # M-step (update the estimates)
+      if (!random_walk && !zero_mean) {
+        phi1[k + 1] <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
+        phi0[k + 1] <- (s_y2 - phi1[k +1] * s_y1) / (n - 1)
+      } else if (random_walk && !zero_mean){
+        phi1[k + 1] <- 1
+        phi0[k + 1] <- (s_y2 - s_y1) / (n - 1)
+      } else if (!random_walk && zero_mean){
+        phi1[k + 1] <- s_y2y1 / s_y1y1 
+        phi0[k + 1] <- 0
+      } else{
+        phi1[k + 1] <- 1
+        phi0[k + 1] <- 0
+      }
+      sigma2[k + 1] <- ((s_y2y2 + (n - 1) * phi0[k + 1]^2 + phi1[k + 1]^2 * s_y1y1 -
+                           2 * phi0[k + 1] * s_y2 - 2 * phi1[k + 1] * s_y2y1 + 2 * phi0[k + 1] * phi1[k + 1] * s_y1) / (n - 1))
+      
+      # computation of the objective function
+      if (return_iterates) f[k + 1] <- obj(phi0[k + 1], phi1[k + 1], sigma2[k + 1])
+      
+      # termination criterion    
+      if (abs(phi0[k + 1] - phi0[k]) <= tol * (abs(phi0[k + 1]) + abs(phi0[k]))/2
+          && abs(phi1[k + 1] - phi1[k]) <= tol * (abs(phi1[k + 1]) + abs(phi1[k]))/2
+          && abs(sigma2[k + 1] - sigma2[k]) <= tol * (abs(sigma2[k + 1]) + abs(sigma2[k]))/2) 
+        break
+    }
+    
+    # collect results to return
+    results <- list("phi0"   = phi0[k + 1],
+                    "phi1"   = phi1[k + 1],
+                    "sigma2" = sigma2[k + 1])
+    if (return_iterates) 
+      results <- c(results, list("phi0_iterates"   = phi0,
+                                 "phi1_iterates"   = phi1,
+                                 "sigma2_iterates" = sigma2,
+                                 "nu_iterates"     = nu))
+    if (return_condMeanCov) {
+      cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
+                          first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
+                          phi0[k+1], phi1[k+1], sigma2[k+1], full_cov = TRUE)
+      results <- c(results, list("cond_mean_y" = cond$mean_y,
+                                 "cond_cov_y"  = cond$cov_y))
+    }
   }
   
-  results <- list("phi0"   = phi0[k + 1],
-                  "phi1"   = phi1[k + 1],
-                  "sigma2" = sigma2[k + 1])
-  
-  if (return_iterates) 
-    results <- c(results, list("phi0_iterates"   = phi0,
-                               "phi1_iterates"   = phi1,
-                               "sigma2_iterates" = sigma2,
-                               "f_iterates"      = f))
-
-
-  if (return_condMeanCov) {
-    cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
-                        first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
-                        phi0[k+1], phi1[k+1], sigma2[k+1], full_cov = TRUE)
-    results <- c(results, list("cond_mean_y" = cond$mean_y,
-                               "cond_cov_y"  = cond$cov_y))
-  }
+  if(remove_outliers)
+    results <- c(results, list("index_outliers" = if(is.null(idx_outliers)) NULL
+                                                  else idx_outliers + idx_offset))
   return(results)
 }
 
 
-#
-# Extracts the diagonal on top of the main diagonal
-#
+
+# extracts the diagonal on top of the main diagonal
 diag1 <- function(X) {
   m <- min(dim(X))
   X[1 + dim(X)[1L] + 0L:(m - 2L) * (dim(X)[1L] + 1)]  # main diag: x[1 + 0L:(m - 1L) * (dim(x)[1L] + 1)]
 }
+
+
+
+# trivial case with no NAs (no need for EM algorithm)
+fit_AR1_Gaussian_complete <- function(y, random_walk = FALSE, zero_mean = FALSE) {
+  n <- length(y)
+  s_y2 <- sum(y[-1])
+  s_y1 <- sum(y[-n])
+  s_y2y2 <- sum(y[-1]^2) 
+  s_y1y1 <- sum(y[-n]^2) 
+  s_y2y1 <- sum(y[-1]*y[-n])
+  if (!random_walk && !zero_mean) {
+    phi1 <- (s_y2y1 - s_y2 * s_y1 / (n - 1)) / (s_y1y1 - s_y1 * s_y1 / (n - 1)) 
+    phi0 <- (s_y2 - phi1 * s_y1) / (n - 1)
+  } else if (random_walk && !zero_mean){
+    phi1 <- 1
+    phi0 <- (s_y2 - s_y1) / (n - 1)
+  } else if (!random_walk && zero_mean){
+    phi1 <- s_y2y1 / s_y1y1 
+    phi0 <- 0
+  } else{
+    phi1 <- 1
+    phi0 <- 0
+  }
+  sigma2 <- (( s_y2y2 + (n - 1) * phi0^2 + phi1^2 * s_y1y1 
+               - 2 * phi0 * s_y2 - 2 * phi1 * s_y2y1 + 2 * phi0 * phi1 * s_y1 ) / (n - 1))
+  return(list("phi0"   = phi0,
+              "phi1"   = phi1,
+              "sigma2" = sigma2))
+}
+
+
+
+find_outliers_AR1_Gaussian <- function(y, index_obs, fitted, p_confidence = 0.95) {
+  index_outliers <- NULL
+  for (i in 2:length(index_obs)) {
+    delta_i <- index_obs[i] - index_obs[i-1]
+    mu_expected <- sum(fitted$phi1^( 0:(delta_i - 1) )) * fitted$phi0 + fitted$phi1^delta_i * y[index_obs[i-1]]
+    upper <- max(y[index_obs[i]], 2*mu_expected - y[index_obs[i]])
+    lower <- min(y[index_obs[i]], 2*mu_expected - y[index_obs[i]])
+    # compute the probability of the observation in [lower, upper]
+    p <- mvtnorm::pmvt(lower = lower, upper = upper, delta = mu_expected, df = 10, sigma = (10 - 2)/10 * fitted$sigma2) 
+    #browser()
+    #p <- mvtnorm::pmvnorm(lower = lower, upper = upper, mean = mu_expected, sigma = fitted$sigma2) 
+    
+    # if p larger than 95%, then the observation lies outside the 95% confidence interval.
+    if (p > 0.95 ) {
+      index_outliers <- c(index_outliers, index_obs[i])
+      #browser()
+    }
+  }
+  return(index_outliers)
+}  
+
+
+
 
 
 
@@ -228,14 +283,11 @@ diag1 <- function(X) {
 #' @description Impute missing values of time series by drawing samples from 
 #'              the conditional distribution of the missing values given the 
 #'              observed data based on a Gaussian AR(1) model as estimated 
-#'              with the function \code{\link{fit_AR1_Gaussian}}. 
+#'              with the function \code{\link{fit_AR1_Gaussian}}. Outliers 
+#'              can be detected and removed.
 #' 
 #' @inheritParams fit_AR1_Gaussian
 #' @param n_samples Positive integer indicating the number of imputations (default is \code{1}).
-#' @param impute_leading_NAs Logical value indicating if the leading missing values of time 
-#'                           series are to be imputed (default is \code{FALSE}).
-#' @param impute_trailing_NAs Logical value indicating if the trailing missing values of time 
-#'                            series are to be imputed (default is \code{FALSE}).                      
 #' @param return_estimates Logical value indicating if the estimates of the model parameters 
 #'                         are to be returned (default is \code{FALSE}).
 #'                         
@@ -243,7 +295,7 @@ diag1 <- function(X) {
 #'         the function will return an imputed time series of the same class and dimensions 
 #'         as the argument \code{y} with one new attribute recording the locations of missing 
 #'         values (the function \code{\link{plot_imputed}} will make use of such information
-#'         to indicate the imputed values).
+#'         to indicate the imputed values), as well as locations of outliers removed.
 #'         
 #'         If \code{n_samples > 1}, the function will return a list consisting of \code{n_sample} 
 #'         imputed time series with names: y_imputed.1, y_imputed.2, etc. 
@@ -258,6 +310,8 @@ diag1 <- function(X) {
 #'                              on the number of time series).}
 #' 
 #' @author Junyan Liu and Daniel P. Palomar
+#' 
+#' @seealso \code{\link{plot_imputed}}, \code{\link{fit_AR1_Gaussian}}, \code{\link{impute_AR1_t}}
 #' 
 #' @references
 #' R. J. Little and D. B. Rubin, Statistical Analysis with Missing Data, 2nd ed. Hoboken, N.J.: John Wiley & Sons, 2002.
@@ -275,18 +329,20 @@ diag1 <- function(X) {
 #' @import zoo
 #' @import MASS
 #' @export
-impute_AR1_Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, impute_trailing_NAs = FALSE,
-                                random_walk = FALSE, zero_mean = FALSE, return_estimates = FALSE, tol = 1e-10, maxiter = 1000) { 
+impute_AR1_Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE, 
+                                remove_outliers = FALSE,
+                                return_estimates = FALSE, tol = 1e-10, maxiter = 1000) { 
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
   if (round(n_samples)!=n_samples | n_samples<=0) stop("\"n_samples\" must be a positive integer.")
 
+  # manage multiple columns  
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {
-      impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, impute_leading_NAs, impute_trailing_NAs, random_walk, zero_mean, return_estimates, tol, maxiter)
+      impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, remove_outliers, return_estimates, tol, maxiter)
       })
     if (n_samples == 1 && !return_estimates) {
-      index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result)$index_miss})
+      index_miss_list <- lapply(results_list, FUN = function(result) attributes(result)$index_miss)
       results <- do.call(cbind, results_list)
       attr(results, "index_miss") = index_miss_list
     } else if (n_samples == 1 && return_estimates) {
@@ -296,68 +352,64 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, impute_leading_NAs = FALSE, im
     } else {
       index_miss_list <- lapply(results_list, FUN = function(result) {attributes(result$y_imputed.1)$index_miss})
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
-      for (i in 1:n_samples) {
+      for (i in 1:n_samples)
         attr(results[[i]], "index_miss") = index_miss_list  
-      }
       if (return_estimates) {
-        results$phi0 <- as.vector(results$phi0)
-        results$phi1 <- as.vector(results$phi1)
+        results$phi0   <- as.vector(results$phi0)
+        results$phi1   <- as.vector(results$phi1)
         results$sigma2 <- as.vector(results$sigma2)
       }
     }
     return(results)
   }
   
+  #
+  #   code for y single-column
+  #  
   # error control
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
-  if (sum(!is.na(y))<5) stop("Each time series in \"y\" must have at least five observations.")
+  if (sum(!is.na(y)) < 5) stop("Each time series in \"y\" must have at least 5 observations.")
   
   y_attrib <- attributes(y)
   y <- as.numeric(y)
   y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
   
+  if (remove_outliers) {
+    fitted <- fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = TRUE, tol = tol, maxiter = maxiter)
+    if (!is.null(index_outliers <- fitted$index_outliers))
+      y[index_outliers] <- NA
+  }  
   
-  if (!anyNA(y)) { # trivial case with no NAs
-    if (return_estimates) estimation_result <- fit_AR1_Gaussian(y, random_walk, zero_mean, tol = tol, maxiter = maxiter)
-    index_miss <- NULL
+  # imputation
+  if (!any_inner_NA(y)) {  # trivial case with no inner NAs: do nothing
+    index_miss <- which(is.na(y))
+    if (return_estimates && !remove_outliers) 
+      fitted <- fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = FALSE, tol = tol, maxiter = maxiter)
   } else {
-    estimation_result <- fit_AR1_Gaussian(y, random_walk, zero_mean, return_condMeanCov = TRUE, tol = tol, maxiter = maxiter)
+    fitted <- fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = FALSE, return_condMeanCov = TRUE, tol = tol, maxiter = maxiter)
     index_miss <- which(is.na(y))  # indexes of missing values
     index_obs <- which(!is.na(y))
     index_obs_min <- min(index_obs)
     index_obs_max <- max(index_obs)
-
-
+    
     index_miss_middle <- index_miss[index_miss>index_obs_min & index_miss<index_obs_max]
     if (length(index_miss_middle) > 0) {
       index_miss_deleted <- index_miss_middle - (index_obs_min - 1)
-      y_imputed[index_miss_middle, ] <- t(MASS::mvrnorm(n = n_samples, estimation_result$cond_mean_y[index_miss_deleted], estimation_result$cond_cov_y[index_miss_deleted, index_miss_deleted]))
-    }
- 
-   # if there are missing values at the head of the time series and impute_leading_NAs == TRUE, impute them.
-    if (index_obs_min > 1 & impute_leading_NAs) { 
-      for (j in (index_obs_min - 1):1 )
-        y_imputed[j, ] <- ( y_imputed[j + 1, ] - MASS::mvrnorm(1, rep(0, n_samples), estimation_result$sigma2 * diag(n_samples)) - estimation_result$phi0 )/estimation_result$phi1
-    }
-    
-    # if there are missing values at the tail of the time series and impute_trailing_NAs == TRUE, impute them.
-    if (index_obs_max < length(y) & impute_trailing_NAs){
-      for (i in (index_obs_max + 1):length(y))
-        y_imputed[i, ] <- estimation_result$phi0 + estimation_result$phi1 * y_imputed[i - 1, ] +  MASS::mvrnorm(1, rep(0, n_samples), estimation_result$sigma2 * diag(n_samples)) 
+      y_imputed[index_miss_middle, ] <- t(MASS::mvrnorm(n = n_samples, fitted$cond_mean_y[index_miss_deleted], fitted$cond_cov_y[index_miss_deleted, index_miss_deleted]))
     }
   }
-    
-
+  
+  # prepare results
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
     attr(y_imputed, "index_miss") <- index_miss
-    if (!return_estimates) {
-      results <- y_imputed
-    } else
-      results <- list("y_imputed" = y_imputed)
+    if(remove_outliers) attr(y_imputed, "index_outliers") <- index_outliers
+    results <- if (!return_estimates) y_imputed
+               else list("y_imputed" = y_imputed)
   } else {
     y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x) { attributes(x) <- y_attrib
                                                                              attr(x, "index_miss") <- index_miss
+                                                                             if(remove_outliers) attr(x, "index_outliers") <- index_outliers
                                                                              return(x) })
     results <- c("y_imputed" = y_imputed)
   }
