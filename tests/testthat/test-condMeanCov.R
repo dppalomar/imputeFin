@@ -24,7 +24,7 @@ for (i in 2:n_total) {
 data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influence of initial point
 y_orig <- xts(data,  seq(as.Date("2016-01-01"), length = n, by = "days"))
 
-# creat missing values
+# create missing values
 index_miss <- sort(sample(2:(n - 1), n_miss))
 y <- y_orig
 y[index_miss] <- NA
@@ -72,14 +72,4 @@ test_that("the main and second main diagonal of cond$cov are equal to the direct
   expect_equal(cond$cov_y_diag,  cond2$cov_y_diag)
   expect_equal(cond$cov_y_diag1, cond2$cov_y_diag1)
 })
-
-
-
-# # other test functions:
-# expect_equal(cond$cov_y_diag,  diag(cond$cov_y))
-# expect_error(riskParityPortfolio(Sigma, w_ub = rep(0.01, N)))
-# expect_silent(riskParityPortfolio(Sigma, w_lb = 0.05, w_ub = 0.3))
-# expect_warning(riskParityPortfolio(Sigma, w0 = rep(1, N)))
-# expect_that(all.equal(rpp_mu, rpp, tolerance = 1e-4), is_true())
-
 
