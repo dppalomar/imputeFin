@@ -17,7 +17,7 @@ vignette(package = "imputeFin")
 
 
 ##
-## Developer commands (https://r-pkgs.org/)
+## Developer commands (https://r-pkgs.org/, https://style.tidyverse.org/)
 ##
 devtools::load_all()  #or Ctrl-Shift-L
 devtools::document()  #to generate all documentation via roxygen
