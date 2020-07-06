@@ -10,7 +10,8 @@
 #' values based on modeling the time series with a random walk or an 
 #' autoregressive (AR) model, convenient to model log-prices and log-volumes 
 #' in financial data. In the current version, the imputation is 
-#' univariate-based (so no asset correlation is used).
+#' univariate-based (so no asset correlation is used). In addition,
+#' outliers can be detected and removed.
 #' 
 #' @section Functions:
 #' \code{\link{fit_AR1_Gaussian}}, \code{\link{impute_AR1_Gaussian}},

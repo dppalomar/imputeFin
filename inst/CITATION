@@ -4,13 +4,13 @@ citEntry(entry = "Manual",
          title        = "{imputeFin: Imputation of Financial Time Series with Missing Values}",
          author       = personList(as.person("J. Liu"),
                                    as.person("D. P. Palomar")),
-         note         = "R package version 0.1.0",
+         note         = "R package version 0.1.1",
          year         = "2019",
          url          = "https://CRAN.R-project.org/package=imputeFin",
          textVersion  =
            paste("J. Liu and D. P. Palomar (2019).",
                  "imputeFin: Imputation of Financial Time Series with Missing Values.",
-                 "R package version 0.1.0.",
+                 "R package version 0.1.1.",
                  "https://CRAN.R-project.org/package=imputeFin")
 )
 

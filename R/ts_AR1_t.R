@@ -1,4 +1,4 @@
-#' Synthetic AR(1) Student's t time series with missing values.
+#' Synthetic AR(1) Student's t time series with missing values
 #' 
 #' Synthetic AR(1) Student's t time series with missing values for 
 #' estimation and imputation testing purposes.
