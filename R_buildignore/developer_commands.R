@@ -12,9 +12,10 @@ library(imputeFin)
 help(package = "imputeFin")
 package?imputeFin
 ?impute_AR1_Gaussian
+vignette("ImputeFinancialTimeSeries", package = "imputeFin")
+browseVignettes("imputeFin")
+RShowDoc("ImputeFinancialTimeSeries", package = "imputeFin")
 citation("imputeFin")
-vignette(package = "imputeFin")
-
 
 ##
 ## Developer commands (https://r-pkgs.org/, https://style.tidyverse.org/)
@@ -22,6 +23,7 @@ vignette(package = "imputeFin")
 devtools::load_all()  #or Ctrl-Shift-L
 devtools::document()  #to generate all documentation via roxygen
 devtools::install()
+devtools::install(build_vignettes = TRUE)
 library(imputeFin)
 
 

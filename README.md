@@ -18,7 +18,8 @@ values. This package provides an efficient way to impute the missing
 values based on modeling the time series with a random walk or an 
 autoregressive (AR) model, convenient to model log-prices and log-volumes 
 in financial data. In the current version, the imputation is 
-univariate-based (so no asset correlation is used). 
+univariate-based (so no asset correlation is used). In addition,
+outliers can be detected and removed.
 
 The package is based on the paper:   
 J. Liu, S. Kumar, and D. P. Palomar (2019). Parameter Estimation of 
@@ -44,14 +45,15 @@ To get help:
 library(imputeFin)
 help(package = "imputeFin")
 ?impute_AR1_Gaussian
+vignette("ImputeFinancialTimeSeries", package = "imputeFin")
+RShowDoc("ImputeFinancialTimeSeries", package = "imputeFin")
 ```
 
-To cite `imputeFin` in publications:
+To cite package `imputeFin` or the base reference in publications:
 
 ```r
 citation("imputeFin")
 ```
-
 
 
 ## Quick Start
@@ -67,12 +69,19 @@ names(ts_AR1_Gaussian)
 We can then impute one of the time series and plot it:
 
 ```r
-y_missing <- ts_AR1_Gaussian$y_missing[, 3]
-y_imputed <- impute_AR1_Gaussian(y_missing)
-plot_imputed(y_imputed)
+y_missing      <- ts_AR1_Gaussian$y_missing[, 3]
+y_missing[100] <- 2*y_missing[100]  # create an outlier
+plot_imputed(y_missing, title = "Original time series with missing values and one outlier")
 ```
 
 <img src="man/figures/README-unnamed-chunk-6-1.png" width="80%" style="display: block; margin: auto;" />
+
+```r
+y_imputed <- impute_AR1_Gaussian(y_missing, remove_outliers = TRUE)
+plot_imputed(y_imputed)
+```
+
+<img src="man/figures/README-unnamed-chunk-6-2.png" width="80%" style="display: block; margin: auto;" />
 
 
 ## Documentation
