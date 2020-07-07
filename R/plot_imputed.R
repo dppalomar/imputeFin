@@ -17,7 +17,7 @@
 #' @param title Title of the plot (default is \code{"Imputed time series"}).
 #' @param color_imputed Color for the imputed values (default is \code{"red"}).
 #' 
-#' @author Daniel P. Palomar and Junyan Liu
+#' @author Daniel P. Palomar
 #' 
 #' @examples
 #' library(imputeFin)
@@ -30,60 +30,85 @@
 #' @import zoo
 #' @import graphics
 #' @export
-plot_imputed <- function(y_imputed, column = 1, type = c("ggplot2", "simple"), title = NULL, color_imputed = "red") {
-  any_index_miss <- !is.null(attr(y_imputed, "index_miss"))
-  if (is.null(title)) title <- "Imputed time series"
-  
+plot_imputed <- function(y_imputed, column = 1, 
+                         title = "Imputed time series", color_imputed = "red", type = c("ggplot2", "simple")) {
+
   # extract the column to be plotted
+  index_miss <- NULL
+  any_index_miss <- !is.null(attr(y_imputed, "index_miss"))
   if (NCOL(y_imputed) > 1) {
-    y_imputed_i <- y_imputed[, column]
     if (any_index_miss)
       index_miss <- attributes(y_imputed)$index_miss[[column]]
+    y_imputed <- y_imputed[, column]
   } else {
-    y_imputed_i <- y_imputed
     if (any_index_miss)
       index_miss <- attributes(y_imputed)$index_miss
   }
 
-  # separate missing values into isolated and nonisolated
-  if (any_index_miss) {
-    index_miss_nonisolated <- NULL
+  # obtain some indices convenient for plotting
+  # 1) separate missing values into isolated and nonisolated
+  index_miss_nonisolated <- NULL
+  if (any_index_miss)
     for (i in index_miss)
       if (any(c(i-1, i+1) %in% index_miss))  # any neighbor
         index_miss_nonisolated <- c(index_miss_nonisolated, i)
-    index_miss_isolated <- setdiff(index_miss, index_miss_nonisolated)
+  index_miss_isolated <- setdiff(index_miss, index_miss_nonisolated)
+  # 2) obtain expanded indexes for the plot
+  index_miss_expanded <- index_miss
+  for (i in index_miss) {
+    if (i > 1)
+      index_miss_expanded <- union(index_miss_expanded, i - 1)
+    if (i < length(y_imputed))
+      index_miss_expanded <- union(index_miss_expanded, i + 1)
   }
+  index_miss_expanded <- sort(index_miss_expanded)
+  
 
+  # plot
   switch(match.arg(type),
          "simple" = {
-           #p <- plot(index_y, y_imputed_i, type = "l",  col = "black", xlab = "", ylab = "", main = title)
+           #p <- plot(index_y, y_imputed, type = "l",  col = "black", xlab = "", ylab = "", main = title)
            #grid()
-           p <- plot(y_imputed_i)
+           p <- plot(y_imputed, main = title, xlab = "", ylab = "")
            if (any_index_miss) {
-             p <- points(y_imputed_i[index_miss], pch = 20, size = 5, col = color_imputed)
-             #p <- lines(index_y[index_miss], y_imputed_i[index_miss], col = color_imputed)
-             # points(index_y[index_miss], y_imputed_i[index_miss], pch = 20, col = "red")
+             p <- points(y_imputed[index_miss], pch = 20, size = 5, col = color_imputed)
+             #p <- lines(index_y[index_miss], y_imputed[index_miss], col = color_imputed)
+             # points(index_y[index_miss], y_imputed[index_miss], pch = 20, col = "red")
              # legend(x = "topleft", legend = "imputed values", col = "red", pch = 20)
            }
-           p
+           invisible(p)
          },
          "ggplot2" = {
            if (!requireNamespace("ggplot2", quietly = TRUE)) 
-             stop("Please install package \"ggplot2\" or choose another plot type.", call. = FALSE)
-           index <- value <- NULL  # to avoid CRAN note
-           data_frm  <- data.frame(index = index(y_imputed_i), value = as.vector(y_imputed_i))
+             stop("Please install package \"ggplot2\" or choose a basic plot type with type = \"simple\".", call. = FALSE)
+
+           df_all  <- data.frame(index = index(y_imputed), value = as.vector(y_imputed))
+           df_obs  <- df_all; df_obs$value[index_miss] <- NA
+           df_miss <- df_all; df_miss$value[setdiff(1:nrow(df_all), index_miss_expanded)] <- NA
+           df_miss_isolated <- df_all[index_miss_isolated, ]
+
+           index <- value <- NULL  # dirty hack to avoid CRAN note
            p <- ggplot2::ggplot() +
-             ggplot2::geom_line(data = data_frm, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
+             ggplot2::geom_line(data = df_miss, ggplot2::aes(x = index, y = value), col = color_imputed) +
+             ggplot2::geom_line(data = df_obs, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
+             #ggplot2::geom_point(data = df_miss_isolated, ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8) +
+             ggplot2::geom_point(data = df_all[index_miss, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8) +
+             #ggplot2::scale_x_date(date_breaks = "6 months", date_labels = "%b %Y") +
              ggplot2::labs(title = title, x = NULL, y = NULL)
-             #ggplot2::scale_x_date(date_breaks = "6 months", date_labels = "%b %Y")
-           if (any_index_miss) {
-             p <- p + ggplot2::geom_point(data = data_frm[index_miss_isolated, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8)
-             if (!is.null(index_miss_nonisolated)) {
-               data_frm$value[-index_miss_nonisolated] <- NA
-               p <- p + ggplot2::geom_line(data = data_frm, ggplot2::aes(x = index, y = value), col = color_imputed)
-             }
-           }
-           p
+           
+           # p <- ggplot2::ggplot() +
+           #   ggplot2::geom_line(data = df_all, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
+           #   ggplot2::labs(title = title, x = NULL, y = NULL)
+           #   #ggplot2::scale_x_date(date_breaks = "6 months", date_labels = "%b %Y")
+           # if (any_index_miss) {
+           #   p <- p + ggplot2::geom_point(data = df_all[index_miss_isolated, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8)
+           #   if (!is.null(index_miss_nonisolated)) {
+           #     df_all$value[-index_miss_nonisolated] <- NA
+           #     p <- p + ggplot2::geom_line(data = df_all, ggplot2::aes(x = index, y = value), col = color_imputed)
+           #   }
+           # }
+
+           suppressWarnings(print(p))
          },
          stop("Plot type unknown"))
 }
