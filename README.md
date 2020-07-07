@@ -68,20 +68,22 @@ names(ts_AR1_t)
 
 We can then impute one of the time series and plot it:
 
+
+
 ```r
 y_missing      <- ts_AR1_t$y_missing[, 3]
 y_missing[100] <- 2*y_missing[100]  # create an outlier
 plot_imputed(y_missing, title = "Original time series with missing values and one outlier")
 ```
 
-<img src="man/figures/README-unnamed-chunk-6-1.png" width="80%" style="display: block; margin: auto;" />
+<img src="man/figures/README-unnamed-chunk-7-1.png" width="80%" style="display: block; margin: auto;" />
 
 ```r
 y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE)
 plot_imputed(y_imputed)
 ```
 
-<img src="man/figures/README-unnamed-chunk-6-2.png" width="80%" style="display: block; margin: auto;" />
+<img src="man/figures/README-unnamed-chunk-7-2.png" width="80%" style="display: block; margin: auto;" />
 
 
 ## Documentation
