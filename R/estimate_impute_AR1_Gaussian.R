@@ -90,11 +90,12 @@ fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, remove_o
     phi0_vct   <- unlist(lapply(estimation_list, function(x) x$phi0))
     phi1_vct   <- unlist(lapply(estimation_list, function(x) x$phi1))
     sigma2_vct <- unlist(lapply(estimation_list, function(x) x$sigma2))
-    if (verbose)  # output messages
+    # output messages
+    if (verbose)
       for (i in 1:length(estimation_list))
         message(names(estimation_list)[i], ": ", 
-                length(estimation_list[[i]]$index_miss), " missing values imputed and ", 
-                length(estimation_list[[i]]$index_outliers), " outliers detected/corrected.")
+                length(estimation_list[[i]]$index_miss), " missing values and ", 
+                length(estimation_list[[i]]$index_outliers), " outliers detected.")
     return(c(estimation_list, list("phi0_vct"   = phi0_vct,
                                    "phi1_vct"   = phi1_vct,
                                    "sigma2_vct" = sigma2_vct)))
@@ -345,7 +346,7 @@ find_outliers_AR1_Gaussian <- function(y, index_obs, fitted, p_confidence = 0.95
 #' @import MASS
 #' @export
 impute_AR1_Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE, 
-                                remove_outliers = FALSE,
+                                remove_outliers = FALSE, verbose = TRUE,
                                 return_estimates = FALSE, tol = 1e-10, maxiter = 1000) { 
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
@@ -354,7 +355,7 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean
   # manage multiple columns  
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i) {
-      impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, remove_outliers, return_estimates, tol, maxiter)
+      impute_AR1_Gaussian(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, remove_outliers,  verbose = FALSE, return_estimates, tol, maxiter)
       })
     names(results_list) <- colnames(y)
     if (n_samples == 1 && !return_estimates) {  # return directly a matrix like y
@@ -383,6 +384,12 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean
         results$sigma2 <- as.vector(results$sigma2)
       }
     }
+    # output messages
+    if (verbose)
+      for (i in 1:length(results_list))
+        message(names(results_list)[i], ": ", 
+                length(attr(results_list[[i]], "index_miss")), " missing values imputed and ", 
+                length(attr(results_list[[i]], "index_outliers")), " outliers detected.")    
     return(results)
   }
   
@@ -394,11 +401,12 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean
   if (sum(!is.na(y)) < 5) stop("Each time series in \"y\" must have at least 5 observations.")
   
   y_attrib <- attributes(y)
+  y_name <- colnames(y)  
   y <- as.numeric(y)
   y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
   
   if (remove_outliers) {
-    fitted <- fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = TRUE, tol = tol, maxiter = maxiter)
+    fitted <- fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = TRUE, verbose = FALSE, tol = tol, maxiter = maxiter)
     if (!is.null(index_outliers <- fitted$index_outliers))
       y[index_outliers] <- NA
   }  
@@ -407,9 +415,10 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean
   if (!any_inner_NA(y)) {  # trivial case with no inner NAs: do nothing
     index_miss <- which(is.na(y))
     if (return_estimates && !remove_outliers) 
-      fitted <- fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = FALSE, tol = tol, maxiter = maxiter)
+      fitted <- fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = FALSE, verbose = FALSE, tol = tol, maxiter = maxiter)
   } else {
-    fitted <- fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = FALSE, return_condMeanCov = TRUE, tol = tol, maxiter = maxiter)
+    fitted <- fit_AR1_Gaussian(y, random_walk, zero_mean, remove_outliers = FALSE, verbose = FALSE, 
+                               return_condMeanCov = TRUE, tol = tol, maxiter = maxiter)
     index_miss <- which(is.na(y))  # indexes of missing values
     index_obs <- which(!is.na(y))
     index_obs_min <- min(index_obs)
@@ -424,21 +433,27 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean
   
   # prepare results
   if (length(index_miss) == 0) index_miss <- NULL
+  if(!remove_outliers) index_outliers <- NULL
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
     attr(y_imputed, "index_miss") <- index_miss
-    if(remove_outliers) attr(y_imputed, "index_outliers") <- index_outliers
+    attr(y_imputed, "index_outliers") <- index_outliers
     results <- if (!return_estimates) y_imputed else list("y_imputed" = y_imputed)
   } else {
     y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x) { attributes(x) <- y_attrib
                                                                              attr(x, "index_miss") <- index_miss
-                                                                             if(remove_outliers) attr(x, "index_outliers") <- index_outliers
+                                                                             attr(x, "index_outliers") <- index_outliers
                                                                              return(x) })
     results <- c("y_imputed" = y_imputed)
   }
   if (return_estimates)  results <- c(results, list("phi0"   = fitted$phi0,
                                                     "phi1"   = fitted$phi1,
                                                     "sigma2" = fitted$sigma2))
+  # output message
+  if (verbose)
+    message(y_name, ": ", 
+            length(index_miss), " missing values imputed and ", 
+            length(index_outliers), " outliers detected and corrected.")   
   return(results)
 }
 
