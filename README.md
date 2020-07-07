@@ -61,15 +61,15 @@ Let's load some time series data with missing values for illustration purposes:
 
 ```r
 library(imputeFin)
-data(ts_AR1_Gaussian)
-names(ts_AR1_Gaussian)
-#> [1] "y_missing" "phi0"      "phi1"      "sigma2"
+data(ts_AR1_t)
+names(ts_AR1_t)
+#> [1] "y_missing" "phi0"      "phi1"      "sigma2"    "nu"
 ```
 
 We can then impute one of the time series and plot it:
 
 ```r
-y_missing      <- ts_AR1_Gaussian$y_missing[, 3]
+y_missing      <- ts_AR1_t$y_missing[, 3]
 y_missing[100] <- 2*y_missing[100]  # create an outlier
 plot_imputed(y_missing, title = "Original time series with missing values and one outlier")
 ```
@@ -77,7 +77,7 @@ plot_imputed(y_missing, title = "Original time series with missing values and on
 <img src="man/figures/README-unnamed-chunk-6-1.png" width="80%" style="display: block; margin: auto;" />
 
 ```r
-y_imputed <- impute_AR1_Gaussian(y_missing, remove_outliers = TRUE)
+y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE)
 plot_imputed(y_imputed)
 ```
 
