@@ -45,6 +45,8 @@
 #' \item{\code{cond_mean_y_Gaussian}}{Numeric vector (of same length as argument \code{y}) with the conditional mean of the 
 #'                                    time series (excluding the missing values at the head and tail) given the observed data based 
 #'                                    on Gaussian AR(1) model (returned only when \code{return_condMean_Gaussian = TRUE}).}
+#' \item{\code{index_miss}}{Indices of missing values imputed.}
+#' \item{\code{index_outliers}}{Indices of outliers detected/corrected.}
 #'
 #' If the argument \code{y} is a multivariate time series (i.e., with multiple columns and coercible to a numeric matrix), 
 #' then this function will return a list with each element as in the case of univariate \code{y} corresponding to each
@@ -78,7 +80,7 @@
 #' @import stats
 #' @import mvtnorm
 #' @export
-fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE, remove_outliers = FALSE,
+fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE, remove_outliers = FALSE, verbose = TRUE,
                          return_iterates = FALSE, return_condMean_Gaussian = FALSE,
                          tol = 1e-8, maxiter = 100, n_chain = 10, n_thin = 1, K = 30) {
   # error control
@@ -91,12 +93,17 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   
   # manage multiple columns
   if (NCOL(y) > 1) {
-    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_t, random_walk, zero_mean, fast_and_heuristic, remove_outliers,
-                             return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
+    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_t, random_walk, zero_mean, fast_and_heuristic, remove_outliers, verbose = FALSE,
+                                                             return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
     phi0_vct   <- unlist(lapply(estimation_list, function(x) x$phi0))
     phi1_vct   <- unlist(lapply(estimation_list, function(x) x$phi1))
     sigma2_vct <- unlist(lapply(estimation_list, function(x) x$sigma2))
     nu_vct     <- unlist(lapply(estimation_list, function(x) x$nu))
+    if (verbose)  # output messages
+      for (i in 1:length(estimation_list))
+        message(names(estimation_list)[i], ": ", 
+                length(estimation_list[[i]]$index_miss), " missing values imputed and ", 
+                length(estimation_list[[i]]$index_outliers), " outliers detected/corrected.")
     return(c(estimation_list, list("phi0_vct"   = phi0_vct,
                                    "phi1_vct"   = phi1_vct,
                                    "sigma2_vct" = sigma2_vct,
@@ -109,6 +116,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   # error control
   if (!is.numeric(y)) stop("\"y\" only allows numerical or NA values.")
   if (sum(!is.na(y)) < 5L) stop("Each time series in \"y\" must have at least 5 observations.")
+  y_name <- colnames(y)
   y <- as.numeric(y)
   
   # remove the missing values at the head and tail of the time series since they do not affect the estimation result
@@ -120,7 +128,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   # outlier detection
   if(remove_outliers) {
     fitted_with_outliers <- if (!anyNA(y)) fit_AR1_t_complete(y, random_walk, zero_mean, return_iterates, tol, maxiter)
-                            else fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers = FALSE,
+                            else fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers = FALSE, verbose = FALSE,
                                            return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
     idx_outliers <- find_outliers_AR1_t(y, index_obs, fitted_with_outliers, p_confidence = 0.95)
     if (!is.null(idx_outliers))
@@ -219,10 +227,16 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
         results <- c(results, list("cond_mean_y_Gaussian" = estimation_Gaussian$cond_mean_y))
     }
   }
-
-  if(remove_outliers)
-    results <- c(results, list("index_outliers" = if(is.null(idx_outliers)) NULL
-                                                  else idx_outliers + idx_offset))
+  results <- c(results, list("index_miss" = if (sum(is.na(y)) == 0) NULL
+                                            else which(is.na(y)) + idx_offset))  
+  if(!remove_outliers) idx_outliers <- NULL
+  results <- c(results, list("index_outliers" = if(is.null(idx_outliers)) NULL
+                                                else idx_outliers + idx_offset))
+  # output message
+  if (verbose)
+    message(y_name, ": ", 
+            length(results$index_miss), " missing values imputed and ", 
+            length(results$index_outliers), " outliers detected and corrected.") 
   return(results)
 }
 
@@ -390,7 +404,7 @@ impute_AR1_t <- function(y, n_samples = 1,
     index_obs_min <- min(index_obs)
     index_obs_max <- max(index_obs)
     
-    index_miss_middle <- index_miss[index_miss>index_obs_min & index_miss<index_obs_max]
+    index_miss_middle <- index_miss[index_miss > index_obs_min & index_miss < index_obs_max]
     if (length(index_miss_middle) > 0) {
       y_middle <- y[min(index_obs):max(index_obs)]  # ignore the missing values at the head and tail
       index_miss_deleted <- index_miss_middle - (index_obs_min - 1)
@@ -416,6 +430,7 @@ impute_AR1_t <- function(y, n_samples = 1,
   }
   
   # prepare results
+  if (length(index_miss) == 0) index_miss <- NULL
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
     attr(y_imputed, "index_miss") <- index_miss
