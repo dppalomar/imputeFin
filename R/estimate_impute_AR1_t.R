@@ -325,19 +325,27 @@ impute_AR1_t <- function(y, n_samples = 1,
       impute_AR1_t(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, fast_and_heuristic, remove_outliers, 
                    return_estimates, tol,  maxiter , K, n_burn, n_thin) 
       })
-    if (n_samples == 1 && !return_estimates) {
-      index_miss_list <- lapply(results_list, FUN = function(result) attributes(result)$index_miss)
+    names(results_list) <- colnames(y)
+    if (n_samples == 1 && !return_estimates) {  # return directly a matrix like y
       results <- do.call(cbind, results_list)
-      attr(results, "index_miss") = index_miss_list
+      index_miss_list     <- lapply(results_list, FUN = function(res) attr(res, "index_miss"))
+      index_outliers_list <- lapply(results_list, FUN = function(res) attr(res, "index_outliers"))
+      attr(results, "index_miss")     <- index_miss_list
+      attr(results, "index_outliers") <- index_outliers_list
     } else if (n_samples == 1 && return_estimates) {
-      index_miss_list <- lapply(results_list, FUN = function(result) attributes(result$y_imputed)$index_miss)
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
-      attr(results$y_imputed, "index_miss") = index_miss_list
+      index_miss_list     <- lapply(results_list, FUN = function(res) attr(res$y_imputed, "index_miss"))
+      index_outliers_list <- lapply(results_list, FUN = function(res) attr(res$y_imputed, "index_outliers"))
+      attr(results$y_imputed, "index_miss")     <- index_miss_list
+      attr(results$y_imputed, "index_outliers") <- index_outliers_list
     } else {
-      index_miss_list <- lapply(results_list, FUN = function(result) attributes(result$y_imputed.1)$index_miss)
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
-      for (i in 1:n_samples)
-        attr(results[[i]], "index_miss") = index_miss_list
+      index_miss_list     <- lapply(results_list, FUN = function(res) attr(res$y_imputed.1, "index_miss"))
+      index_outliers_list <- lapply(results_list, FUN = function(res) attr(res$y_imputed.1, "index_outliers"))
+      for (i in 1:n_samples) {
+        attr(results[[i]], "index_miss")     <- index_miss_list
+        attr(results[[i]], "index_outliers") <- index_outliers_list
+      }
       if (return_estimates) {
         results$phi0   <- as.vector(results$phi0)
         results$phi1   <- as.vector(results$phi1)
@@ -411,15 +419,12 @@ impute_AR1_t <- function(y, n_samples = 1,
   if (n_samples == 1) {
     attributes(y_imputed) <- y_attrib
     attr(y_imputed, "index_miss") <- index_miss
-    if(remove_outliers)
-      attr(y_imputed, "index_outliers") <- index_outliers
-    results <- if (!return_estimates) y_imputed
-               else list("y_imputed" = y_imputed)
+    if(remove_outliers) attr(y_imputed, "index_outliers") <- index_outliers
+    results <- if (!return_estimates) y_imputed else list("y_imputed" = y_imputed)
   } else {
     y_imputed <-lapply(split(y_imputed, col(y_imputed)), FUN = function(x) { attributes(x) <- y_attrib
                                                                              attr(x, "index_miss") <- index_miss
-                                                                             if(remove_outliers)
-                                                                               attr(x, "index_outliers") <- index_outliers
+                                                                             if(remove_outliers) attr(x, "index_outliers") <- index_outliers
                                                                              return(x) })
     results <- c("y_imputed" = y_imputed)
   }
