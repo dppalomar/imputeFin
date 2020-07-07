@@ -79,7 +79,7 @@ plot_imputed(y_missing, title = "Original time series with missing values and on
 
 ```r
 y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE)
-#> c: 60 missing values imputed and 1 outliers detected and corrected.
+#> var c: 60 missing values imputed and 1 outliers detected and corrected.
 plot_imputed(y_imputed)
 ```
 

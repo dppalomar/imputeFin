@@ -36,10 +36,9 @@ opts_chunk$set(
   dpi = 96,
   pngquant = "--speed=1"
 )
-options(width=100)
+options(width=80)
 knit_hooks$set(pngquant = hook_pngquant)
 # rmarkdown::render("vignettes/ImputeFinancialTimeSeries.Rmd", "prettydoc::html_pretty")
-# rmarkdown::render("vignettes/ImputeFinancialTimeSeries.Rmd", "html_document")
 ```
 
 -----------
@@ -76,6 +75,7 @@ citation("imputeFin")
 # Quick Start
 Let's load some time series data with missing values for illustration purposes:
 ```{r, message=FALSE}
+library(xts)
 library(imputeFin)
 data(ts_AR1_t)
 names(ts_AR1_t)
@@ -88,7 +88,8 @@ set.seed(42)
 ```{r, warning=FALSE, fig.width=9, fig.height=5, out.width="80%"}
 y_missing      <- ts_AR1_t$y_missing[, 3]
 y_missing[100] <- 2*y_missing[100]  # create an outlier
-plot_imputed(y_missing, title = "Original time series with missing values and one outlier")
+plot_imputed(y_missing, 
+             title = "Original time series with missing values and one outlier")
 y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE)
 plot_imputed(y_imputed)
 ```
@@ -181,10 +182,12 @@ In addition to imputing missing values, the functions also are equipped to detec
 ```{r, warning=FALSE, fig.width=9, fig.height=5, out.width="100%"}
 y_missing      <- ts_AR1_t$y_missing[, 3]
 y_missing[100] <- 2*y_missing[100]  # create an outlier
-plot_imputed(y_missing, title = "Original time series with missing values and one outlier")
+plot_imputed(y_missing, 
+             title = "Original time series with missing values and one outlier")
 y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE)
 plot_imputed(y_imputed)
 ```
+Note, however, that in the current version it cannot fix price jumps as can arise from stock splits.
 
 
 # Comparison with other packages
