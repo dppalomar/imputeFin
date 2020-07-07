@@ -19,7 +19,7 @@ data <- data[(n_drop + 1):n_total]  # drop the first n_drop to reduce the influe
 # repeat the time series m times
 m <- 3
 y_orig <- matrix(rep(data, m), nrow = n, ncol = m)
-colnames(y_orig) <- c("a", "b", "c")
+colnames(y_orig) <- c("var a", "var b", "var c")
 
 # create missing values
 index_miss1 <- round(n/2) + 1:n_miss
@@ -31,6 +31,7 @@ y_missing_numeric[index_miss1, 1] <- NA
 y_missing_numeric[index_miss2, 2] <- NA
 y_missing_numeric[index_miss3, 3] <- NA
 y_missing <- zoo::zoo(y_missing_numeric, seq(as.Date("2016-01-01"), length = n, by = "days"))
+y_missing <- xts::as.xts(y_missing)
 
 
 # create variable
