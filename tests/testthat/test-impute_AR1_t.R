@@ -23,7 +23,7 @@ test_that("imputation works", {
 
   # imputation does not screw up the numerical values
   y_imputed <- impute_AR1_t(y_missing[, 3])
-  expect_equal(y_missing[!is.na(y_missing[, 3]), 3], y_imputed[!is.na(y_missing[, 3])])
+  expect_equivalent(y_missing[!is.na(y_missing[, 3]), 3], y_imputed[!is.na(y_missing[, 3])])
   #plot_imputed(y_imputed)
 })
 
@@ -41,11 +41,11 @@ test_that("imputation plus outliers work", {
                y_outlier[idx_not_NA_or_outlier])
       
   y_clean <- impute_AR1_t(y_outlier, remove_outliers = TRUE)
-  expect_equal(y_missing[idx_not_NA_or_outlier, 3], 
-               y_clean[idx_not_NA_or_outlier])  
+  expect_equivalent(y_missing[idx_not_NA_or_outlier, 3], 
+                    y_clean[idx_not_NA_or_outlier])  
 
-  expect_equal(y_missing[idx_not_NA, 3], 
-               y_clean[idx_not_NA], tolerance = 0.2)
+  expect_equivalent(y_missing[idx_not_NA, 3], 
+                    y_clean[idx_not_NA], tolerance = 0.2)
 
   #plot_imputed(y_missing[, 3])
   #plot_imputed(y_outlier)

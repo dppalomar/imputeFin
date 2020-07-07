@@ -62,14 +62,14 @@ test_that("time series following random walk works", {
 test_that("remove_outliers = TRUE does not screw up", {
   fitted1 <- fit_AR1_Gaussian(y_missing[, 3, drop = FALSE], remove_outliers = FALSE)
   fitted2 <- fit_AR1_Gaussian(y_missing[, 3, drop = FALSE], remove_outliers = TRUE)
-  expect_equal(fitted1, fitted2[1:3])
+  expect_equal(fitted1, fitted2)
   
   fitted1 <- fit_AR1_Gaussian(y_missing, remove_outliers = FALSE)
   fitted2 <- fit_AR1_Gaussian(y_missing, remove_outliers = TRUE)
   expect_equal(fitted1[-c(1, 2, 3)], fitted2[-c(1, 2, 3)])
-  expect_equal(fitted1[[1]], fitted1[[1]][1:3])
-  expect_equal(fitted1[[2]], fitted1[[2]][1:3])
-  expect_equal(fitted1[[3]], fitted1[[3]][1:3])
+  expect_equal(fitted1[[1]], fitted2[[1]])
+  expect_equal(fitted1[[2]], fitted2[[2]])
+  expect_equal(fitted1[[3]], fitted2[[3]])
 })
 
 
