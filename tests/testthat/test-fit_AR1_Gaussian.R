@@ -98,3 +98,27 @@ test_that("remove_outliers = TRUE detects outliers", {
 })
 
 
+test_that("attributes work in multivariate case", {
+  # create outlier
+  y_outlier <- y_missing
+  y_outlier[100, 1] <- 2*y_outlier[100, 1]
+  # true indices of NAs and outliers
+  idx_NAs <- apply(y_outlier, MARGIN = 2, FUN = function(x) which(is.na(as.numeric(x))))
+  idx_outliers <- list(100L, NULL, NULL)
+  names(idx_outliers) <- names(idx_NAs) <- colnames(y_outlier)
+  idx_NAs[[1]] <- sort(union(idx_NAs[[1]], idx_outliers[[1]]))  # because the outlier will become an NA
+
+  
+  y_imputed <- impute_AR1_Gaussian(y_outlier, n_samples = 1, return_estimates = FALSE, remove_outliers = TRUE)
+  expect_identical(attr(y_imputed, "index_miss"),     idx_NAs)
+  expect_identical(attr(y_imputed, "index_outliers"), idx_outliers)
+  
+  res <- impute_AR1_Gaussian(y_outlier, n_samples = 1, return_estimates = TRUE, remove_outliers = TRUE)
+  expect_identical(attr(res$y_imputed, "index_miss"),     idx_NAs)
+  expect_identical(attr(res$y_imputed, "index_outliers"), idx_outliers)
+  
+  res <- impute_AR1_Gaussian(y_outlier, n_samples = 3, return_estimates = TRUE, remove_outliers = TRUE)
+  expect_identical(attr(res$y_imputed.1, "index_miss"),     idx_NAs)
+  expect_identical(attr(res$y_imputed.1, "index_outliers"), idx_outliers)
+})
+
