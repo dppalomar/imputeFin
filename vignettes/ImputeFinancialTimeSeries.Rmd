@@ -5,6 +5,12 @@ author: |
   | The Hong Kong University of Science and Technology (HKUST)
 date: "`r Sys.Date()`"
 output:
+  html_document:
+    theme: flatly
+    highlight: pygments
+    toc: true
+    toc_depth: 1
+    toc_float: true
   prettydoc::html_pretty:
     theme: tactile
     highlight: vignette
@@ -14,12 +20,12 @@ csl: ieee.csl
 bibliography: refs.bib
 vignette: |
   %\VignetteIndexEntry{Imputation of Financial Time Series}
-  %\VignetteKeyword{imputation, time series, missing values, AR, random walk, heavy tail, Student t, econometrics}
+  %\VignetteKeyword{imputation, time series, missing values, outliers, AR, random walk, heavy tail, Student t, econometrics}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
 
-```{r, echo = FALSE}
+```{r, echo=FALSE}
 library(knitr)
 opts_chunk$set(
   collapse = TRUE,
@@ -30,13 +36,15 @@ opts_chunk$set(
   dpi = 96,
   pngquant = "--speed=1"
 )
+options(width=100)
 knit_hooks$set(pngquant = hook_pngquant)
 # rmarkdown::render("vignettes/ImputeFinancialTimeSeries.Rmd", "prettydoc::html_pretty")
+# rmarkdown::render("vignettes/ImputeFinancialTimeSeries.Rmd", "html_document")
 ```
 
 -----------
 > This vignette illustrates the usage of the package [`imputeFin`](https://CRAN.R-project.org/package=imputeFin) 
-for imputation of missing values in time series that fit a random walk or an autoregressive (AR)
+for imputation of missing values and detection/removal of outliers in time series that follow a random walk or an autoregressive (AR)
 model. As a side result, the parameters of the model are estimated from the incomplete time series.
 
 
@@ -48,23 +56,53 @@ install.packages("imputeFin")
 
 # install development version from GitHub
 devtools::install_github("dppalomar/imputeFin")
+```
 
-# Getting help
+To get help:
+```{r, eval=FALSE}
 library(imputeFin)
 help(package = "imputeFin")
 ?impute_AR1_Gaussian
+vignette("ImputeFinancialTimeSeries", package = "imputeFin")
+RShowDoc("ImputeFinancialTimeSeries", package = "imputeFin")
+```
+
+To cite package `imputeFin` or the base reference in publications:
+```{r, eval=FALSE}
+citation("imputeFin")
+```
+
+
+# Quick Start
+Let's load some time series data with missing values for illustration purposes:
+```{r, message=FALSE}
+library(imputeFin)
+data(ts_AR1_t)
+names(ts_AR1_t)
+```
+
+We can then impute one of the time series and plot it:
+```{r, echo=FALSE}
+set.seed(42)
+```
+```{r, warning=FALSE, fig.width=9, fig.height=5, out.width="80%"}
+y_missing      <- ts_AR1_t$y_missing[, 3]
+y_missing[100] <- 2*y_missing[100]  # create an outlier
+plot_imputed(y_missing, title = "Original time series with missing values and one outlier")
+y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE)
+plot_imputed(y_imputed)
 ```
 
 
 # Usage of the package
-This package can be used to impute missing values in time series that fit a random walk or an AR(1) model. Besides, it can be used to estimate the model parameters of the models from incomplete time series with missing values.
+This package can be used to impute missing values in time series and detect/remove outliers that follow a random walk or an AR(1) model. Besides, it can be used to estimate the model parameters of the models from incomplete time series with missing values.
 
 
 ## Datasets
-To use this package, the time series object with missing values should be coercible to either a numeric vector or numeric matrix (e.g., `zoo` or `xts`) with missing values denoted by NA. For convenience, the package contains two time series objects with missing values:
+To use this package, the time series object with missing values should be coercible to either a numeric vector or numeric matrix (e.g., `matrix`, `zoo`, or `xts`) with missing values denoted by NA. For convenience, the package contains two time series objects with missing values:
 
-- `ts_AR1_Gaussian` is a list containing a time series with missing values `y_missing` generated from an AR(1) model with Gaussian distributed innovations, and the parameters of the model `phi0`, `phi1`, and `sigma2`;
-- `ts_AR1_t` is a list containing a time series with missing values `y_missing` generated from an AR(1) model with Student's $t$ distributed innovations, and the parameters of the model `phi0`, `phi1`, `sigma2`, and `nu`.
+- Gaussian AR(1) time series: `ts_AR1_Gaussian` is a list containing a time series with missing values `y_missing` (with three columns) generated from an AR(1) model with Gaussian distributed innovations, and the parameters of the model `phi0`, `phi1`, and `sigma2`;
+- Student's $t$ AR(1) time series: `ts_AR1_t` is a list containing a time series with missing values `y_missing` (with three columns) generated from an AR(1) model with Student's $t$ distributed innovations, and the parameters of the model `phi0`, `phi1`, `sigma2`, and `nu`.
 
 ```{r, message=FALSE}
 library(imputeFin)
@@ -76,7 +114,7 @@ names(ts_AR1_t)
 ## Fitting a Gaussian AR(1) model
 We start with the function `fit_AR1_Gaussian()` to fit a univariate Gaussian AR(1) model and estimate the parameters:
 ```{r}
-y_missing <- ts_AR1_Gaussian$y_missing[, 2]
+y_missing <- ts_AR1_Gaussian$y_missing[, 2]  # choose second column / time series
 fitted <- fit_AR1_Gaussian(y_missing)
 fitted
 ```
@@ -107,7 +145,7 @@ It is important to note the argument `fast_and_heuristic`, which indicates wheth
 
 ## Imputation of missing values from Gaussian AR(1) model
 We now show how to use the function `impute_AR1_Gaussian()` to impute the missing values in the time series based on the Gaussian AR(1) model, and how to conveniently plot the imputed time series with the function `plot_imputed()`:
-```{r, warning=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
+```{r, warning=FALSE, fig.width=9, fig.height=5, out.width="100%"}
 y_missing <- ts_AR1_Gaussian$y_missing[, 1]
 y_imputed <- impute_AR1_Gaussian(y_missing)
 plot_imputed(y_imputed)
@@ -130,15 +168,23 @@ names(res)
 
 ## Imputation of missing values from Student's t AR(1) model
 The function `impute_AR1_t()` works similarly to `impute_AR1_Gaussian()` but assuming that the residuals follow a Student's $t$ distribution:
-```{r, warning=FALSE, fig.width = 9, fig.height = 5, out.width = "100%"}
+```{r, warning=FALSE, fig.width=9, fig.height=5, out.width="100%"}
 y_missing <- ts_AR1_t$y_missing[, 1]
 res <- impute_AR1_t(y_missing, n_samples = 3, return_estimates = TRUE)
 names(res)
-y_imputed1 <- res$y_imputed.1
-plot_imputed(y_imputed1)
+plot_imputed(res$y_imputed.1)
 ```
 
 
+## Removing outliers
+In addition to imputing missing values, the functions also are equipped to detect and remove (and then impute) outliers. This is easily accomplished with the argument `remove_outliers = TRUE`:
+```{r, warning=FALSE, fig.width=9, fig.height=5, out.width="100%"}
+y_missing      <- ts_AR1_t$y_missing[, 3]
+y_missing[100] <- 2*y_missing[100]  # create an outlier
+plot_imputed(y_missing, title = "Original time series with missing values and one outlier")
+y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE)
+plot_imputed(y_imputed)
+```
 
 
 # Comparison with other packages
@@ -154,13 +200,13 @@ T <- nrow(y_orig)
 miss_pct <- 0.2
 T_miss <- floor(miss_pct*T)
 index_miss <- round(T/2) + 1:T_miss
-attr(y_orig, "index_miss") = index_miss
+attr(y_orig, "index_miss") <- index_miss
 y_missing <- y_orig
 y_missing[index_miss] <- NA
 ```
 
 Now we plot the imputed time series obtained by functions in existing packages `zoo` and `imputeTS`. Basically, all these interpolation methods look artificial and destroy the time series statistics:
-```{r, message=FALSE, warning=FALSE, fig.width = 9, fig.height = 7.5, out.width = "100%"}
+```{r, message=FALSE, warning=FALSE, fig.width=9, fig.height=7.5, out.width = "100%"}
 # impute using packages zoo and imputeTS
 library(zoo)
 library(imputeTS)
