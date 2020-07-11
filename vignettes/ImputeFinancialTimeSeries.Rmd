@@ -184,7 +184,7 @@ y_missing      <- ts_AR1_t$y_missing[, 3]
 y_missing[100] <- 2*y_missing[100]  # create an outlier
 plot_imputed(y_missing, 
              title = "Original time series with missing values and one outlier")
-y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE)
+y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE, outlier_prob_th = 1e-3)
 plot_imputed(y_imputed)
 ```
 Note, however, that in the current version it cannot fix price jumps arising from stock splits.
