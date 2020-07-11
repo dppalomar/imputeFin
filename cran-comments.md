@@ -1,4 +1,4 @@
-Version 0.1.1 (2020-07-12), (package also available in GitHub).
+Version 0.1.1 (2020-07-11), (package also available in GitHub).
 
 ---
 

@@ -1,5 +1,5 @@
 
-## Changes in imputeFin version 0.1.1 (2020-07-12)
+## Changes in imputeFin version 0.1.1 (2020-07-11)
 
 * Included detection of outliers in all functions with the argument: remove_outliers = FALSE
 
