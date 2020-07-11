@@ -206,8 +206,7 @@ fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, remove_o
     if (return_iterates) 
       results <- c(results, list("phi0_iterates"   = phi0,
                                  "phi1_iterates"   = phi1,
-                                 "sigma2_iterates" = sigma2,
-                                 "nu_iterates"     = nu))
+                                 "sigma2_iterates" = sigma2))
     if (return_condMeanCov) {
       cond <- condMeanCov(y_obs, index_obs, n, n_block, n_in_block, 
                           first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block, 
