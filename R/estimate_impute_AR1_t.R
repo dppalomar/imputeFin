@@ -80,7 +80,8 @@
 #' @import stats
 #' @import mvtnorm
 #' @export
-fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE, remove_outliers = FALSE, verbose = TRUE,
+fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE, remove_outliers = FALSE, outlier_prob_th = 0.001, 
+                         verbose = TRUE,
                          return_iterates = FALSE, return_condMean_Gaussian = FALSE,
                          tol = 1e-8, maxiter = 100, n_chain = 10, n_thin = 1, K = 30) {
   # error control
@@ -93,7 +94,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   
   # manage multiple columns
   if (NCOL(y) > 1) {
-    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_t, random_walk, zero_mean, fast_and_heuristic, remove_outliers, verbose = FALSE,
+    estimation_list <- apply(y, MARGIN = 2, FUN = fit_AR1_t, random_walk, zero_mean, fast_and_heuristic, remove_outliers, outlier_prob_th, verbose = FALSE,
                                                              return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
     phi0_vct   <- unlist(lapply(estimation_list, function(x) x$phi0))
     phi1_vct   <- unlist(lapply(estimation_list, function(x) x$phi1))
@@ -103,7 +104,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
     if (verbose)
       for (i in 1:length(estimation_list))
         message(names(estimation_list)[i], ": ", 
-                length(estimation_list[[i]]$index_miss), " missing values and ", 
+                length(estimation_list[[i]]$index_miss), " inner missing values and ", 
                 length(estimation_list[[i]]$index_outliers), " outliers detected.")
     return(c(estimation_list, list("phi0_vct"   = phi0_vct,
                                    "phi1_vct"   = phi1_vct,
@@ -120,21 +121,21 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   y_name <- colnames(y)
   y <- as.numeric(y)
   
+  # outlier detection and substitution with NAs
+  if(remove_outliers) {
+    fitted_with_outliers <- if (!any_inner_NA(y)) fit_AR1_t_complete(y[!is.na(y)], random_walk, zero_mean, return_iterates, tol, maxiter)
+                            else fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers = FALSE, outlier_prob_th, verbose = FALSE,
+                                           return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
+    idx_outliers <- find_outliers_AR1_t(y, fitted_with_outliers, outlier_prob_th)
+    if (!is.null(idx_outliers))
+      y[idx_outliers] <- NA  # substitute outliers with NAs
+  }
+  
   # remove the missing values at the head and tail of the time series since they do not affect the estimation result
   index_obs <- which(!is.na(y))
   y <- y[min(index_obs):max(index_obs)]
   idx_offset <- min(index_obs) - 1L
   index_obs <- which(!is.na(y))
-  
-  # outlier detection
-  if(remove_outliers) {
-    fitted_with_outliers <- if (!anyNA(y)) fit_AR1_t_complete(y, random_walk, zero_mean, return_iterates, tol, maxiter)
-                            else fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers = FALSE, verbose = FALSE,
-                                           return_iterates, return_condMean_Gaussian, tol, maxiter, n_chain, n_thin, K)
-    idx_outliers <- find_outliers_AR1_t(y, index_obs, fitted_with_outliers, p_confidence = 0.95)
-    if (!is.null(idx_outliers))
-      y[idx_outliers] <- NA  # substitute outliers with NAs
-  }
   
   # estimation (after possibly setting outliers to NA)
   if (!anyNA(y))   # trivial case with no NAs
@@ -236,46 +237,22 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
   # output message
   if (verbose)
     message(y_name, ": ", 
-            length(results$index_miss), " missing values imputed and ", 
-            length(results$index_outliers), " outliers detected and corrected.") 
+            length(results$index_miss), " inner missing values and ", 
+            length(results$index_outliers), " outliers detected.") 
   return(results)
 }
 
 
 
-find_outliers_AR1_t <- function(y, index_obs, fitted, p_confidence = 0.95) {
-  index_outliers <- NULL
-  for (i in 2:length(index_obs)) {
-    delta_i <- index_obs[i] - index_obs[i-1]
-    mu_expected <- sum(fitted$phi1^( 0:(delta_i - 1) )) * fitted$phi0 + fitted$phi1^delta_i * y[index_obs[i-1]]
-    upper <- max(y[index_obs[i]], 2*mu_expected - y[index_obs[i]])
-    lower <- min(y[index_obs[i]], 2*mu_expected - y[index_obs[i]])
-    # compute the probability of the observation in [lower, upper]
-    p <- mvtnorm::pmvt(lower = lower, upper = upper, delta = mu_expected, df = max(round(fitted$nu), 1), sigma = fitted$sigma2) 
-    # if p larger than 95%, then the observation lies outside the 95% confidence interval.
-    if (p > 0.95 ) index_outliers <- c(index_outliers, index_obs[i])
-  }
-  return(index_outliers)
-}
-
-
-any_inner_NA <- function(y) {
-  idx_obs <- which(!is.na(y))
-  if (length(idx_obs) == 0)  # all NAs!
-    return(FALSE)
-  else
-    anyNA(y[min(idx_obs):max(idx_obs)])
-}
-
 
 
 #' @title Impute missing values of time series based on a Student's t AR(1) model
 #'
-#' @description Impute missing values of time series by drawing samples from 
-#'              the conditional distribution of the missing values given the 
-#'              observed data based on a Student's t AR(1) model as estimated 
-#'              with the function \code{\link{fit_AR1_t}}. Outliers 
-#'              can be detected and removed.
+#' @description Impute inner missing values (excluding leading and trailing ones) 
+#'              of time series by drawing samples from the conditional distribution 
+#'              of the missing values given the observed data based on a Student's t 
+#'              AR(1) model as estimated with the function \code{\link{fit_AR1_t}}. 
+#'              Outliers can be detected and removed.
 #'
 #' @inheritParams impute_AR1_Gaussian
 #' @inheritParams fit_AR1_t
@@ -324,9 +301,9 @@ any_inner_NA <- function(y) {
 #' @export
 impute_AR1_t <- function(y, n_samples = 1,
                          random_walk = FALSE, zero_mean = FALSE, 
-                         fast_and_heuristic = TRUE, remove_outliers = FALSE, verbose = TRUE,
-                         return_estimates = FALSE,
-                         tol = 1e-10,  maxiter = 100, K = 30,
+                         fast_and_heuristic = TRUE, remove_outliers = FALSE, outlier_prob_th = 0.001,
+                         verbose = TRUE, return_estimates = FALSE,
+                         tol = 1e-8,  maxiter = 100, K = 30, 
                          n_burn = 100, n_thin = 50) {
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
@@ -337,22 +314,18 @@ impute_AR1_t <- function(y, n_samples = 1,
   # manage multiple columns
   if (NCOL(y) > 1) {
     results_list <- lapply(c(1:NCOL(y)), FUN = function(i) { 
-      impute_AR1_t(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, fast_and_heuristic, remove_outliers, verbose = FALSE,
-                   return_estimates, tol,  maxiter , K, n_burn, n_thin) 
+      impute_AR1_t(y[, i, drop = FALSE], n_samples, random_walk, zero_mean, fast_and_heuristic, remove_outliers, outlier_prob_th, verbose = FALSE,
+                   return_estimates, tol, maxiter, K, n_burn, n_thin) 
       })
     names(results_list) <- colnames(y)
     if (n_samples == 1 && !return_estimates) {  # return directly a matrix like y
       results <- do.call(cbind, results_list)
-      index_miss_list     <- lapply(results_list, FUN = function(res) attr(res, "index_miss"))
-      index_outliers_list <- lapply(results_list, FUN = function(res) attr(res, "index_outliers"))
-      attr(results, "index_miss")     <- index_miss_list
-      attr(results, "index_outliers") <- index_outliers_list
+      attr(results, "index_miss")     <- lapply(results_list, FUN = function(res) attr(res, "index_miss"))
+      attr(results, "index_outliers") <- lapply(results_list, FUN = function(res) attr(res, "index_outliers"))
     } else if (n_samples == 1 && return_estimates) {
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
-      index_miss_list     <- lapply(results_list, FUN = function(res) attr(res$y_imputed, "index_miss"))
-      index_outliers_list <- lapply(results_list, FUN = function(res) attr(res$y_imputed, "index_outliers"))
-      attr(results$y_imputed, "index_miss")     <- index_miss_list
-      attr(results$y_imputed, "index_outliers") <- index_outliers_list
+      attr(results$y_imputed, "index_miss")     <- lapply(results_list, FUN = function(res) attr(res$y_imputed, "index_miss"))
+      attr(results$y_imputed, "index_outliers") <- lapply(results_list, FUN = function(res) attr(res$y_imputed, "index_outliers"))
     } else {
       results <- do.call(mapply, c("FUN" = cbind, results_list, "SIMPLIFY" = FALSE))
       index_miss_list     <- lapply(results_list, FUN = function(res) attr(res$y_imputed.1, "index_miss"))
@@ -372,8 +345,8 @@ impute_AR1_t <- function(y, n_samples = 1,
     if (verbose)
       for (i in 1:length(results_list))
         message(names(results_list)[i], ": ", 
-                length(attr(results_list[[i]], "index_miss")), " missing values imputed and ", 
-                length(attr(results_list[[i]], "index_outliers")), " outliers detected.")
+                length(attr(results_list[[i]], "index_miss")), " inner missing values imputed and ", 
+                length(attr(results_list[[i]], "index_outliers")), " outliers detected and corrected.")
     return(results)
   }  
   
@@ -388,32 +361,24 @@ impute_AR1_t <- function(y, n_samples = 1,
   y_name <- colnames(y)  
   y <- as.numeric(y)
   y_imputed <- matrix(rep(y, times = n_samples), ncol = n_samples)
-  
+
   if (remove_outliers) {
-    fitted <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers = TRUE, verbose = FALSE, tol = tol,  maxiter = maxiter, K = K)
+    fitted <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers = TRUE, outlier_prob_th = outlier_prob_th, verbose = FALSE, 
+                        tol = tol, maxiter = maxiter, K = K)
     if (!is.null(index_outliers <- fitted$index_outliers))
       y[index_outliers] <- NA
-  }
+  }  
   
   # imputation
   if (!any_inner_NA(y)) {  # trivial case with no inner NAs: do nothing
-    index_miss <- which(is.na(y))
     if (return_estimates && !remove_outliers) 
       fitted <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers = FALSE, verbose = FALSE, tol = tol, maxiter = maxiter, K = K)
   } else {
     fitted <- fit_AR1_t(y, random_walk, zero_mean, fast_and_heuristic, remove_outliers = FALSE, verbose = FALSE, 
                         return_condMean_Gaussian = TRUE, tol = tol,  maxiter = maxiter, K = K)
-    phi0 <- fitted$phi0
-    phi1 <- fitted$phi1
-    sigma2 <- fitted$sigma2
-    nu <- fitted$nu
-    
-    index_miss <- which(is.na(y))  # indexes of missing values
     index_obs <- which(!is.na(y))
     index_obs_min <- min(index_obs)
-    index_obs_max <- max(index_obs)
-    
-    index_miss_middle <- index_miss[index_miss > index_obs_min & index_miss < index_obs_max]
+    index_miss_middle <- which(is_inner_NA(y))
     if (length(index_miss_middle) > 0) {
       y_middle <- y[min(index_obs):max(index_obs)]  # ignore the missing values at the head and tail
       index_miss_deleted <- index_miss_middle - (index_obs_min - 1)
@@ -424,21 +389,21 @@ impute_AR1_t <- function(y, n_samples = 1,
       for (i in 1:n_burn) {
         sample <- sampling_latent_variables(y_middle_tmp, n_thin = 1, n_block, n_in_block,
                                             first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
-                                            phi0, phi1, sigma2, nu) 
+                                            fitted$phi0, fitted$phi1, fitted$sigma2, fitted$nu) 
         y_middle_tmp <- sample$y
       }
       # sample every n_thin-th sample
       for (j in 1:n_samples) {
         sample <- sampling_latent_variables(y_middle_tmp, n_thin, n_block, n_in_block,
                                             first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
-                                            phi0, phi1, sigma2, nu) 
+                                            fitted$phi0, fitted$phi1, fitted$sigma2, fitted$nu) 
         y_imputed[index_miss_middle, j] <- sample$y[index_miss_deleted]
       }
-      index_miss <- which(is.na(y))
     }
   }
   
   # prepare results
+  index_miss <- which(is_inner_NA(y))
   if (length(index_miss) == 0) index_miss <- NULL
   if(!remove_outliers) index_outliers <- NULL
   if (n_samples == 1) {
@@ -487,12 +452,12 @@ sampling_latent_variables <- function(y_sample_init, n_thin, n_block, n_in_block
                                     first_index_in_block, last_index_in_block, previous_obs_before_block, next_obs_after_block,
                                     phi0, phi1, sigma2, nu) {
   n <- length(y_sample_init)
-  tau_tmp <- vector( length = n )
+  tau_tmp <- vector(length = n)
   y_tmp <-  y_sample_init
   
   max_n_in_block <- max( n_in_block ) # maximum number of missing values in the blocks
   phi1_exponential <- phi1^( 0:(max_n_in_block + 1) )
-  sum_phi1_exponential <- cumsum( phi1_exponential )
+  sum_phi1_exponential <- cumsum(phi1_exponential)
   
   for(j in 1:n_thin){
     # sample tau
@@ -543,8 +508,12 @@ sampling_latent_variables <- function(y_sample_init, n_thin, n_block, n_in_block
 fit_AR1_t_complete <- function(y, random_walk = FALSE, zero_mean = FALSE, 
                                return_iterates = FALSE,
                                tol = 1e-10,  maxiter = 1000) {
-  phi0 <- phi1 <- sigma2 <- nu <- c()  
-  estimation_Gaussian <- fit_AR1_Gaussian(y, random_walk, zero_mean, verbose = FALSE, return_condMeanCov = FALSE)
+  if (anyNA(y)) stop("Function fit_AR1_t_complete() cannot accept NAs.")
+  
+  phi0 <- phi1 <- sigma2 <- nu <- c()
+  #estimation_Gaussian <- fit_AR1_Gaussian(y, random_walk, zero_mean, verbose = FALSE, return_condMeanCov = FALSE)
+  estimation_Gaussian <- fit_AR1_Gaussian_complete(y, random_walk, zero_mean)
+  
   phi0[1] <- estimation_Gaussian$phi0
   phi1[1] <- estimation_Gaussian$phi1
   sigma2[1] <- estimation_Gaussian$sigma2
