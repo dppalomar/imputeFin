@@ -187,7 +187,7 @@ plot_imputed(y_missing,
 y_imputed <- impute_AR1_t(y_missing, remove_outliers = TRUE)
 plot_imputed(y_imputed)
 ```
-Note, however, that in the current version it cannot fix price jumps as can arise from stock splits.
+Note, however, that in the current version it cannot fix price jumps arising from stock splits.
 
 
 # Comparison with other packages
