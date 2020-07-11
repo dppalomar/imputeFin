@@ -40,7 +40,7 @@ test_that("imputation plus outliers work", {
   expect_equal(y_missing[idx_not_NA_or_outlier, 3], 
                y_outlier[idx_not_NA_or_outlier])
       
-  y_clean <- impute_AR1_t(y_outlier, remove_outliers = TRUE)
+  y_clean <- impute_AR1_t(y_outlier, remove_outliers = TRUE, outlier_prob_th = 0.002)
   expect_equivalent(y_missing[idx_not_NA_or_outlier, 3], 
                     y_clean[idx_not_NA_or_outlier])  
 

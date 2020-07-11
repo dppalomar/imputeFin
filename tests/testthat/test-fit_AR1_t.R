@@ -91,7 +91,7 @@ test_that("remove_outliers = TRUE detects outliers", {
   val_outliers <- c(100,  50)
   y_outlier[idx_outliers] <- val_outliers
   
-  fitted1 <- fit_AR1_t(y_outlier, fast_and_heuristic = TRUE, remove_outliers = TRUE)  
+  fitted1 <- fit_AR1_t(y_outlier, fast_and_heuristic = TRUE, remove_outliers = TRUE, outlier_prob_th = 0.002)  
   expect_equal(fitted1$index_outliers, idx_outliers)
   
   fitted2 <- fit_AR1_t(y_missing[, 3, drop = FALSE], fast_and_heuristic = TRUE, remove_outliers = FALSE)
@@ -120,16 +120,15 @@ test_that("attributes work in multivariate case", {
   names(idx_outliers) <- names(idx_NAs) <- colnames(y_outlier)
   idx_NAs[[1]] <- sort(union(idx_NAs[[1]], idx_outliers[[1]]))  # because the outlier will become an NA
   
-  
-  y_imputed <- impute_AR1_t(y_outlier, n_samples = 1, return_estimates = FALSE, remove_outliers = TRUE)
+  y_imputed <- impute_AR1_t(y_outlier, n_samples = 1, return_estimates = FALSE, remove_outliers = TRUE, outlier_prob_th = 0.002)
   expect_identical(attr(y_imputed, "index_miss"),     idx_NAs)
   expect_identical(attr(y_imputed, "index_outliers"), idx_outliers)
   
-  res <- impute_AR1_t(y_outlier, n_samples = 1, return_estimates = TRUE, remove_outliers = TRUE)
+  res <- impute_AR1_t(y_outlier, n_samples = 1, return_estimates = TRUE, remove_outliers = TRUE, outlier_prob_th = 0.002)
   expect_identical(attr(res$y_imputed, "index_miss"),     idx_NAs)
   expect_identical(attr(res$y_imputed, "index_outliers"), idx_outliers)
   
-  res <- impute_AR1_t(y_outlier, n_samples = 3, return_estimates = TRUE, remove_outliers = TRUE)
+  res <- impute_AR1_t(y_outlier, n_samples = 3, return_estimates = TRUE, remove_outliers = TRUE, outlier_prob_th = 0.002)
   expect_identical(attr(res$y_imputed.1, "index_miss"),     idx_NAs)
   expect_identical(attr(res$y_imputed.1, "index_outliers"), idx_outliers)
 })
