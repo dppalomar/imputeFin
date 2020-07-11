@@ -17,7 +17,7 @@
 #' @param zero_mean Logical value indicating if the time series is assumed zero-mean so that \code{phi0 = 0} 
 #'                  (default is \code{FALSE}).
 #' @param remove_outliers Logical value indicating whether to detect and remove outliers.
-#' @param outlier_prob_th Threshold of probability of observation to declare an outlier (default is \code{0.001}).
+#' @param outlier_prob_th Threshold of probability of observation to declare an outlier (default is \code{1e-3}).
 #' @param verbose Logical value indicating whether to output messages (default is \code{TRUE}).
 #' @param return_iterates Logical value indicating if the iterates are to be returned (default is \code{FALSE}).
 #' @param return_condMeanCov Logical value indicating if the conditional mean and covariance matrix of the 
@@ -76,7 +76,7 @@
 #' 
 #' @import zoo
 #' @export
-fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, remove_outliers = FALSE, outlier_prob_th = 0.001, 
+fit_AR1_Gaussian <- function(y, random_walk = FALSE, zero_mean = FALSE, remove_outliers = FALSE, outlier_prob_th = 1e-3, 
                                 verbose = TRUE,
                                 return_iterates = FALSE, return_condMeanCov = FALSE,
                                 tol = 1e-8, maxiter = 100) {
@@ -319,7 +319,7 @@ fit_AR1_Gaussian_complete <- function(y, random_walk = FALSE, zero_mean = FALSE)
 #' @import MASS
 #' @export
 impute_AR1_Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean = FALSE, 
-                                remove_outliers = FALSE, outlier_prob_th = 0.001, 
+                                remove_outliers = FALSE, outlier_prob_th = 1e-3, 
                                 verbose = TRUE, return_estimates = FALSE, 
                                 tol = 1e-10, maxiter = 100) { 
   # error control

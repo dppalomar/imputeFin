@@ -80,7 +80,7 @@
 #' @import stats
 #' @import mvtnorm
 #' @export
-fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE, remove_outliers = FALSE, outlier_prob_th = 0.001, 
+fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE, remove_outliers = FALSE, outlier_prob_th = 1e-3, 
                          verbose = TRUE,
                          return_iterates = FALSE, return_condMean_Gaussian = FALSE,
                          tol = 1e-8, maxiter = 100, n_chain = 10, n_thin = 1, K = 30) {
@@ -301,7 +301,7 @@ fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuris
 #' @export
 impute_AR1_t <- function(y, n_samples = 1,
                          random_walk = FALSE, zero_mean = FALSE, 
-                         fast_and_heuristic = TRUE, remove_outliers = FALSE, outlier_prob_th = 0.001,
+                         fast_and_heuristic = TRUE, remove_outliers = FALSE, outlier_prob_th = 1e-3,
                          verbose = TRUE, return_estimates = FALSE,
                          tol = 1e-8,  maxiter = 100, K = 30, 
                          n_burn = 100, n_thin = 50) {
