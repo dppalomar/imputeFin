@@ -78,7 +78,6 @@
 #' @import zoo
 #' @import MASS
 #' @import stats
-#' @import mvtnorm
 #' @export
 fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE, remove_outliers = FALSE, outlier_prob_th = 1e-3, 
                          verbose = TRUE,
