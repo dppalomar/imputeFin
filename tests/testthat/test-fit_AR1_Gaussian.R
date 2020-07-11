@@ -61,11 +61,11 @@ test_that("time series following random walk works", {
 
 test_that("remove_outliers = TRUE does not screw up", {
   fitted1 <- fit_AR1_Gaussian(y_missing[, 3, drop = FALSE], remove_outliers = FALSE)
-  fitted2 <- fit_AR1_Gaussian(y_missing[, 3, drop = FALSE], remove_outliers = TRUE)
+  fitted2 <- fit_AR1_Gaussian(y_missing[, 3, drop = FALSE], remove_outliers = TRUE, outlier_prob_th = 0.0001)
   expect_equal(fitted1, fitted2)
   
   fitted1 <- fit_AR1_Gaussian(y_missing, remove_outliers = FALSE)
-  fitted2 <- fit_AR1_Gaussian(y_missing, remove_outliers = TRUE, outlier_prob_th = 0.001)
+  fitted2 <- fit_AR1_Gaussian(y_missing, remove_outliers = TRUE, outlier_prob_th = 0.0001)
   expect_equal(fitted1[-c(1, 2, 3)], fitted2[-c(1, 2, 3)])
   expect_equal(fitted1[[1]], fitted2[[1]])
   expect_equal(fitted1[[2]], fitted2[[2]])
@@ -79,7 +79,7 @@ test_that("remove_outliers = TRUE detects outliers", {
   val_outliers <- c(100,  50)
   y_outlier[idx_outliers] <- val_outliers
   
-  fitted1 <- fit_AR1_t(y_outlier, remove_outliers = TRUE, outlier_prob_th = 0.001)  
+  fitted1 <- fit_AR1_t(y_outlier, remove_outliers = TRUE, outlier_prob_th = 0.0001)  
   expect_equal(fitted1$index_outliers, idx_outliers)
   
   fitted2 <- fit_AR1_t(y_missing[, 3, drop = FALSE], remove_outliers = FALSE)
@@ -109,15 +109,15 @@ test_that("attributes work in multivariate case", {
   idx_NAs[[1]] <- sort(union(idx_NAs[[1]], idx_outliers[[1]]))  # because the outlier will become an NA
 
   
-  y_imputed <- impute_AR1_Gaussian(y_outlier, n_samples = 1, return_estimates = FALSE, remove_outliers = TRUE, outlier_prob_th = 0.001)
+  y_imputed <- impute_AR1_Gaussian(y_outlier, n_samples = 1, return_estimates = FALSE, remove_outliers = TRUE, outlier_prob_th = 0.0001)
   expect_identical(attr(y_imputed, "index_miss"),     idx_NAs)
   expect_identical(attr(y_imputed, "index_outliers"), idx_outliers)
   
-  res <- impute_AR1_Gaussian(y_outlier, n_samples = 1, return_estimates = TRUE, remove_outliers = TRUE, outlier_prob_th = 0.001)
+  res <- impute_AR1_Gaussian(y_outlier, n_samples = 1, return_estimates = TRUE, remove_outliers = TRUE, outlier_prob_th = 0.0001)
   expect_identical(attr(res$y_imputed, "index_miss"),     idx_NAs)
   expect_identical(attr(res$y_imputed, "index_outliers"), idx_outliers)
   
-  res <- impute_AR1_Gaussian(y_outlier, n_samples = 3, return_estimates = TRUE, remove_outliers = TRUE, outlier_prob_th = 0.001)
+  res <- impute_AR1_Gaussian(y_outlier, n_samples = 3, return_estimates = TRUE, remove_outliers = TRUE, outlier_prob_th = 0.0001)
   expect_identical(attr(res$y_imputed.1, "index_miss"),     idx_NAs)
   expect_identical(attr(res$y_imputed.1, "index_outliers"), idx_outliers)
 })

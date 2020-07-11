@@ -1,3 +1,4 @@
+#' @import stats
 find_outliers_AR1_Gaussian <- function(y, fitted, outlier_prob_th = 1e-3) {  # outlier_prob_th = 0.002 is too high and detects too many outliers
   index_obs <- which(!is.na(y))
   index_outliers <- NULL
@@ -19,7 +20,7 @@ find_outliers_AR1_Gaussian <- function(y, fitted, outlier_prob_th = 1e-3) {  # o
 }
 
 
-
+#' @import stats
 find_outliers_AR1_t <- function(y, fitted, outlier_prob_th = 1e-3) {  # outlier_prob_th = 0.001 is too low and misses some outliers
   index_obs <- which(!is.na(y))
   index_outliers <- NULL
