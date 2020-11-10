@@ -39,6 +39,20 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
   n_full_obs <- length(Y_shreds$full_obs)
   n_part_obs <- length(Y_shreds$part_obs)
   
+  # decide number of parallel cores
+  n_cores <- min(parallel_max_cores, parallel::detectCores() - 1, n_part_obs)
+  cl <- if (n_cores > 1) parallel::makeCluster(n_cores) else NULL
+  if (!is.null(cl)) {
+    clusterExport(cl = cl, varlist = .assistant_fun_names)
+    clusterEvalQ(cl = cl, expr = {library("magrittr")})
+  }
+  my_lapply <- function(DATA, FUN) {
+    if (is.null(cl))
+      lapply(DATA, FUN)
+    else
+      parallel::parLapplyLB(cl = cl, X = DATA, fun = FUN)
+  }
+  
   # browser()
   # initialize parameters
   nu      <- if (is.null(initial$nu)) 6 else initial$nu
@@ -48,7 +62,8 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
   
   # browser()
   Estep_part_obs_old <- .EstepContainer(N, p)
-  chains_library <- lapply(Y_shreds$part_obs, function(part_obs) .gibbsEstepMultiChains(part_obs, phi0, Phii, scatter, nu, L)$chain_states)  # init. markov chain states
+  # chains_library <- lapply(Y_shreds$part_obs, function(part_obs) .gibbsEstepMultiChains(part_obs, phi0, Phii, scatter, nu, L)$chain_states)  # init. markov chain states
+  chains_library <- my_lapply(Y_shreds$part_obs, function(part_obs) .gibbsEstepMultiChains(part_obs, phi0, Phii, scatter, nu, L)$chain_states)  # init. markov chain states
   
   # define tool functions for simplifying
   snapshot <- function() list(nu = nu, phi0 = phi0, Phii = Phii, scatter = scatter)
@@ -82,7 +97,7 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
     
     # for the partially observed segments
     if (n_part_obs > 0) {
-      tmp <- lapply(1:n_part_obs, function(idx) .gibbsEstepMultiChains(Y_shreds$part_obs[[idx]], phi0, Phii, scatter, nu, chains_library[[idx]]))
+      tmp <- my_lapply(1:n_part_obs, function(idx) .gibbsEstepMultiChains(Y_shreds$part_obs[[idx]], phi0, Phii, scatter, nu, chains_library[[idx]]))
       chains_library <- lapply(tmp, function(x) x$chain_states)
       Estep_part_obs <- lapply(tmp, function(x) x$Estep) %>% do.call(.add_num_list, .)
       
@@ -130,6 +145,8 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
     if (have_params_converged) break
   }
   
+  if (!is.null(cl)) stopCluster(cl)
+  
   
   # return results -------------
   vars_to_be_returned <- list("nu"                    = nu, 
@@ -168,6 +185,13 @@ fnu <- function(nu) nu/(nu-2)
 ###############################################################################
 # assistant functions ---------
 ###############################################################################
+
+.assistant_fun_names <- 
+  c(".add_num_list", ".assembleB", ".assembleEstep", ".assembleM" , ".condGsnMoms", 
+    ".cutHeadNA", ".EstepContainer", ".exactEstep", ".gibbsEstepMultiChains", 
+    ".gibbsEstepSingleChain", ".gibbsTau", ".gibbsY", ".idx_mask", ".lagInterception", 
+    ".loglikFullObs", ".mul_num_list", ".partitionConsecutiveNonNA", 
+    ".partitionMissingGroups", ".Random.seed", ".SAEMConvexCombPara", ".sampleCondGsn")
 
 # log-likelihood function when Y is full observed
 .loglikFullObs <- function(Y, phi0, Phii, scatter, nu) {
@@ -469,7 +493,7 @@ fnu <- function(nu) nu/(nu-2)
   
   # sanity check
   # TODO: remove this before pushing to CRAN
-  if(!isSymmetric.matrix(container$s_tauyy)) stop("The computed E(tau * y * y) is not symmetric!")
+  # if(!isSymmetric.matrix(container$s_tauyy)) stop("The computed E(tau * y * y) is not symmetric!")
   
   return(container)
 }

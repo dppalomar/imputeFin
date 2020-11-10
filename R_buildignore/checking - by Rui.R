@@ -68,6 +68,29 @@ plotConvergence(fitted)
 
 
 
+# checking code: when Y is partially observed (parallel mode) ----------------------------------
+rm(list = ls())
+
+source("R/fit_t_VAR.R")
+source("R_buildignore/checking - assist - by Rui.R")
+
+set.seed(1)
+N <- 3
+T <- 200
+p <- 2
+genParaVARp(N = N, p = p)
+nu <- 5
+Psi <- cbind(phi0, do.call(cbind, Phii))
+
+Y <- genDataVARp(T = T, phi0 = phi0, Phii = Phii, scatter = scatter, nu = nu)
+Y_crp <- corrupt(Y, miss_pct = 0.1, miss_items = 2, p = p)
+
+fitted <- fit_VAR_t(Y = Y_crp, p = p, parallel_max_cores = 4, return_iterates = TRUE)
+
+plotConvergence(fitted)
+
+
+
 
 
 
