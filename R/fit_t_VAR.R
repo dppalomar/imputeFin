@@ -2,22 +2,77 @@
 # Functions for fitting (parameter estimation of) Student's t VAR model
 # Based on paper: Rui Zhou, Junyan Liu, Sandeep Kumar, and Daniel P. Palomar, 
 # “Student’s t VAR Modeling with Missing Data via Stochastic EM and Gibbs Sampling,” 
-# accepted in IEEE Trans. on Signal Processing, 2020.
+# IEEE Trans. on Signal Processing, vol. 68, pp. 6198-6211, Oct. 2020.
 ###############################################################################
 
-require(magrittr)
-require(parallel)
-require(mvtnorm)
+#'
+#' @title Fit Student's t VAR model to time series with missing values and/or outliers
+#'
+#' @description Estimate the parameters of a Student's t vector autoregressive
+#'              model 
+#'              \deqn{y_t = \phi_0 + \sum_{i=1}^p \Phi_i * y_{t-i} + \epsilon_t}
+#'              to fit the given time series with missing values and/or outliers. 
+#'              If the time series does not contain missing values, the 
+#'              maximum likelihood (ML) estimation is done via the iterative
+#'              EM algorithm until converge is achieved.
+#'              With missing values, the stochastic EM algorithm is employed 
+#'              for the estimation (currently the maximum number of iterations
+#'              will be executed without attempting to check early converge).
+#'
+#' @author Rui Zhou and Daniel P. Palomar
+#' 
+#' @references 
+#' Rui Zhou, Junyan Liu, Sandeep Kumar, and Daniel P. Palomar,
+#' “Student’s t VAR Modeling with Missing Data via Stochastic EM and Gibbs Sampling,” 
+#' IEEE Trans. on Signal Processing, vol. 68, pp. 6198-6211, Oct. 2020.
+#' 
+#' @param Y Time series object coercible to either anumeric matrix (e.g., \code{zoo} or \code{xts}) with missing values denoted by \code{NA}.
+#' @param p A positive interger as the order (or the time lag) of the VAR model.
+#' @param initial A list as the initial values of parameters of the VAR model, which may contain some or all of the following elements:
+#' \itemize{\item{\code{nu} (\eqn{\nu}) - a positive number as the degrees of freedom,}
+#'          \item{\code{phi0} (\eqn{\phi_0}) - a numerical vector of length \code{ncol(Y)} as the interception of VAR model,}
+#'          \item{\code{Phii} (\eqn{\Phi_i}) - a list of \code{p} matrices of dimension \code{ncol(Y)} as the autoregressive coefficient matrices,}
+#'          \item{\code{scatter} (\eqn{\Sigma}) - a positive definite of dimension \code{ncol(Y)} as the scatter matrix.}}
+#' @param L A positive integer as the number of markov chains (default is \eqn{10}).
+#' @param max_iter A positive integer as the number of maximum iterations (default is \eqn{100}).
+#' @param ptol A non-negative number as the tolerance indicating the convergence of (stocastic) EM method.
+#' @param omit_missing A logical value indicating whether to use the omit-variable method, i.e., 
+#'                     excluding the variables with missing data from the analysis (default is \code{FALSE})..
+#' @param partition_groups A logical value indicating whether to partition \code{Y} into groups (default is \code{TRUE}).
+#' @param parallel_max_cores A positive integer as the maximum cores used in the parallel computing, 
+#'                           only valid when \code{partition_groups} = \code{TRUE} (default is \eqn{1}).
+#' @param K A positive integer controlling the values of the step sizes in the stochastic EM method.
+#' @param return_iterates A logical value indicating whether return the parameter estimates of each iteration (default is \code{FALSE}).
+#' @param verbose A logical value indicating whether to report in console the infomation of each ietration.
+#' 
+#' @return A list if follow things
+#' \item{\code{nu}}{The estimate for \eqn{\nu}.}
+#' \item{\code{phi0}}{The estimate for \eqn{\phi_0}.}
+#' \item{\code{Phii}}{The estimate for \eqn{\Phi_i}.}
+#' \item{\code{scatter}}{The estimate for scatter matrix, i.e., \eqn{\Sigma}.}
+#' 
+#' \item{\code{converged}}{A logical value indicating whether the method has converged.}
+#' \item{\code{iter_usage}}{A number indicating how many iteration has been used.}
+#' \item{\code{elapsed_times}}{A numerical vector indicating how much is comsumed in each iteration.}
+#' \item{\code{elapsed_time}}{A number indicating how much time is comsumed overall.}
+#' \item{\code{elapsed_time_per_iter}}{A number indicating how much time is comsumed for each iteration in average.}
+#' \item{\code{iterates_record}}{A list as the records of parameter estimates of each iteration, only returned when \code{return_iterates} = \code{TRUE}.}
+#' 
+#' 
+#' @importFrom mvtnorm dmvt
+#' @importFrom magrittr %>%
+#' @import parallel
+#' @export
+#' 
 
 # TODO: allow prior information on parameters
-# TODO: add convergence conditions
-# TODO: (optional) include also entire sampling
-# TODO: allow parallel mode
+
 
 # main function for fitting VAR(p) model with Student's t innovations -----
 fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1e-3, omit_missing = FALSE, 
                       partition_groups = TRUE, parallel_max_cores = 1,
-                      K1 = round(max_iter/3), return_iterates = FALSE, verbose = TRUE) {
+                      K = round(max_iter/3), return_iterates = FALSE, verbose = TRUE) {
+  Y <- as.matrix(Y)
   T <- nrow(Y)
   N <- ncol(Y)
   # browser()
@@ -41,11 +96,15 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
   
   # decide number of parallel cores
   n_cores <- min(parallel_max_cores, parallel::detectCores() - 1, n_part_obs)
-  cl <- if (n_cores > 1) parallel::makeCluster(n_cores) else NULL
-  if (!is.null(cl)) {
-    clusterExport(cl = cl, varlist = .assistant_fun_names)
-    clusterEvalQ(cl = cl, expr = {library("magrittr")})
+  if (n_cores > 1) {
+    message("creating a parallel socket cluster with ", n_cores, " cores...")
+    cl <- parallel::makeCluster(n_cores)  # create parallel socket cluster
+    clusterExport(cl = cl, varlist = .assistant_fun_names)  # export assisting functions
+    clusterEvalQ(cl = cl, expr = {library("magrittr")})  # dependencies
+  } else {
+    cl <- NULL
   }
+  
   my_lapply <- function(DATA, FUN) {
     if (is.null(cl))
       lapply(DATA, FUN)
@@ -78,19 +137,19 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
   
   for (iter in 1:max_iter) {
     if (verbose) {  # display the iteration info if required
-      obj <- if (length(Y_shreds$part_obs) > 0) NA else sapply(Y_shreds$full_obs, function(full_obs_seg) .loglikFullObs(full_obs_seg, phi0, Phii, scatter, nu)) %>% sum()
+      obj <- if (length(Y_shreds$part_obs) > 0) NA else my_lapply(Y_shreds$full_obs, function(full_obs_seg) .loglikFullObs(full_obs_seg, phi0, Phii, scatter, nu)) %>% sum()
       message("iteration: ", iter, "\t objective:", obj) 
     }
     
     start_time <- proc.time()[3]  # record start time
     
-    nu_old <- nu; psi0_old <- phi0; Psii_old <- Phii; scatter_old <- scatter  # record the current estimates
+    nu_old <- nu; phi0_old <- phi0; Phii_old <- Phii; scatter_old <- scatter  # record the current estimates
     
     # E-step ----------------------------------------
     # browser()
     # for the full observed segments
     if (n_full_obs > 0) {
-      Estep_full_obs <- lapply(Y_shreds$full_obs, function(full_obs_seg) .exactEstep(full_obs_seg, phi0, Phii, scatter, nu)) %>% do.call(.add_num_list, .)
+      Estep_full_obs <- my_lapply(Y_shreds$full_obs, function(full_obs_seg) .exactEstep(full_obs_seg, phi0, Phii, scatter, nu)) %>% do.call(.add_num_list, .)
     } else {
       Estep_full_obs <- .EstepContainer(N, p)
     }
@@ -102,7 +161,7 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
       Estep_part_obs <- lapply(tmp, function(x) x$Estep) %>% do.call(.add_num_list, .)
       
       # SAEM: combine the current Estep with the previous one
-      convex_comb_para <- .SAEMConvexCombPara(k = iter, K1 = K1)
+      convex_comb_para <- .SAEMConvexCombPara(k = iter, K = K)
       if (convex_comb_para < 1) 
         Estep_part_obs <- .add_num_list(.mul_num_list(Estep_part_obs,     convex_comb_para),
                                         .mul_num_list(Estep_part_obs_old, 1 - convex_comb_para))
@@ -136,8 +195,8 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
     
     have_params_converged <-
       all(abs(fnu(nu) - fnu(nu_old))               <= .5 * ptol * (abs(fnu(nu_old)) + abs(fnu(nu)))) &&
-      all(abs(phi0 - psi0_old)                     <= .5 * ptol * (abs(phi0) + abs(psi0_old))) &&
-      all(abs(unlist(Phii) - unlist(Psii_old))     <= .5 * ptol * (abs(unlist(Phii)) + abs(unlist(Psii_old)))) &&
+      all(abs(phi0 - phi0_old)                     <= .5 * ptol * (abs(phi0) + abs(phi0_old))) &&
+      all(abs(unlist(Phii) - unlist(Phii_old))     <= .5 * ptol * (abs(unlist(Phii)) + abs(unlist(Phii_old)))) &&
       all(abs(scatter - scatter_old)               <= .5 * ptol * (abs(scatter) + abs(scatter_old)))
     
     elapsed_times <- c(elapsed_times, proc.time()[3] - start_time)
@@ -169,9 +228,9 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
 
 fnu <- function(nu) nu/(nu-2)
 
-.SAEMConvexCombPara <- function(k, K1) {
-  if (k <= K1) return(1)
-  else return(1/(k - K1))
+.SAEMConvexCombPara <- function(k, K) {
+  if (k <= K) return(1)
+  else return(1/(k - K))
 }
 
 
@@ -190,26 +249,12 @@ fnu <- function(nu) nu/(nu-2)
   c(".add_num_list", ".assembleB", ".assembleEstep", ".assembleM" , ".condGsnMoms", 
     ".cutHeadNA", ".EstepContainer", ".exactEstep", ".gibbsEstepMultiChains", 
     ".gibbsEstepSingleChain", ".gibbsTau", ".gibbsY", ".idx_mask", ".lagInterception", 
-    ".loglikFullObs", ".mul_num_list", ".partitionConsecutiveNonNA", 
+    ".mul_num_list", ".partitionConsecutiveNonNA", 
     ".partitionMissingGroups", ".Random.seed", ".SAEMConvexCombPara", ".sampleCondGsn")
 
 # log-likelihood function when Y is full observed
 .loglikFullObs <- function(Y, phi0, Phii, scatter, nu) {
-  # browser()
-  T <- nrow(Y)
-  p <- length(Phii)
-  res <- 0
-  for (t in (p+1):T) {
-    y_old <- tail(head(Y, t-1), p)
-    yt <- Y[t, ]
-    res <- res + dmvt(x = yt, 
-                      delta = phi0 + as.vector(.lagInterception(Phii, y_old)),#+ rowSums(sapply(1:p, function(idx) as.vector(Phii[[idx]]%*%cbind(y_old[p-idx+1, ])))), 
-                      sigma = scatter, 
-                      df = nu,
-                      log = TRUE)
-  }
-  
-  return(res)
+  dmvt(x = tail(Y, - length(Phii)) - .lagInterception(Phii, Y, TRUE), delta = phi0, sigma = scatter, df = nu, log = TRUE) %>% sum()
 }
 
 

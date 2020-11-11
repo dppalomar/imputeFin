@@ -39,7 +39,9 @@ Psi <- cbind(phi0, do.call(cbind, Phii))
 Y <- genDataVARp(T = T, phi0 = phi0, Phii = Phii, scatter = scatter, nu = nu)
 Y_crp <- corrupt(Y, miss_pct = 0.1, miss_items = 2, p = p)
 
-fitted <- fit_VAR_t(Y = Y_crp, p = p, return_iterates = TRUE)
+fitted <- fit_VAR_t(Y = Y_crp, p = p, max_iter = 50, return_iterates = TRUE)
+fitted$elapsed_time_per_iter
+
 
 plotConvergence(fitted)
 
@@ -85,7 +87,8 @@ Psi <- cbind(phi0, do.call(cbind, Phii))
 Y <- genDataVARp(T = T, phi0 = phi0, Phii = Phii, scatter = scatter, nu = nu)
 Y_crp <- corrupt(Y, miss_pct = 0.1, miss_items = 2, p = p)
 
-fitted <- fit_VAR_t(Y = Y_crp, p = p, parallel_max_cores = 4, return_iterates = TRUE)
+fitted <- fit_VAR_t(Y = Y_crp, p = p, max_iter = 50, parallel_max_cores = 5, return_iterates = TRUE)
+fitted$elapsed_time_per_iter
 
 plotConvergence(fitted)
 
