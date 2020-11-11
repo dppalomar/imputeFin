@@ -65,6 +65,7 @@
 #' 
 #' @importFrom mvtnorm dmvt
 #' @importFrom magrittr %>% add
+#' @importFrom utils head tail
 #' @import parallel
 #' @export
 #' 
