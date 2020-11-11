@@ -58,9 +58,13 @@
 #' \item{\code{elapsed_time_per_iter}}{A number indicating how much time is comsumed for each iteration in average.}
 #' \item{\code{iterates_record}}{A list as the records of parameter estimates of each iteration, only returned when \code{return_iterates} = \code{TRUE}.}
 #' 
+#' #' @examples 
+#' library(imputeFin)
+#' data(VAR_t) 
+#' fitted <- fit_VAR_t(Y = VAR_t, p = 2)
 #' 
 #' @importFrom mvtnorm dmvt
-#' @importFrom magrittr %>%
+#' @importFrom magrittr %>% add
 #' @import parallel
 #' @export
 #' 
@@ -96,10 +100,11 @@ fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1
   
   # decide number of parallel cores
   n_cores <- min(parallel_max_cores, parallel::detectCores() - 1, n_part_obs)
+  # message(ls(environment() %>% parent.env(), all.names = TRUE))
   if (n_cores > 1) {
     message("creating a parallel socket cluster with ", n_cores, " cores...")
     cl <- parallel::makeCluster(n_cores)  # create parallel socket cluster
-    clusterExport(cl = cl, varlist = .assistant_fun_names)  # export assisting functions
+    clusterExport(cl = cl, varlist = .assistant_fun_names, envir = environment() %>% parent.env())  # export assisting functions
     clusterEvalQ(cl = cl, expr = {library("magrittr")})  # dependencies
   } else {
     cl <- NULL
