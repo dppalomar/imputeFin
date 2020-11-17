@@ -16,6 +16,8 @@ vignette("ImputeFinancialTimeSeries", package = "imputeFin")
 browseVignettes("imputeFin")
 RShowDoc("ImputeFinancialTimeSeries", package = "imputeFin")
 citation("imputeFin")
+#tools::showNonASCIIfile("R/estimate_impute_AR1_Gaussian.R")
+
 
 ##
 ## Developer commands (https://r-pkgs.org/, https://style.tidyverse.org/)
