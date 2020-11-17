@@ -20,22 +20,27 @@ Description: Missing values often occur in financial data due to a variety
     Signal Processing, vol. 67, no. 8, pp. 2159-2172. <doi:10.1109/TSP.2019.2899816>.
 Authors@R: c(
   person(c("Daniel", "P."), "Palomar", role = c("cre", "aut"), email = "daniel.p.palomar@gmail.com"),
-  person("Junyan", "Liu", role =  "aut", email = "jliubl@connect.ust.hk")
+  person("Junyan", "Liu", role =  "aut", email = "jliubl@connect.ust.hk"),
+  person("Rui", "Zhou", role =  "aut", email = "rui.zhou@connect.ust.hk")
   )
 Maintainer: Daniel P. Palomar <daniel.p.palomar@gmail.com>
 URL: https://CRAN.R-project.org/package=imputeFin,
      https://github.com/dppalomar/imputeFin,
      https://www.danielppalomar.com,
-     https://doi.org/10.1109/TSP.2019.2899816
+     https://doi.org/10.1109/TSP.2019.2899816,
+     https://doi.org/10.1109/TSP.2020.3033378
 BugReports: https://github.com/dppalomar/imputeFin/issues
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
-Depends:
+Depends: R (>= 2.10)
 Imports: 
     MASS,
-    zoo
+    zoo,
+    mvtnorm,
+    magrittr, 
+    parallel
 Suggests:
     knitr,
     ggplot2,

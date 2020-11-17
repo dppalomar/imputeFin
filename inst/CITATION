@@ -34,3 +34,25 @@ citEntry(entry = "Article",
                  "vol. 67, no. 8, pp. 2159-2172.",
                  "https://doi.org/10.1109/TSP.2019.2899816")
 )
+
+
+citEntry(entry = "Article",
+         title        = "Student’s t VAR Modeling with Missing Data via 
+                         Stochastic EM and Gibbs Sampling",
+         author       = personList(as.person("R. Zhou"),
+                                   as.person("J. Liu"),
+                                   as.person("S. Kumar"),
+                                   as.person("D. P. Palomar")),
+         journal      = "IEEE Trans. on Signal Processing",
+         volume       = "68",
+         pages        = "6198--6211",
+         year         = "2020",
+         url          = "https://doi.org/10.1109/TSP.2020.3033378",
+         textVersion  =
+           paste("R. Zhou, J. Liu, S. Kumar, and D. P. Palomar (2019).",
+                 "Student’s t VAR Modeling with Missing Data via 
+                         Stochastic EM and Gibbs Sampling.",
+                 "IEEE Trans. on Signal Processing,",
+                 "vol. 68, pp. 6198--6211.",
+                 "https://doi.org/10.1109/TSP.2020.3033378")
+)
