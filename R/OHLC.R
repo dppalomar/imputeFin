@@ -35,14 +35,14 @@ impute_OHLC <- function(y_OHLC, rolling_window = 252,
   
   # impute Hi-Cl and then form Hi
   Hi_Cl <- impute_rolling_AR1_Gaussian(logy_OHLC[, 2] - logy_OHLC_imputed[, 4], rolling_window, 
-                                       random_walk = FALSE, zero_mean = TRUE, 
+                                       random_walk = FALSE, zero_mean = FALSE, 
                                        remove_outliers, outlier_prob_th, tol, maxiter)
   Hi_Cl <- pmax(Hi_Cl, 0)
   logy_OHLC_imputed[, 2] <- logy_OHLC_imputed[, 4] + Hi_Cl
   
   # impute Lo-Cl and then form Lo
   Lo_Cl <- impute_rolling_AR1_Gaussian(logy_OHLC[, 3] - logy_OHLC_imputed[, 4], rolling_window, 
-                                       random_walk = FALSE, zero_mean = TRUE, 
+                                       random_walk = FALSE, zero_mean = FALSE, 
                                        remove_outliers, outlier_prob_th, tol, maxiter)
   Lo_Cl <- pmin(Lo_Cl, 0)
   logy_OHLC_imputed[, 3] <- logy_OHLC_imputed[, 4] + Lo_Cl  
