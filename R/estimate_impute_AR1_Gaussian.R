@@ -427,6 +427,90 @@ impute_AR1_Gaussian <- function(y, n_samples = 1, random_walk = FALSE, zero_mean
 
 
 
+
+
+#' @title Impute missing values of time series on a rolling window basis based on a Gaussian AR(1) model
+#'
+#' @description Impute inner missing values (excluding leading and trailing ones) 
+#'              of time series on a rolling window basis. This is a wrapper of the 
+#'              function \code{\link{impute_AR1_Gaussian}}.
+#' 
+#' @inheritParams impute_AR1_Gaussian
+#' @param rolling_window Rolling window length (default is \code{252}).
+#' 
+#' @return Same as \code{\link{impute_AR1_Gaussian}} for the case \code{n_samples = 1} 
+#'         and \code{return_estimates = FALSE}.
+#' 
+#' @author Daniel P. Palomar
+#' 
+#' @seealso \code{\link{plot_imputed}}, \code{\link{impute_AR1_Gaussian}}
+#' 
+#' @examples
+#' library(imputeFin)
+#' data(ts_AR1_Gaussian) 
+#' y_missing <- ts_AR1_Gaussian$y_missing
+#' y_imputed <- impute_rolling_AR1_Gaussian(y_missing)
+#' plot_imputed(y_imputed)
+#' 
+#' @export
+impute_rolling_AR1_Gaussian <- function(y, rolling_window = 252,
+                                        random_walk = FALSE, zero_mean = FALSE, 
+                                        remove_outliers = FALSE, outlier_prob_th = 1e-3, 
+                                        tol = 1e-10, maxiter = 100) {
+  # each stock, impute block by block
+  impute_single_stock <- function(y, rolling_window, random_walk, zero_mean, remove_outliers, outlier_prob_th, tol, maxiter) {
+    idx_obs <- which(!is.na(y))
+    if (length(idx_obs) == 0)
+      T <- 0
+    else
+      T <- tail(idx_obs, 1) - idx_obs[1] + 1
+    
+    if (T <= 1)       # nothing to impute
+      y_imputed <- y
+    else {            # something to impute
+      # generate block indices
+      num_blocks <- max(1, floor(T/rolling_window))
+      i_start <- idx_obs[1] - 1 + seq(1, T, by = rolling_window)[1:num_blocks]
+      i_end   <- idx_obs[1] - 1 + c(i_start[-1] - 1, T)
+      # remove blocks that end/start in the middle of NAs
+      blocks_to_remove <- union(which(is.na(y[i_start])), which(is.na(y[i_end])) + 1)
+      if (length(blocks_to_remove) > 0) {
+        i_start <- i_start[-blocks_to_remove]
+        i_end   <- i_end[-(blocks_to_remove - 1)]
+        num_blocks <- length(i_start)
+      }
+      #browser()
+      idx_blocks_list <- lapply(1:num_blocks, function(i_block) seq(i_start[i_block], i_end[i_block]))
+      # call impute function for each block
+      y_imputed_list <- lapply(idx_blocks_list, 
+                               function(idx) impute_AR1_Gaussian(y[idx, ], n_samples = 1,
+                                                                 random_walk = random_walk, zero_mean = zero_mean, 
+                                                                 remove_outliers = remove_outliers, outlier_prob_th = outlier_prob_th,
+                                                                 verbose = FALSE, return_estimates = FALSE, 
+                                                                 tol = tol, maxiter = maxiter))
+      y_imputed <- do.call(rbind, y_imputed_list)
+    }
+    return(y_imputed)
+  }
+  
+  # impute stock by stock (column by column)
+  y_imputed_list <- lapply(1:NCOL(y), FUN = function(i) {
+    impute_single_stock(y[, i, drop = FALSE], rolling_window, random_walk, zero_mean, remove_outliers, outlier_prob_th, tol, maxiter)
+  })
+  names(y_imputed_list) <- colnames(y)
+  y_imputed <- do.call(cbind, y_imputed_list)
+  
+  return(y_imputed)
+}
+
+
+
+
+
+
+
+
+
 #
 # Compute the conditional mean and covariance matrix of y given the observed data and current estimates
 #
