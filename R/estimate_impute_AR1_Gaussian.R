@@ -464,14 +464,12 @@ impute_rolling_AR1_Gaussian <- function(y, rolling_window = 252,
       T <- 0
     else
       T <- tail(idx_obs, 1) - idx_obs[1] + 1
-    
-    if (T <= 1)       # nothing to impute
-      y_imputed <- y
-    else {            # something to impute
+    y_imputed <- y
+    if (T > 1) {  # something to impute
       # generate block indices
       num_blocks <- max(1, floor(T/rolling_window))
       i_start <- idx_obs[1] - 1 + seq(1, T, by = rolling_window)[1:num_blocks]
-      i_end   <- idx_obs[1] - 1 + c(i_start[-1] - 1, T)
+      i_end   <- c(i_start[-1] - 1, tail(idx_obs, 1))
       # remove blocks that end/start in the middle of NAs
       blocks_to_remove <- union(which(is.na(y[i_start])), which(is.na(y[i_end])) + 1)
       if (length(blocks_to_remove) > 0) {
@@ -488,7 +486,7 @@ impute_rolling_AR1_Gaussian <- function(y, rolling_window = 252,
                                                                  remove_outliers = remove_outliers, outlier_prob_th = outlier_prob_th,
                                                                  verbose = FALSE, return_estimates = FALSE, 
                                                                  tol = tol, maxiter = maxiter))
-      y_imputed <- do.call(rbind, y_imputed_list)
+      y_imputed[idx_obs[1]:tail(idx_obs, 1)] <- do.call(rbind, y_imputed_list)
     }
     return(y_imputed)
   }
