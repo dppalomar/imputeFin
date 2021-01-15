@@ -69,7 +69,7 @@
 #' J. Liu, S. Kumar, and D. P. Palomar, "Parameter estimation of heavy-tailed AR model with missing 
 #' data via stochastic EM," IEEE Trans. on Signal Processing, vol. 67, no. 8, pp. 2159-2172, 15 April, 2019. 
 #'
-#' @examples 
+#' @examples
 #' library(imputeFin)
 #' data(ts_AR1_t) 
 #' y_missing <- ts_AR1_t$y_missing
@@ -80,9 +80,9 @@
 #' @import stats
 #' @export
 fit_AR1_t <- function(y, random_walk = FALSE, zero_mean = FALSE, fast_and_heuristic = TRUE, remove_outliers = FALSE, outlier_prob_th = 1e-3, 
-                         verbose = TRUE,
-                         return_iterates = FALSE, return_condMean_Gaussian = FALSE,
-                         tol = 1e-8, maxiter = 100, n_chain = 10, n_thin = 1, K = 30) {
+                      verbose = TRUE,
+                      return_iterates = FALSE, return_condMean_Gaussian = FALSE,
+                      tol = 1e-8, maxiter = 100, n_chain = 10, n_thin = 1, K = 30) {
   # error control
   if (!is.matrix(try(as.matrix(y), silent = TRUE))) stop("\"y\" must be coercible to a vector or matrix.")
   if (tol <= 0) stop("\"tol\" must be greater than 0.")

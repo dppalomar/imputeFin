@@ -33,7 +33,7 @@
 #'          \item{\code{phi0} (\eqn{\phi_0}) - a numerical vector of length \code{ncol(Y)} as the interception of VAR model,}
 #'          \item{\code{Phii} (\eqn{\Phi_i}) - a list of \code{p} matrices of dimension \code{ncol(Y)} as the autoregressive coefficient matrices,}
 #'          \item{\code{scatter} (\eqn{\Sigma}) - a positive definite of dimension \code{ncol(Y)} as the scatter matrix.}}
-#' @param L A positive integer as the number of markov chains (default is \eqn{10}).
+#' @param L A positive integer as the number of Markov chains (default is \eqn{10}).
 #' @param max_iter A positive integer as the number of maximum iterations (default is \eqn{100}).
 #' @param ptol A non-negative number as the tolerance indicating the convergence of (stocastic) EM method.
 #' @param omit_missing A logical value indicating whether to use the omit-variable method, i.e., 
@@ -74,9 +74,10 @@
 
 
 # main function for fitting VAR(p) model with Student's t innovations -----
-fit_VAR_t <- function(Y, p = 1, initial = NULL, L = 10, max_iter = 100, ptol = 1e-3, omit_missing = FALSE, 
-                      partition_groups = TRUE, parallel_max_cores = 1,
-                      K = round(max_iter/3), return_iterates = FALSE, verbose = TRUE) {
+fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = 1,
+                      verbose = TRUE,
+                      return_iterates = FALSE,
+                      initial = NULL, L = 10, max_iter = 100, ptol = 1e-3, partition_groups = TRUE, K = round(max_iter/3)) {
   Y <- as.matrix(Y)
   T <- nrow(Y)
   N <- ncol(Y)
