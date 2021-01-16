@@ -49,7 +49,7 @@ plotConvergence(fitted)
 # checking code: simple omit-variable method ----------------------------------
 rm(list = ls())
 
-source("R/fit_t_VAR.R")
+source("R/fit_VAR_t.R")
 source("R_buildignore/checking - assist - by Rui.R")
 
 # set.seed(3)

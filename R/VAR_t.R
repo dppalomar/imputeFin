@@ -5,10 +5,17 @@
 #' 
 #' @docType data
 #'
-#' @usage data(VAR_t)
+#' @usage data(ts_VAR_t)
 #'
-#' @format a matrix
+#' @format List with the following elements:
+#' \describe{
+#'   \item{Y}{200 x 3 \code{zoo} object as a Student's t VAR time series.}
+#'   \item{phi0}{True value of the constant vector in the VAR model.}
+#'   \item{Phii}{True value of the coefficient matrix in the VAR model.}
+#'   \item{scatter}{True value of the scatter matrix (of the noise distribution) in the VAR model.}
+#'   \item{nu}{True value of the degrees of freedom (of the noise distribution) in the VAR model.}
+#' }
 #' 
 #' @keywords dataset
 #' 
-"VAR_t"
+"ts_VAR_t"
