@@ -98,7 +98,7 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
   # full_obs: a list of full observed segments 
   # part_obs: a list of partially observed segments
   if (partition_groups) {
-    Y_shreds <- .partitionMissingGroups(Y, p)
+    Y_shreds <- partitionMissingGroups(Y, p)
     if (omit_missing) {  # omit-variable method: ignore all partially observed segments
       Y_shreds$part_obs <- list()
       T <- sum(sapply(Y_shreds$full_obs, nrow) - p) + p  # NOTE: in this case, we need fake "T" since we have deleted some rows
@@ -117,7 +117,7 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
   if (n_cores > 1) {
     if (verbose) message("creating a parallel socket cluster with ", n_cores, " cores...")
     cl <- parallel::makeCluster(n_cores)  # create parallel socket cluster
-    clusterExport(cl = cl, varlist = .assistant_fun_names, envir = environment() %>% parent.env())  # export assisting functions
+    clusterExport(cl = cl, varlist = assistant_fun_names, envir = environment() %>% parent.env())  # export assisting functions
     clusterEvalQ(cl = cl, expr = {library("magrittr")})  # dependencies
   } else {
     cl <- NULL
@@ -138,16 +138,16 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
   scatter <- if (is.null(initial$scatter)) diag(N)  else initial$scatter
   
   # browser()
-  Estep_part_obs_old <- .EstepContainer(N, p)
-  # chains_library <- lapply(Y_shreds$part_obs, function(part_obs) .gibbsEstepMultiChains(part_obs, phi0, Phii, scatter, nu, L)$chain_states)  # init. markov chain states
-  chains_library <- my_lapply(Y_shreds$part_obs, function(part_obs) .gibbsEstepMultiChains(part_obs, phi0, Phii, scatter, nu, L)$chain_states)  # init. markov chain states
+  Estep_part_obs_old <- EstepContainer(N, p)
+  # chains_library <- lapply(Y_shreds$part_obs, function(part_obs) gibbsEstepMultiChains(part_obs, phi0, Phii, scatter, nu, L)$chain_states)  # init. markov chain states
+  chains_library <- my_lapply(Y_shreds$part_obs, function(part_obs) gibbsEstepMultiChains(part_obs, phi0, Phii, scatter, nu, L)$chain_states)  # init. markov chain states
   
   # define tool functions for simplifying
   snapshot <- function() list(nu = nu, phi0 = phi0, Phii = Phii, scatter = scatter)
   s_tau    <- function() Estep$s_tau
   s_logtau <- function() Estep$s_logtau
   s_tauy   <- function(i) Estep$s_tauy[, i+1, drop = FALSE]
-  S_tauyy  <- function(i, j) if (i >= j) Estep$s_tauyy[.idx_mask(i, N), .idx_mask(j, N)] else t(Estep$s_tauyy[.idx_mask(j, N), .idx_mask(i, N)])
+  S_tauyy  <- function(i, j) if (i >= j) Estep$s_tauyy[idx_mask(i, N), idx_mask(j, N)] else t(Estep$s_tauyy[idx_mask(j, N), idx_mask(i, N)])
   
   # let's loop
   if (return_iterates) iterates_record <- list(snapshot())
@@ -155,7 +155,7 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
   
   for (iter in 1:maxiter) {
     if (verbose) {  # display the iteration info if required
-      obj <- if (length(Y_shreds$part_obs) > 0) NA else my_lapply(Y_shreds$full_obs, function(full_obs_seg) .loglikFullObs(full_obs_seg, phi0, Phii, scatter, nu)) %>% sum()
+      obj <- if (length(Y_shreds$part_obs) > 0) NA else my_lapply(Y_shreds$full_obs, function(full_obs_seg) loglikFullObs(full_obs_seg, phi0, Phii, scatter, nu)) %>% sum()
       message("iteration: ", iter, "\t objective:", obj) 
     }
     
@@ -167,27 +167,27 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
     # browser()
     # for the full observed segments
     if (n_full_obs > 0) {
-      Estep_full_obs <- my_lapply(Y_shreds$full_obs, function(full_obs_seg) .exactEstep(full_obs_seg, phi0, Phii, scatter, nu)) %>% do.call(.add_num_list, .)
+      Estep_full_obs <- my_lapply(Y_shreds$full_obs, function(full_obs_seg) exactEstep(full_obs_seg, phi0, Phii, scatter, nu)) %>% do.call(add_num_list, .)
     } else {
-      Estep_full_obs <- .EstepContainer(N, p)
+      Estep_full_obs <- EstepContainer(N, p)
     }
     
     # for the partially observed segments
     if (n_part_obs > 0) {
-      tmp <- my_lapply(1:n_part_obs, function(idx) .gibbsEstepMultiChains(Y_shreds$part_obs[[idx]], phi0, Phii, scatter, nu, chains_library[[idx]]))
+      tmp <- my_lapply(1:n_part_obs, function(idx) gibbsEstepMultiChains(Y_shreds$part_obs[[idx]], phi0, Phii, scatter, nu, chains_library[[idx]]))
       chains_library <- lapply(tmp, function(x) x$chain_states)
-      Estep_part_obs <- lapply(tmp, function(x) x$Estep) %>% do.call(.add_num_list, .)
+      Estep_part_obs <- lapply(tmp, function(x) x$Estep) %>% do.call(add_num_list, .)
       
       # SAEM: combine the current Estep with the previous one
-      convex_comb_para <- .SAEMConvexCombPara(k = iter, K = K)
+      convex_comb_para <- SAEMConvexCombPara(k = iter, K = K)
       if (convex_comb_para < 1) 
-        Estep_part_obs <- .add_num_list(.mul_num_list(Estep_part_obs,     convex_comb_para),
-                                        .mul_num_list(Estep_part_obs_old, 1 - convex_comb_para))
+        Estep_part_obs <- add_num_list(mul_num_list(Estep_part_obs,     convex_comb_para),
+                                        mul_num_list(Estep_part_obs_old, 1 - convex_comb_para))
       Estep_part_obs_old <- Estep_part_obs  # record the current Estep
     } else {
-      Estep_part_obs <- .EstepContainer(N, p)
+      Estep_part_obs <- EstepContainer(N, p)
     }
-    Estep <- .add_num_list(Estep_full_obs, Estep_part_obs)  
+    Estep <- add_num_list(Estep_full_obs, Estep_part_obs)  
     
     
     # M-step ----------------------------------------
@@ -198,10 +198,10 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
     # if (!is.null(prior_info$nu)) nu <- prior_info$nu
 
     
-    M <- .assembleM(Estep = Estep)
+    M <- assembleM(Estep = Estep)
     Psi <- M$M0 %*% solve(M$M1)
     phi0 <- Psi[, 1]
-    Phii <- lapply(1:p, function(i) Psi[, .idx_mask(i-1, N) + 1])
+    Phii <- lapply(1:p, function(i) Psi[, idx_mask(i-1, N) + 1])
     
     S <- S_tauyy(0, 0) - 2 * M$M0 %*% t(Psi) + Psi %*% M$M1 %*% t(Psi)
     # browser()
@@ -252,7 +252,7 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
 
 fnu <- function(nu) nu/(nu-2)
 
-.SAEMConvexCombPara <- function(k, K) {
+SAEMConvexCombPara <- function(k, K) {
   if (k <= K) return(1)
   else return(1/(k - K))
 }
@@ -269,40 +269,40 @@ fnu <- function(nu) nu/(nu-2)
 # assistant functions ---------
 ###############################################################################
 
-.assistant_fun_names <- 
-  c(".add_num_list", ".assembleB", ".assembleEstep", ".assembleM" , ".condGsnMoms", 
-    ".cutHeadNA", ".EstepContainer", ".exactEstep", ".gibbsEstepMultiChains", 
-    ".gibbsEstepSingleChain", ".gibbsTau", ".gibbsY", ".idx_mask", ".lagInterception", 
-    ".mul_num_list", ".partitionConsecutiveNonNA", 
-    ".partitionMissingGroups", ".Random.seed", ".SAEMConvexCombPara", ".sampleCondGsn")
+assistant_fun_names <- 
+  c("add_num_list", "assembleB", "assembleEstep", "assembleM" , "condGsnMoms", 
+    "cutHeadNA", "EstepContainer", "exactEstep", "gibbsEstepMultiChains", 
+    "gibbsEstepSingleChain", "gibbsTau", "gibbsY", "idx_mask", "lagInterception", 
+    "mul_num_list", "partitionConsecutiveNonNA", 
+    "partitionMissingGroups", ".Random.seed", "SAEMConvexCombPara", "sampleCondGsn")
 
 # log-likelihood function when Y is full observed
-.loglikFullObs <- function(Y, phi0, Phii, scatter, nu) {
-  dmvt(x = tail(Y, - length(Phii)) - .lagInterception(Phii, Y, TRUE), delta = phi0, sigma = scatter, df = nu, log = TRUE) %>% sum()
+loglikFullObs <- function(Y, phi0, Phii, scatter, nu) {
+  dmvt(x = tail(Y, - length(Phii)) - lagInterception(Phii, Y, TRUE), delta = phi0, sigma = scatter, df = nu, log = TRUE) %>% sum()
 }
 
 
 # partition matrix Y according to missing patterns
 # the sub-matrix with NAs should be identified and picked out
-.partitionMissingGroups <- function(Y, p) {
+partitionMissingGroups <- function(Y, p) {
   T <- nrow(Y)
   obs_idx <- miss_idx <- rep(NA, T)
   
   # observation partition, when consecutive observations >= p + 1
   obs_mask <- !apply(Y, 1, anyNA)
   obs_idx[obs_mask] <- (1:T)[obs_mask]
-  obs_partition <- .partitionConsecutiveNonNA(x = obs_idx, consec = p + 1)
+  obs_partition <- partitionConsecutiveNonNA(x = obs_idx, consec = p + 1)
   
   # extract the raw missing mask
   miss_mask <- miss_mask_snapshort <- !obs_mask
   
   # amend the consecutive observations as missing (via using logical "TRUE" in the "miss_mask") when its length <= p
-  tmp <- .partitionConsecutiveNonNA(x = obs_idx, consec = 1)
+  tmp <- partitionConsecutiveNonNA(x = obs_idx, consec = 1)
   for (idx in tmp) if (length(idx) <= p) miss_mask[idx] <- TRUE
   
   # missing groups partition, include also p observations before and after
   miss_idx[miss_mask] <- (1:T)[miss_mask]
-  miss_partition <- .partitionConsecutiveNonNA(x = miss_idx, consec = 1)
+  miss_partition <- partitionConsecutiveNonNA(x = miss_idx, consec = 1)
   miss_partition <- lapply(miss_partition, function(x) {
     tmp <- c(min(x) + (-p:-1), x, max(x) + (1:p))
     tmp <- tmp[tmp <= T]
@@ -325,7 +325,7 @@ fnu <- function(nu) nu/(nu-2)
 # remove the heading NAs from a vector
 # {examples} input:  c(NA, NA, 1, 2, 3)
 #            output: c(1, 2, 3)
-.cutHeadNA <- function(x) {
+cutHeadNA <- function(x) {
   if (all(is.na(x))) {
     integer(0)
   } else if (!is.na(x[1])) {
@@ -338,8 +338,8 @@ fnu <- function(nu) nu/(nu-2)
 # partition segments consisting of consecutive observations
 # {example} input:  c(1, 2, 3, NA, 5, 6, 7, NA, NA, 10, 11, 12)
 #           output: a list consisting of c(1, 2, 3), c(5, 6, 7), c(10, 11, 12)
-.partitionConsecutiveNonNA <- function(x, consec = 2) {
-  x <- .cutHeadNA(x)
+partitionConsecutiveNonNA <- function(x, consec = 2) {
+  x <- cutHeadNA(x)
   res <- list()
   count <- 1
   while (TRUE) {
@@ -350,14 +350,14 @@ fnu <- function(nu) nu/(nu-2)
       count <- count + 1
     }
     x <- tail(x, -cutting)  # drop the heading observations
-    x <- .cutHeadNA(x)  # drop the heading NAs
+    x <- cutHeadNA(x)  # drop the heading NAs
     if (length(x) == 0) break
   }
   return(res)
 }
 
 # the index mask function, particularly designed to start from 0
-.idx_mask <- function(i, N) (1:N) + i*N
+idx_mask <- function(i, N) (1:N) + i*N
 
 # .loglikNoMiss <- function(X, phi0, Phii, delta, nu, scatter) {
 #   # browser()
@@ -370,7 +370,7 @@ fnu <- function(nu) nu/(nu-2)
 
 # lagged interception from previous p observations 
 # note the data matrix is ranked from old to recent
-.lagInterception <- function(Phii, Y, rm.last = FALSE) {
+lagInterception <- function(Phii, Y, rm.last = FALSE) {
   T <- nrow(Y)
   p <- length(Phii)
   res <- do.call(cbind, lapply(1:p, function(idx) Y[(p+1-idx):(T+1-idx), , drop = FALSE])) %*% t(do.call(cbind, Phii))
@@ -381,14 +381,14 @@ fnu <- function(nu) nu/(nu-2)
 # recursively add two numerical lists
 # very useful when we collect the E-step statistics
 # assuming the passed lists have the same structure (not check since it's an inner function)
-.add_num_list <- function(...) {
+add_num_list <- function(...) {
   data <- list(...)  # collect inputs
   res <- data[[1]][sapply(data[[1]], function(x) is.list(x) | is.numeric(x))]  # only allow numbers or lists
   if (length(data) == 1) return(res)
   for (i in 2:length(data)) {
     for (name in names(res)) {
       if (is.list(res[[name]]))
-        res[[name]] <- .add_num_list(res[[name]], data[[i]][[name]])
+        res[[name]] <- add_num_list(res[[name]], data[[i]][[name]])
       if (is.numeric(res[[name]]))
         res[[name]] <- res[[name]] + data[[i]][[name]]
     }
@@ -397,10 +397,10 @@ fnu <- function(nu) nu/(nu-2)
 }
 
 # recursively multiply a scale to a numerical list
-.mul_num_list <- function(lis, sca) {
+mul_num_list <- function(lis, sca) {
   for (name in names(lis)) {
     if (is.list(lis[[name]]))
-      lis[[name]] <- .mul_num_list(lis[[name]], sca)
+      lis[[name]] <- mul_num_list(lis[[name]], sca)
     if (is.numeric(lis[[name]]))
       lis[[name]] <- lis[[name]] * sca
   }
@@ -413,7 +413,7 @@ fnu <- function(nu) nu/(nu-2)
 # container for minimal sufficient statistics in E-step
 # all elements are initialized as "0" when created
 # note these values are already sum up over t
-.EstepContainer <- function(N, p) {
+EstepContainer <- function(N, p) {
   list("s_logtau" = 0,
        "s_tau"    = 0,
        "s_tauy"   = matrix(0, N, p + 1),
@@ -422,7 +422,7 @@ fnu <- function(nu) nu/(nu-2)
 
 
 # exact expectation computation when Y elements are all observed
-.exactEstep <- function(Y, phi0, Phii, scatter, nu) {
+exactEstep <- function(Y, phi0, Phii, scatter, nu) {
   if (anyNA(Y)) stop("Y can not contain any NA values!")
   if (nrow(Y) <= 1) stop("Y must have more than 2 rows!")
   
@@ -430,28 +430,28 @@ fnu <- function(nu) nu/(nu-2)
   N <- ncol(Y)
   p <- length(Phii)
   
-  container <- .EstepContainer(N, p)
+  container <- EstepContainer(N, p)
   # browser()
   # as the tau follows the gamma distribution
   scatter_inv <- solve(scatter)
-  tmp <- apply(t(tail(Y, -p)) - phi0 - t(.lagInterception(Phii, Y, TRUE)), 2, function(x) as.numeric(x%*%scatter_inv%*%x))
+  tmp <- apply(t(tail(Y, -p)) - phi0 - t(lagInterception(Phii, Y, TRUE)), 2, function(x) as.numeric(x%*%scatter_inv%*%x))
   
   tau_vec_exp <- sapply(tmp, function(x) (nu+N)/(nu+x))
   logtau_vec_exp <- sapply(tmp, function(x) digamma((nu+N)/2) - log((nu+x)/2))
-  return(.assembleEstep(taus = tau_vec_exp, logtaus = logtau_vec_exp, Y = Y))
+  return(assembleEstep(taus = tau_vec_exp, logtaus = logtau_vec_exp, Y = Y))
 }
 
 
 # to assemble B matrix from the current estimates,
 # see equation (36) of the reference paper
-.assembleB <- function(phi0, Phii) {
+assembleB <- function(phi0, Phii) {
   N <- length(phi0)
   p <- length(Phii)
   B <- matrix(0, N*p, N*p)
   for (i in 1:p) 
-    B[.idx_mask(0, N), .idx_mask(i-1, N)] <- Phii[[i]]
+    B[idx_mask(0, N), idx_mask(i-1, N)] <- Phii[[i]]
   if (p > 1)
-    diag(B[N + .idx_mask(0, N*(p - 1)), .idx_mask(0, N*(p - 1))]) <- 1
+    diag(B[N + idx_mask(0, N*(p - 1)), idx_mask(0, N*(p - 1))]) <- 1
   
   return(B)
 }
@@ -460,13 +460,13 @@ fnu <- function(nu) nu/(nu-2)
 # for a segment, compute the gaussian moments of last (T-p) rows
 # conditional on the first p rows, taus, and the current estimates
 # see Lemma 2 of the reference paper
-.condGsnMoms <- function(phi0, Phii, scatter, Y_head_p, taus) {
+condGsnMoms <- function(phi0, Phii, scatter, Y_head_p, taus) {
   N <- length(phi0)
   p <- length(Phii)
   T_minus_p <- length(taus)
   if (nrow(Y_head_p) != p) stop("Invalid Phii or Y_head_p!")
   
-  B <- .assembleB(phi0, Phii)
+  B <- assembleB(phi0, Phii)
   Bs <- list(B)
   for (i in 2:(max(T_minus_p, 2))) Bs[[i]] <- Bs[[i - 1]] %*% B
   powerB <- function(idx) if(idx == 0) diag(N*p) else Bs[[idx]]
@@ -480,11 +480,11 @@ fnu <- function(nu) nu/(nu-2)
   for (i in 1:T_minus_p) {
     for (j in 1:i) {
       tmp <- lapply(1:min(i, j), function(q) powerB(i-q)[1:N, 1:N]%*%scatter%*%t(powerB(j-q)[1:N, 1:N])/taus[q])
-      Sigma[.idx_mask(i-1, N), .idx_mask(j-1, N)] <- Reduce('+', tmp)
+      Sigma[idx_mask(i-1, N), idx_mask(j-1, N)] <- Reduce('+', tmp)
     }
   }
   Sigma <- Sigma + t(Sigma)
-  for (i in 1:T_minus_p) Sigma[.idx_mask(i-1, N), .idx_mask(i-1, N)] <- Sigma[.idx_mask(i-1, N), .idx_mask(i-1, N)]/2
+  for (i in 1:T_minus_p) Sigma[idx_mask(i-1, N), idx_mask(i-1, N)] <- Sigma[idx_mask(i-1, N), idx_mask(i-1, N)]/2
   
   return(list("mu" = mu, "Sigma" = Sigma))
 }
@@ -493,7 +493,8 @@ fnu <- function(nu) nu/(nu-2)
 # when data is assumed to follow a jointly Gaussian distribution
 # sample the missing data conditional on the observed part and the joint distribution parameter
 # see Lemma 3 of the reference paper
-.sampleCondGsn <- function(y, mu, Sigma) {
+#' @importFrom MASS mvrnorm
+sampleCondGsn <- function(y, mu, Sigma) {
   if (!anyNA(y)) return(x)
   if (all(is.na(y))) stop("Invaild y!")
   
@@ -508,18 +509,18 @@ fnu <- function(nu) nu/(nu-2)
 
 
 # Gibbs sampling - taus
-.gibbsTau <- function(Y, phi0, Phii, scatter, nu, scatter_inv = NULL) {
+gibbsTau <- function(Y, phi0, Phii, scatter, nu, scatter_inv = NULL) {
   T <- nrow(Y)
   N <- ncol(Y)
   p <- length(Phii)
   if (is.null(scatter_inv)) scatter_inv <- solve(scatter)
-  tmp <- apply(t(tail(Y, -p)) - phi0 - t(.lagInterception(Phii, Y, rm.last = TRUE)), 2, function(x) as.numeric(x%*%scatter_inv%*%x))
+  tmp <- apply(t(tail(Y, -p)) - phi0 - t(lagInterception(Phii, Y, rm.last = TRUE)), 2, function(x) as.numeric(x%*%scatter_inv%*%x))
   tau_vec <- sapply(tmp, function(x) rgamma(n = 1, shape = (nu+N)/2, rate = (x+nu)/2))
   return(tau_vec)
 }
 
 # Gibbs sampling - Y (missing part) in fashion of row by row
-.gibbsY <- function(tau_vec, Y, phi0, Phii, scatter, nu, chain_state) {
+gibbsY <- function(tau_vec, Y, phi0, Phii, scatter, nu, chain_state) {
   
   if (!anyNA(Y)) return(Y)
   T <- nrow(Y)
@@ -533,9 +534,9 @@ fnu <- function(nu) nu/(nu-2)
     idx_first_p <- (-p:-1) + i
     idx_next_p  <- if (i == T) integer(0) else (i+1):min(i+p, T)
     # compute Gaussian moments
-    gaus_mean_cov <- .condGsnMoms(phi0, Phii, scatter, Y[idx_first_p, , drop = FALSE], tau_vec[c(i, idx_next_p) - p])
+    gaus_mean_cov <- condGsnMoms(phi0, Phii, scatter, Y[idx_first_p, , drop = FALSE], tau_vec[c(i, idx_next_p) - p])
     # impute Y missing
-    y <- .sampleCondGsn(as.vector(t(rbind(Y[i, ], chain_state[idx_next_p, ]))), gaus_mean_cov$mu, gaus_mean_cov$Sigma)
+    y <- sampleCondGsn(as.vector(t(rbind(Y[i, ], chain_state[idx_next_p, ]))), gaus_mean_cov$mu, gaus_mean_cov$Sigma)
     Y[i, ] <- head(y, N)
   }
   
@@ -544,19 +545,19 @@ fnu <- function(nu) nu/(nu-2)
 
 
 # assemble the minimal sufficient statistics from Gibbs samples
-.assembleEstep <- function(taus, logtaus = log(taus), Y) {
+assembleEstep <- function(taus, logtaus = log(taus), Y) {
   N <- ncol(Y)
   T <- nrow(Y)
   p <- nrow(Y) - length(taus)  # p is infered
   idxes <- function(i, T, p) ((p+1):T) - i  # indexes for (T-p) rows, "i" is the offset
   # browser()
-  container          <- .EstepContainer(N, p)
+  container          <- EstepContainer(N, p)
   container$s_tau    <- sum(taus)
   container$s_logtau <- sum(logtaus)
   container$s_tauy   <- sapply(0:p, function(i) colSums(Y[idxes(i, T, p), , drop = FALSE] * taus))
   for (i in 0:p) {
     for (j in 0:p) {
-      container$s_tauyy[.idx_mask(i, N), .idx_mask(j, N)] <- t(Y[idxes(i, T, p), , drop = FALSE] * taus) %*% Y[idxes(j, T, p), , drop = FALSE]
+      container$s_tauyy[idx_mask(i, N), idx_mask(j, N)] <- t(Y[idxes(i, T, p), , drop = FALSE] * taus) %*% Y[idxes(j, T, p), , drop = FALSE]
     }
   }
   
@@ -571,13 +572,13 @@ fnu <- function(nu) nu/(nu-2)
 # gibbs sampling of taus and missing ys in single markov chain
 # n_iter: number of iterations in the markov chain
 # n_drop: number of iterations to be dropped at the begining
-.gibbsEstepSingleChain <- function(n_iter = 5e3, n_drop = 1e3, Y, phi0, Phii, scatter, nu, Y_iterator) {
+gibbsEstepSingleChain <- function(n_iter = 5e3, n_drop = 1e3, Y, phi0, Phii, scatter, nu, Y_iterator) {
   T <- nrow(Y)
   N <- ncol(Y)
   p <- length(Phii)
   
   # browser()
-  container <- .EstepContainer(N, p)
+  container <- EstepContainer(N, p)
   
   # initialize
   if (missing(Y_iterator)) {  # Y_iterator is not given, meaning it is the initial of the markov chain
@@ -587,11 +588,11 @@ fnu <- function(nu) nu/(nu-2)
   }
   
   for (iter in 1:n_iter) {
-    tau_iterator <- .gibbsTau(Y_iterator, phi0, Phii, scatter, nu)
-    Y_iterator   <- .gibbsY(tau_iterator, Y, phi0, Phii, scatter, nu, Y_iterator)
+    tau_iterator <- gibbsTau(Y_iterator, phi0, Phii, scatter, nu)
+    Y_iterator   <- gibbsY(tau_iterator, Y, phi0, Phii, scatter, nu, Y_iterator)
     
     if (iter <= n_drop) next
-    container <- .add_num_list(container, .mul_num_list(.assembleEstep(taus = tau_iterator, Y = Y_iterator), 1 / (n_iter - n_drop)))
+    container <- add_num_list(container, mul_num_list(assembleEstep(taus = tau_iterator, Y = Y_iterator), 1 / (n_iter - n_drop)))
     
   }
   
@@ -601,20 +602,20 @@ fnu <- function(nu) nu/(nu-2)
 
 
 # gibbs sampling of taus and missing ys in multiple markov chain
-# chain_states: when is a number, it means number of markov chains, implying the initial status (initialization is going to be done in ".gibbsEstepSingleChain()")
+# chain_states: when is a number, it means number of markov chains, implying the initial status (initialization is going to be done in "gibbsEstepSingleChain()")
 #               when is a list, it means the status of Y in markov chains
 
-.gibbsEstepMultiChains <- function(Y, phi0, Phii, scatter, nu, chain_states) { 
+gibbsEstepMultiChains <- function(Y, phi0, Phii, scatter, nu, chain_states) { 
   # browser()
   if (is.numeric(chain_states))  # initialize chain states if the initial states are given in numerical
-    tmp <- lapply(1:chain_states, function(x) .gibbsEstepSingleChain(n_iter = 10, n_drop = 10, Y, phi0, Phii, scatter, nu))
+    tmp <- lapply(1:chain_states, function(x) gibbsEstepSingleChain(n_iter = 10, n_drop = 10, Y, phi0, Phii, scatter, nu))
   else                           # move multiple chains to next status
-    tmp <- lapply(chain_states, function(chain_state) .gibbsEstepSingleChain(n_iter = 1, n_drop = 0, Y, phi0, Phii, scatter, nu, chain_state))
+    tmp <- lapply(chain_states, function(chain_state) gibbsEstepSingleChain(n_iter = 1, n_drop = 0, Y, phi0, Phii, scatter, nu, chain_state))
   
   n_chain <- ifelse(is.numeric(chain_states), chain_states, length(chain_states))
   
   list("chain_states" = lapply(tmp, function(x) x$state),
-       "Estep"        = lapply(tmp, function(x) x$Estep) %>% do.call(.add_num_list, .) %>% .mul_num_list(., 1/n_chain))
+       "Estep"        = lapply(tmp, function(x) x$Estep) %>% do.call(add_num_list, .) %>% mul_num_list(., 1/n_chain))
 }
 
 
@@ -624,17 +625,17 @@ fnu <- function(nu) nu/(nu-2)
 
 # to assemble M_0 and M_1 matrix from the minimal sufficient statistics,
 # see equation (12) of the reference paper
-# argument "Estep" is a directly returned result from ".assembleEstep()"
-.assembleM <- function(Estep) {
+# argument "Estep" is a directly returned result from "assembleEstep()"
+assembleM <- function(Estep) {
   N <- nrow(Estep$s_tauy)
   p <- ncol(Estep$s_tauy) - 1
-  M0 <- cbind(Estep$s_tauy[, 1], Estep$s_tauyy[.idx_mask(0, N), -.idx_mask(0, N)])
+  M0 <- cbind(Estep$s_tauy[, 1], Estep$s_tauyy[idx_mask(0, N), -idx_mask(0, N)])
   M1 <- matrix(0, 1+N*p, 1+N*p)
   
   M1[1, 1]   <- Estep$s_tau
   M1[-1, 1]  <- as.vector(Estep$s_tauy[, -1])
   M1[1, -1]  <- as.vector(Estep$s_tauy[, -1])
-  M1[-1, -1] <- Estep$s_tauyy[-.idx_mask(0, N), -.idx_mask(0, N)]
+  M1[-1, -1] <- Estep$s_tauyy[-idx_mask(0, N), -idx_mask(0, N)]
   
   return(list("M0" = M0, "M1" = M1))
 }

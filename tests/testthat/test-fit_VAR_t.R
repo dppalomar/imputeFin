@@ -25,7 +25,7 @@ test_that("SAEM-MCMC works", {
   # save(fitted_VAR_check, file = "fitted_VAR_check.RData", version = 2, compress = "xz")
   load("fitted_VAR_check.RData")
   
-  fitted_VAR <- fit_VAR_t(Y, 2)[1:4]
+  fitted_VAR <- fit_VAR_t(Y, 2, parallel_max_cores = 1)[1:4]
   expect_equal(fitted_VAR, fitted_VAR_check, tolerance = 1e-1)
 })
 
@@ -35,6 +35,6 @@ test_that("omit-variable method works", {
   # save(fitted_VAR_omit_check, file = "fitted_VAR_omit_check.RData", version = 2, compress = "xz")
   load("fitted_VAR_omit_check.RData")
   
-  fitted_VAR_omit <- fit_VAR_t(Y, 2, omit_missing = TRUE)[1:4]
+  fitted_VAR_omit <- fit_VAR_t(Y, 2, omit_missing = TRUE, parallel_max_cores = 1)[1:4]
   expect_equal(fitted_VAR_omit, fitted_VAR_omit_check, tolerance = 1e-3)
 })
