@@ -40,7 +40,7 @@
 #'          \item{\code{Phii} (\eqn{\Phi_i}) - a list of \code{p} matrices of dimension \code{ncol(Y)} as the autoregressive coefficient matrices,}
 #'          \item{\code{scatter} (\eqn{\Sigma}) - a positive definite of dimension \code{ncol(Y)} as the scatter matrix.}}
 #' @param L A positive integer as the number of Markov chains (default is \eqn{10}).
-#' @param max_iter A positive integer as the number of maximum iterations (default is \eqn{100}).
+#' @param maxiter A positive integer as the number of maximum iterations (default is \eqn{100}).
 #' @param ptol A non-negative number as the tolerance indicating the convergence of (stocastic) EM method.
 #' @param partition_groups A logical value indicating whether to partition \code{Y} into groups (default is \code{TRUE}).
 #' @param K A positive integer controlling the values of the step sizes in the stochastic EM method.
@@ -76,12 +76,24 @@
 fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1, parallel::detectCores() - 1),
                       verbose = FALSE,
                       return_iterates = FALSE,
-                      initial = NULL, L = 10, max_iter = 50, ptol = 1e-3, partition_groups = TRUE, K = round(max_iter/3)) {
+                      initial = NULL, L = 10, maxiter = 50, ptol = 1e-3, partition_groups = TRUE, K = round(maxiter/3)) {
+  
+  # error control
+  if (!is.matrix(try(as.matrix(Y), silent = TRUE))) stop("\"Y\" must be coercible to a matrix.")
+  if (p <= 0) stop("\"p\" must be a positive integer.")
+  if (!is.logical(omit_missing)) stop("\"omit_missing\" must be a logical value.")
+  if (parallel_max_cores <= 0) stop("\"parallel_max_cores\" must be a positive integer.")
+  if (!is.logical(verbose)) stop("\"verbose\" must be a logical value.")
+  if (!is.logical(return_iterates)) stop("\"return_iterates\" must be a logical value.")
+  if (L <= 0) stop("\"L\" must be a positive integer.")
+  if (maxiter < 1) stop("\"maxiter\" must be greater than 1.")
+  if (ptol <= 0) stop("\"ptol\" must be greater than 0.")
+  if (!is.logical(partition_groups)) stop("\"partition_groups\" must be a logical value.")
+  if (K <= 0) stop("\"K\" must be a positive integer.")
+  
   Y <- as.matrix(Y)
   T <- nrow(Y)
   N <- ncol(Y)
-  # browser()
-  
   # disassemble Y into Y_shreds, which is a list containing:
   # full_obs: a list of full observed segments 
   # part_obs: a list of partially observed segments
@@ -141,7 +153,7 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
   if (return_iterates) iterates_record <- list(snapshot())
   elapsed_times <- c()
   
-  for (iter in 1:max_iter) {
+  for (iter in 1:maxiter) {
     if (verbose) {  # display the iteration info if required
       obj <- if (length(Y_shreds$part_obs) > 0) NA else my_lapply(Y_shreds$full_obs, function(full_obs_seg) .loglikFullObs(full_obs_seg, phi0, Phii, scatter, nu)) %>% sum()
       message("iteration: ", iter, "\t objective:", obj) 
@@ -224,7 +236,7 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
                               "phi0"                  = phi0, 
                               "Phii"                  = Phii, 
                               "scatter"               = scatter, 
-                              "converged"             = (iter < max_iter),
+                              "converged"             = (iter < maxiter),
                               "iter_usage"            = iter,
                               "elapsed_times"         = elapsed_times,
                               "elapsed_time"          = sum(elapsed_times),
