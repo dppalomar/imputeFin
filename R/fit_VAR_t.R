@@ -28,6 +28,12 @@
 #' 
 #' @param Y Time series object coercible to either anumeric matrix (e.g., \code{zoo} or \code{xts}) with missing values denoted by \code{NA}.
 #' @param p A positive interger as the order (or the time lag) of the VAR model.
+#' @param omit_missing A logical value indicating whether to use the omit-variable method, i.e., 
+#'                     excluding the variables with missing data from the analysis (default is \code{FALSE}).
+#' @param parallel_max_cores A positive integer as the maximum cores used in the parallel computing, 
+#'                           only valid when \code{partition_groups} = \code{TRUE} (default is \eqn{1}).
+#' @param verbose A logical value indicating whether to report in console the infomation of each ietration.
+#' @param return_iterates A logical value indicating whether return the parameter estimates of each iteration (default is \code{FALSE}).
 #' @param initial A list as the initial values of parameters of the VAR model, which may contain some or all of the following elements:
 #' \itemize{\item{\code{nu} (\eqn{\nu}) - a positive number as the degrees of freedom,}
 #'          \item{\code{phi0} (\eqn{\phi_0}) - a numerical vector of length \code{ncol(Y)} as the interception of VAR model,}
@@ -36,14 +42,8 @@
 #' @param L A positive integer as the number of Markov chains (default is \eqn{10}).
 #' @param max_iter A positive integer as the number of maximum iterations (default is \eqn{100}).
 #' @param ptol A non-negative number as the tolerance indicating the convergence of (stocastic) EM method.
-#' @param omit_missing A logical value indicating whether to use the omit-variable method, i.e., 
-#'                     excluding the variables with missing data from the analysis (default is \code{FALSE})..
 #' @param partition_groups A logical value indicating whether to partition \code{Y} into groups (default is \code{TRUE}).
-#' @param parallel_max_cores A positive integer as the maximum cores used in the parallel computing, 
-#'                           only valid when \code{partition_groups} = \code{TRUE} (default is \eqn{1}).
 #' @param K A positive integer controlling the values of the step sizes in the stochastic EM method.
-#' @param return_iterates A logical value indicating whether return the parameter estimates of each iteration (default is \code{FALSE}).
-#' @param verbose A logical value indicating whether to report in console the infomation of each ietration.
 #' 
 #' @return A list if follow things
 #' \item{\code{nu}}{The estimate for \eqn{\nu}.}
@@ -60,8 +60,8 @@
 #' 
 #' #' @examples 
 #' library(imputeFin)
-#' data(VAR_t) 
-#' fitted <- fit_VAR_t(Y = VAR_t, p = 2)
+#' data(ts_VAR_t) 
+#' fitted <- fit_VAR_t(Y = ts_VAR_t$Y, p = 2)
 #' 
 #' @importFrom mvtnorm dmvt
 #' @importFrom magrittr %>% add
@@ -70,14 +70,13 @@
 #' @export
 #' 
 
-# TODO: allow prior information on parameters
 
 
 # main function for fitting VAR(p) model with Student's t innovations -----
-fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = 1,
-                      verbose = TRUE,
+fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1, parallel::detectCores() - 1),
+                      verbose = FALSE,
                       return_iterates = FALSE,
-                      initial = NULL, L = 10, max_iter = 100, ptol = 1e-3, partition_groups = TRUE, K = round(max_iter/3)) {
+                      initial = NULL, L = 10, max_iter = 50, ptol = 1e-3, partition_groups = TRUE, K = round(max_iter/3)) {
   Y <- as.matrix(Y)
   T <- nrow(Y)
   N <- ncol(Y)
@@ -104,7 +103,7 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = 1,
   n_cores <- min(parallel_max_cores, parallel::detectCores() - 1, n_part_obs)
   # message(ls(environment() %>% parent.env(), all.names = TRUE))
   if (n_cores > 1) {
-    message("creating a parallel socket cluster with ", n_cores, " cores...")
+    if (verbose) message("creating a parallel socket cluster with ", n_cores, " cores...")
     cl <- parallel::makeCluster(n_cores)  # create parallel socket cluster
     clusterExport(cl = cl, varlist = .assistant_fun_names, envir = environment() %>% parent.env())  # export assisting functions
     clusterEvalQ(cl = cl, expr = {library("magrittr")})  # dependencies
@@ -213,6 +212,12 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = 1,
   
   if (!is.null(cl)) stopCluster(cl)
   
+  # changed names of returned variables
+  var_names <- colnames(Y)
+  if (is.null(var_names)) var_names <- paste0("x", 1:N)
+  for (i in 1:p) colnames(Phii[[i]]) <- rownames(Phii[[i]]) <- var_names
+  colnames(scatter) <- rownames(scatter) <- var_names
+  names(elapsed_times) <- NULL
   
   # return results -------------
   vars_to_be_returned <- list("nu"                    = nu, 
@@ -296,9 +301,9 @@ fnu <- function(nu) nu/(nu-2)
   # browser()
   # sanity check 
   # TODO: remove this part before submitting to CRAN 
-  tmp <- lapply(c(obs_partition, miss_partition), function(x) tail(x, -p))
-  tmp <- unlist(tmp)
-  if (length(tmp) != T-p || length(tmp) != length(unique(tmp))) stop("ERROR found in missing groups partition step!")
+  # tmp <- lapply(c(obs_partition, miss_partition), function(x) tail(x, -p))
+  # tmp <- unlist(tmp)
+  # if (length(tmp) != T-p || length(tmp) != length(unique(tmp))) stop("ERROR found in missing groups partition step!")
   
   return(list("full_obs" = lapply(obs_partition,  function(x) Y[x, ]), 
               "part_obs" = lapply(miss_partition, function(x) Y[x, ])))

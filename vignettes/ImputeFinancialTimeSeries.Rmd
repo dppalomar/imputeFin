@@ -144,6 +144,24 @@ fitted
 ```
 It is important to note the argument `fast_and_heuristic`, which indicates whether a heuristic but fast method is to be used to estimate the parameters (by default, it is `TRUE`).
 
+## Fitting a Student's t VAR model
+The function `fit_AR1_t()` can only fit a univariate time series. If fed with a multivariate time series, the function `fit_AR1_t()` would fit the Student's t AR(1) model on each variable separately. While the function `fit_VAR_t()` is able to fit a Student's t VAR model on the given multivariate time series:
+```{r}
+data(ts_VAR_t)
+Y <- ts_VAR_t$Y
+fitted_AR1 <- fit_AR1_t(Y)
+str(fitted, max.level = 1)  # note the AR(1) is fitted for each variable separately
+
+fitted_VAR <- fit_VAR_t(Y = Y, p = 2)
+str(fitted_VAR, max.level = 1)
+```
+Although the function `fit_VAR_t` is able to directly handle the a time series containing missing data, the speed may not be satisfying for high-dimensional case. We also implement a traditional way handling these missing values by ignoring them and their relating data from analysis. Some of the useful data may be ignored. But much faster speed can be expected. One can use that model by setting the argument `omit_missing = TRUE`: 
+```{r}
+fitted_VAR <- fit_VAR_t(Y = Y, p = 2, omit_missing = TRUE)
+str(fitted_VAR, max.level = 1)
+```
+
+
 ## Imputation of missing values from Gaussian AR(1) model
 We now show how to use the function `impute_AR1_Gaussian()` to impute the missing values in the time series based on the Gaussian AR(1) model, and how to conveniently plot the imputed time series with the function `plot_imputed()`:
 ```{r, warning=FALSE, fig.width=9, fig.height=5, out.width="100%"}
