@@ -11,9 +11,9 @@
 ^vignettes/ImputeFinancialTimeSeries_cache$
 ^vignettes/ImputeFinancialTimeSeries_files$
 ^vignettes/ImputeFinancialTimeSeries\.Rmd$
-^vignettes/ieee\.csl$
 ^vignettes/refs\.bib$
+^vignettes/journal-of-econometrics\.csl$
+^vignettes/econometrica\.csl$
 ^vignettes/ImputeHankel\.Rmd$
 ^vignettes/ImputeHankel\.html$
 ^vignettes/ImputeFinancialTimeSeries-toc\.html$
-

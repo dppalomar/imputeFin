@@ -1,22 +1,23 @@
 ---
 title: "Imputation of Financial Time Series"
 author: |
-  | Junyan Liu and Daniel P. Palomar
+  | Junyan Liu, Rui Zhou, and Daniel P. Palomar
   | The Hong Kong University of Science and Technology (HKUST)
 date: "`r Sys.Date()`"
 output:
+  prettydoc::html_pretty:
+    theme: tactile
+    highlight: vignette
+    toc: yes
+    toc_depth: 2
   html_document:
     theme: flatly
     highlight: pygments
     toc: true
     toc_depth: 1
     toc_float: true
-  prettydoc::html_pretty:
-    theme: tactile
-    highlight: vignette
-    toc: yes
-    toc_depth: 2
-csl: ieee.csl
+toc-title: "Table of Contents"    
+csl: econometrica.csl  # https://www.zotero.org/styles
 bibliography: refs.bib
 vignette: |
   %\VignetteIndexEntry{Imputation of Financial Time Series}
@@ -135,7 +136,7 @@ fitted$a
 fitted$phi0_vct
 ```
 
-## Fitting a Student's t AR(1) model
+## Fitting a Student's $t$ AR(1) model
 The function `fit_AR1_t()` works similarly to `fit_AR1_Gaussian()` but assuming that the residuals follow a Student's $t$ distribution:
 ```{r}
 y_missing <- ts_AR1_t$y_missing[, 2]
@@ -144,18 +145,19 @@ fitted
 ```
 It is important to note the argument `fast_and_heuristic`, which indicates whether a heuristic but fast method is to be used to estimate the parameters (by default, it is `TRUE`).
 
-## Fitting a Student's t VAR model
-The function `fit_AR1_t()` can only fit a univariate time series. If fed with a multivariate time series, the function `fit_AR1_t()` would fit the Student's t AR(1) model on each variable separately. While the function `fit_VAR_t()` is able to fit a Student's t VAR model on the given multivariate time series:
+
+## Fitting a Student's $t$ VAR model
+The function `fit_AR1_t()` can only fit a univariate time series. If fed with a multivariate time series, it will still fit univariate time series columnwise separately. As an alternative, the function `fit_VAR_t()` is able to fit a multivariate Student's $t$ VAR model:
 ```{r}
 data(ts_VAR_t)
 Y <- ts_VAR_t$Y
 fitted_AR1 <- fit_AR1_t(Y)
-str(fitted, max.level = 1)  # note the AR(1) is fitted for each variable separately
+str(fitted_AR1, max.level = 1)  # note the AR(1) is fitted for each column separately
 
 fitted_VAR <- fit_VAR_t(Y = Y, p = 2)
 str(fitted_VAR, max.level = 1)
 ```
-Although the function `fit_VAR_t` is able to directly handle the a time series containing missing data, the speed may not be satisfying for high-dimensional case. We also implement a traditional way handling these missing values by ignoring them and their relating data from analysis. Some of the useful data may be ignored. But much faster speed can be expected. One can use that model by setting the argument `omit_missing = TRUE`: 
+Although the function `fit_VAR_t()` is able to directly handle a time series containing missing data, the speed may not be satisfying for the high-dimensional case. We also implement a simpler way of handling these missing values by simply ignoring them, with the consequent much faster speed (passing the argument `omit_missing = TRUE`):
 ```{r}
 fitted_VAR <- fit_VAR_t(Y = Y, p = 2, omit_missing = TRUE)
 str(fitted_VAR, max.level = 1)
@@ -278,7 +280,7 @@ plot_imputed(res$y_imputed.3, title = "AR1 t", type = "simple")
 # Algorithms
 ## Parameter estimation
 The parameter estimation for the AR(1) models with Gaussian and Student's $t$ distributed innovations are based on the maximum likelihood estimation (MLE) given the observed data. Suppose we have a univariate time series $y_{1}$, $y_{2}$,$\ldots$,
-$y_{T}$ from the Gaussian AR($1$) model 
+$y_{T}$ from the Gaussian AR(1) model 
 $$
 \begin{equation}
 y_{t}=\varphi_{0}+\varphi_{1}y_{t-1}+\varepsilon_{t},\label{eq:ar(1) model}
@@ -297,7 +299,7 @@ $$
 where $f_{G}\left(\cdot\right)$ denotes the probability density function
 (pdf) of a Gaussian distribution. 
 
-For Student's $t$ AR(1) model with $\varepsilon_{t}\overset{i.i.d.}{\sim}t\left(0,\sigma^{2},\nu\right)$,
+For the Student's $t$ AR(1) model with $\varepsilon_{t}\overset{i.i.d.}{\sim}t\left(0,\sigma^{2},\nu\right)$,
 the MLE problem for the parameters takes the form:
 $$
 \begin{equation}
@@ -308,7 +310,7 @@ $$
 where $f_{t}\left(\cdot\right)$ denotes the probability density function
 (pdf) of a Gaussian distribution.
 
-The objective functions in the above optimization problems are very complicated, and there are no closed-form solutions for them. Thus, it is necessary to resort to the expectation-maximization (EM) framework to derive efficient iterative algorithms to solve these MLE problems. An EM agorithm was developed to estimate the parameters for the Gaussian case [@LittleRubin2002]. The stochastic version of the EM algorithm has been derived to deal with the Student's $t$ case [@LiuKumarPalomar2019].
+The objective functions in the above optimization problems are very complicated, and there are no closed-form solutions for them. Thus, it is necessary to resort to the expectation-maximization (EM) framework to derive efficient iterative algorithms to solve these MLE problems. For the Gaussian case, the EM agorithm can be efficiently used [@LittleRubin2002]. The stochastic version of the EM algorithm was derived in [@LiuKumarPalomar2019] to deal with the Student's $t$ case. The extension to the multivariate case was developed in [@ZhouLiuKumarPalomar2020].
 
 ## Imputation
 Given the conditional distribution $p\left(\mathbf{y}_{\mathsf{miss}}|\mathbf{y}_{\mathsf{obs}}\right)$
@@ -328,7 +330,4 @@ to draw realizations.
 
 
 # References {-}
-\setlength{\parindent}{-0.2in}
-\setlength{\leftskip}{0.2in}
-\setlength{\parskip}{8pt}
-\noindent
+
