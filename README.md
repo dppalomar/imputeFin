@@ -21,11 +21,17 @@ in financial data. In the current version, the imputation is
 univariate-based (so no asset correlation is used). In addition,
 outliers can be detected and removed.
 
-The package is based on the paper:   
+The package is based on the papers:
+
 J. Liu, S. Kumar, and D. P. Palomar (2019). Parameter Estimation of 
 Heavy-Tailed AR Model With Missing Data Via Stochastic EM. _IEEE Trans. on 
 Signal Processing_, vol. 67, no. 8, pp. 2159-2172.
 https://doi.org/10.1109/TSP.2019.2899816
+
+R. Zhou, J. Liu, S. Kumar, and D. P. Palomar (2020). Student’s t VAR Modeling 
+with Missing Data via Stochastic EM and Gibbs Sampling. _IEEE Trans. on 
+Signal Processing_, vol. 68, pp. 6198-6211
+https://doi.org/10.1109/TSP.2020.3033378
 
 
 ## Installation
