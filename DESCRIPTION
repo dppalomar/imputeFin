@@ -1,7 +1,7 @@
 Package: imputeFin
 Title: Imputation of Financial Time Series with Missing Values and/or Outliers
-Version: 0.1.1.9000
-Date: 2020-07-11
+Version: 0.1.2
+Date: 2021-02-19
 Description: Missing values often occur in financial data due to a variety 
     of reasons (errors in the collection process or in the processing stage, 
     lack of asset liquidity, lack of reporting of funds, etc.). However, 

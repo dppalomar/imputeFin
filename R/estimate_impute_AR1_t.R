@@ -63,7 +63,7 @@
 #' 
 #' @author Junyan Liu and Daniel P. Palomar
 #' 
-#' @seealso \code{\link{impute_AR1_t}}, \code{\link{fit_AR1_Gaussian}}
+#' @seealso \code{\link{impute_AR1_t}}, \code{\link{fit_AR1_Gaussian}}, \code{\link{fit_VAR_t}}
 #' 
 #' @references 
 #' J. Liu, S. Kumar, and D. P. Palomar, "Parameter estimation of heavy-tailed AR model with missing 

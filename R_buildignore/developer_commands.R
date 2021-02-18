@@ -31,7 +31,11 @@ library(imputeFin)
 
 # Code tests
 devtools::test()
-#covr::package_coverage()  #coverage of tests
+
+
+# Reverse dependencies
+devtools::revdep(pkg = "imputeFin")
+revdepcheck::revdep_check(num_workers = 4)  # https://github.com/r-lib/revdepcheck
 
 
 # CRAN check and submission (https://r-pkgs.org/release.html)
@@ -39,9 +43,8 @@ devtools::test()
 devtools::check()  # run_dont_test = TRUE
 rcmdcheck::rcmdcheck()  # build_args = "--run-donttest"
 devtools::build()
-#devtools::revdep(pkg = "imputeFin")  # to check reverse dependencies
 #devtools::check_win_release()  #to check under windows
 #R CMD build .  # this is to generate tarball
-#R CMD check imputeFin_0.1.1.tar.gz --as-cran --run-donttest  # this is before submission to CRAN
-#R CMD install imputeFin_0.1.1.tar.gz
+#R CMD check imputeFin_0.1.2.tar.gz --as-cran --run-donttest  # this is before submission to CRAN
+#R CMD install imputeFin_0.1.2.tar.gz
 #submit the tarball directly via the webform: https://cran.r-project.org/submit.html

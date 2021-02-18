@@ -1,9 +1,9 @@
-Version 0.1.1 (2020-07-11), (package also available in GitHub).
+Version 0.1.2 (2021-02-19), (package also available in GitHub).
 
 ---
 
 ## Test environments
-* macOS Catalina, R 4.0.2
+* OS X, R version 4.0.3 (2020-10-10)
 * Windows at https://win-builder.r-project.org/
 
 ## R CMD check results

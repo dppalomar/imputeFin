@@ -1,17 +1,10 @@
-###############################################################################
-# Functions for fitting (parameter estimation of) Student's t VAR model
-# Based on paper: Rui Zhou, Junyan Liu, Sandeep Kumar, and Daniel P. Palomar, 
-# “Student’s t VAR Modeling with Missing Data via Stochastic EM and Gibbs Sampling,” 
-# IEEE Trans. on Signal Processing, vol. 68, pp. 6198-6211, Oct. 2020.
-###############################################################################
-
 #'
 #' @title Fit Student's t VAR model to time series with missing values and/or outliers
 #'
 #' @description Estimate the parameters of a Student's t vector autoregressive
 #'              model 
 #'              \deqn{y_t = \phi_0 + \sum_{i=1}^p \Phi_i * y_{t-i} + \epsilon_t}
-#'              to fit the given time series with missing values and/or outliers. 
+#'              to fit the given time series with missing values. 
 #'              If the time series does not contain missing values, the 
 #'              maximum likelihood (ML) estimation is done via the iterative
 #'              EM algorithm until converge is achieved.
@@ -19,33 +12,26 @@
 #'              for the estimation (currently the maximum number of iterations
 #'              will be executed without attempting to check early converge).
 #'
-#' @author Rui Zhou and Daniel P. Palomar
-#' 
-#' @references 
-#' Rui Zhou, Junyan Liu, Sandeep Kumar, and Daniel P. Palomar,
-#' “Student’s t VAR Modeling with Missing Data via Stochastic EM and Gibbs Sampling,” 
-#' IEEE Trans. on Signal Processing, vol. 68, pp. 6198-6211, Oct. 2020.
-#' 
-#' @param Y Time series object coercible to either anumeric matrix (e.g., \code{zoo} or \code{xts}) with missing values denoted by \code{NA}.
-#' @param p A positive interger as the order (or the time lag) of the VAR model.
-#' @param omit_missing A logical value indicating whether to use the omit-variable method, i.e., 
+#' @param Y Time series object coercible to either a numeric matrix (e.g., \code{zoo} or \code{xts}) with missing values denoted by \code{NA}.
+#' @param p Positive integer indicating the order of the VAR model.
+#' @param omit_missing Logical value indicating whether to use the omit-variable method, i.e., 
 #'                     excluding the variables with missing data from the analysis (default is \code{FALSE}).
-#' @param parallel_max_cores A positive integer as the maximum cores used in the parallel computing, 
+#' @param parallel_max_cores Positive integer indicating the maximum numer of cores used in the parallel computing, 
 #'                           only valid when \code{partition_groups} = \code{TRUE} (default is \eqn{1}).
-#' @param verbose A logical value indicating whether to report in console the infomation of each ietration.
-#' @param return_iterates A logical value indicating whether return the parameter estimates of each iteration (default is \code{FALSE}).
-#' @param initial A list as the initial values of parameters of the VAR model, which may contain some or all of the following elements:
+#' @param verbose Logical value indicating whether to report in console the information of each iteration.
+#' @param return_iterates Logical value indicating whether to return the parameter estimates at each iteration (default is \code{FALSE}).
+#' @param initial List with the initial values of the parameters of the VAR model, which may contain some or all of the following elements:
 #' \itemize{\item{\code{nu} (\eqn{\nu}) - a positive number as the degrees of freedom,}
 #'          \item{\code{phi0} (\eqn{\phi_0}) - a numerical vector of length \code{ncol(Y)} as the interception of VAR model,}
 #'          \item{\code{Phii} (\eqn{\Phi_i}) - a list of \code{p} matrices of dimension \code{ncol(Y)} as the autoregressive coefficient matrices,}
 #'          \item{\code{scatter} (\eqn{\Sigma}) - a positive definite of dimension \code{ncol(Y)} as the scatter matrix.}}
-#' @param L A positive integer as the number of Markov chains (default is \eqn{10}).
-#' @param maxiter A positive integer as the number of maximum iterations (default is \eqn{100}).
-#' @param ptol A non-negative number as the tolerance indicating the convergence of (stocastic) EM method.
-#' @param partition_groups A logical value indicating whether to partition \code{Y} into groups (default is \code{TRUE}).
-#' @param K A positive integer controlling the values of the step sizes in the stochastic EM method.
+#' @param L Positive integer with the number of Markov chains (default is \eqn{10}).
+#' @param maxiter Positive integer with the number of maximum iterations (default is \eqn{100}).
+#' @param ptol Non-negative number with the tolerance to determine the convergence of the (stochastic) EM method.
+#' @param partition_groups Logical value indicating whether to partition \code{Y} into groups (default is \code{TRUE}).
+#' @param K Positive integer indicating the values of the step sizes in the stochastic EM method.
 #' 
-#' @return A list if follow things
+#' @return A list with the following elements:
 #' \item{\code{nu}}{The estimate for \eqn{\nu}.}
 #' \item{\code{phi0}}{The estimate for \eqn{\phi_0}.}
 #' \item{\code{Phii}}{The estimate for \eqn{\Phi_i}.}
@@ -58,7 +44,15 @@
 #' \item{\code{elapsed_time_per_iter}}{A number indicating how much time is comsumed for each iteration in average.}
 #' \item{\code{iterates_record}}{A list as the records of parameter estimates of each iteration, only returned when \code{return_iterates} = \code{TRUE}.}
 #' 
-#' #' @examples 
+#' @author Rui Zhou and Daniel P. Palomar
+#' 
+#' @references 
+#' R. Zhou, J. Liu, S. Kumar, and D. P. Palomar, "Student’s t VAR Modeling with Missing Data via 
+#' Stochastic EM and Gibbs Sampling," IEEE Trans. on Signal Processing, vol. 68, pp. 6198-6211, Oct. 2020.
+#' 
+#' @seealso \code{\link{fit_AR1_t}}
+#' 
+#' @examples 
 #' library(imputeFin)
 #' data(ts_VAR_t) 
 #' fitted <- fit_VAR_t(Y = ts_VAR_t$Y, p = 2)
@@ -68,11 +62,6 @@
 #' @importFrom utils head tail
 #' @import parallel
 #' @export
-#' 
-
-
-
-# main function for fitting VAR(p) model with Student's t innovations -----
 fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1, parallel::detectCores() - 1),
                       verbose = FALSE,
                       return_iterates = FALSE,
