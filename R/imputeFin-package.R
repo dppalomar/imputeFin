@@ -28,12 +28,16 @@
 #' For more details see the vignette:
 #' \href{https://CRAN.R-project.org/package=imputeFin/vignettes/ImputeFinancialTimeSeries.html}{CRAN-vignette}.
 #'
-#' @author Junyan LIU and Daniel P. Palomar
+#' @author Junyan Liu, Rui Zhou, and Daniel P. Palomar
 #' 
 #' @references
 #' J. Liu, S. Kumar, and D. P. Palomar, "Parameter estimation of heavy-tailed AR model with missing 
-#' data via stochastic EM," IEEE Trans. on Signal Processing, vol. 67, no. 8, pp. 2159-2172, 15 April, 2019.
+#' data via stochastic EM," IEEE Trans. on Signal Processing, vol. 67, no. 8, pp. 2159-2172, Apr. 2019.
 #' <https://doi.org/10.1109/TSP.2019.2899816>
+#' 
+#' R. Zhou, J. Liu, S. Kumar, and D. P. Palomar, "Student’s t VAR Modeling with Missing Data via 
+#' Stochastic EM and Gibbs Sampling," IEEE Trans. on Signal Processing, vol. 68, pp. 6198-6211, Oct. 2020.
+#' <https://doi.org/10.1109/TSP.2020.3033378>
 #'
 #' @docType package
 #' @name imputeFin-package

@@ -4,13 +4,13 @@ citEntry(entry = "Manual",
          title        = "{imputeFin: Imputation of Financial Time Series with Missing Values}",
          author       = personList(as.person("J. Liu"),
                                    as.person("D. P. Palomar")),
-         note         = "R package version 0.1.1",
-         year         = "2019",
+         note         = "R package version 0.1.2",
+         year         = "2021",
          url          = "https://CRAN.R-project.org/package=imputeFin",
          textVersion  =
-           paste("J. Liu and D. P. Palomar (2019).",
+           paste("J. Liu and D. P. Palomar (2021).",
                  "imputeFin: Imputation of Financial Time Series with Missing Values.",
-                 "R package version 0.1.1.",
+                 "R package version 0.1.2.",
                  "https://CRAN.R-project.org/package=imputeFin")
 )
 
@@ -49,7 +49,7 @@ citEntry(entry = "Article",
          year         = "2020",
          url          = "https://doi.org/10.1109/TSP.2020.3033378",
          textVersion  =
-           paste("R. Zhou, J. Liu, S. Kumar, and D. P. Palomar (2019).",
+           paste("R. Zhou, J. Liu, S. Kumar, and D. P. Palomar (2020).",
                  "Student’s t VAR Modeling with Missing Data via 
                          Stochastic EM and Gibbs Sampling.",
                  "IEEE Trans. on Signal Processing,",
