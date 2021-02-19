@@ -8,6 +8,7 @@
 ^README_files$
 ^R_buildignore$
 ^data-raw$
+^TODO.txt$
 ^vignettes/ImputeFinancialTimeSeries_cache$
 ^vignettes/ImputeFinancialTimeSeries_files$
 ^vignettes/ImputeFinancialTimeSeries\.Rmd$

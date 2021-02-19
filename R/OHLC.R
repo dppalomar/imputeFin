@@ -5,7 +5,7 @@
 #'              of the functions \code{\link{impute_AR1_Gaussian}} and 
 #'              \code{\link{impute_rolling_AR1_Gaussian}}.
 #' 
-#' @param y Time series object coercible to a numeric matrix (e.g., \code{zoo} or \code{xts}) 
+#' @param y_OHLC Time series object coercible to a numeric matrix (e.g., \code{zoo} or \code{xts}) 
 #'          with four columns denoting the prices Op, Hi, Lo, Cl.
 #' @inheritParams impute_rolling_AR1_Gaussian
 #' 
