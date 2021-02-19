@@ -66,6 +66,7 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
                       verbose = FALSE,
                       return_iterates = FALSE,
                       initial = NULL, L = 10, maxiter = 50, ptol = 1e-3, partition_groups = TRUE, K = round(maxiter/3)) {
+  . = NULL  # ugly hack to prevent check() from complaining about %>%
   
   # error control
   if (!is.matrix(try(as.matrix(Y), silent = TRUE))) stop("\"Y\" must be coercible to a matrix.")
@@ -462,13 +463,13 @@ condGsnMoms <- function(phi0, Phii, scatter, Y_head_p, taus) {
   
   xp <- as.vector(t(Y_head_p[p:1, ]))
   
-  mu <- sapply(0:(T_minus_p-1), function(x) powerB(x)[1:N, 1:N]%*%phi0) %>% apply(., 1, cumsum) %>% rbind() %>% t() %>%
-    add(sapply(1:(T_minus_p), function(x) powerB(x)[1:N, ]%*%xp)) %>% as.vector()
+  mu <- sapply(0:(T_minus_p-1), function(x) powerB(x)[1:N, 1:N] %*% phi0) %>% apply(1, cumsum) %>% rbind() %>% t() %>%
+    add(sapply(1:(T_minus_p), function(x) powerB(x)[1:N, ] %*% xp)) %>% as.vector()
   
   Sigma <- matrix(0, length(mu), length(mu))
   for (i in 1:T_minus_p) {
     for (j in 1:i) {
-      tmp <- lapply(1:min(i, j), function(q) powerB(i-q)[1:N, 1:N]%*%scatter%*%t(powerB(j-q)[1:N, 1:N])/taus[q])
+      tmp <- lapply(1:min(i, j), function(q) powerB(i-q)[1:N, 1:N] %*% scatter %*% t(powerB(j-q)[1:N, 1:N])/taus[q])
       Sigma[idx_mask(i-1, N), idx_mask(j-1, N)] <- Reduce('+', tmp)
     }
   }
@@ -484,7 +485,6 @@ condGsnMoms <- function(phi0, Phii, scatter, Y_head_p, taus) {
 # see Lemma 3 of the reference paper
 #' @importFrom MASS mvrnorm
 sampleCondGsn <- function(y, mu, Sigma) {
-  if (!anyNA(y)) return(x)
   if (all(is.na(y))) stop("Invaild y!")
   
   missing_pattern <- is.na(y)
@@ -593,8 +593,8 @@ gibbsEstepSingleChain <- function(n_iter = 5e3, n_drop = 1e3, Y, phi0, Phii, sca
 # gibbs sampling of taus and missing ys in multiple markov chain
 # chain_states: when is a number, it means number of markov chains, implying the initial status (initialization is going to be done in "gibbsEstepSingleChain()")
 #               when is a list, it means the status of Y in markov chains
-
 gibbsEstepMultiChains <- function(Y, phi0, Phii, scatter, nu, chain_states) { 
+  . = NULL  # ugly hack to prevent check() from complaining about %>%
   # browser()
   if (is.numeric(chain_states))  # initialize chain states if the initial states are given in numerical
     tmp <- lapply(1:chain_states, function(x) gibbsEstepSingleChain(n_iter = 10, n_drop = 10, Y, phi0, Phii, scatter, nu))
