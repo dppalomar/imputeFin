@@ -80,34 +80,35 @@ plot_imputed <- function(y_imputed, column = 1,
          },
          "ggplot2" = {
            if (!requireNamespace("ggplot2", quietly = TRUE)) 
-             stop("Please install package \"ggplot2\" or choose a basic plot type with type = \"simple\".", call. = FALSE)
-
-           df_all  <- data.frame(index = index(y_imputed), value = as.vector(y_imputed))
-           df_obs  <- df_all; df_obs$value[index_miss] <- NA
-           df_miss <- df_all; df_miss$value[setdiff(1:nrow(df_all), index_miss_expanded)] <- NA
-
-           index <- value <- NULL  # dirty hack to avoid CRAN note
-           p <- ggplot2::ggplot() +
-             ggplot2::geom_line(data = df_miss, ggplot2::aes(x = index, y = value), col = color_imputed) +
-             ggplot2::geom_line(data = df_obs, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
-             ggplot2::geom_point(data = df_all[index_miss_isolated, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8) +
-             #ggplot2::geom_point(data = df_all[index_miss, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8) +
-             #ggplot2::scale_x_date(date_breaks = "6 months", date_labels = "%b %Y") +
-             ggplot2::labs(title = title, x = NULL, y = NULL)
-           
-           # p <- ggplot2::ggplot() +
-           #   ggplot2::geom_line(data = df_all, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
-           #   ggplot2::labs(title = title, x = NULL, y = NULL)
-           #   #ggplot2::scale_x_date(date_breaks = "6 months", date_labels = "%b %Y")
-           # if (any_index_miss) {
-           #   p <- p + ggplot2::geom_point(data = df_all[index_miss_isolated, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8)
-           #   if (!is.null(index_miss_nonisolated)) {
-           #     df_all$value[-index_miss_nonisolated] <- NA
-           #     p <- p + ggplot2::geom_line(data = df_all, ggplot2::aes(x = index, y = value), col = color_imputed)
-           #   }
-           # }
-
-           suppressWarnings(p)
+             message("Please install package \"ggplot2\" or choose a basic plot type with the argument type = \"simple\".")
+           else {
+             df_all  <- data.frame(index = index(y_imputed), value = as.vector(y_imputed))
+             df_obs  <- df_all; df_obs$value[index_miss] <- NA
+             df_miss <- df_all; df_miss$value[setdiff(1:nrow(df_all), index_miss_expanded)] <- NA
+             
+             index <- value <- NULL  # dirty hack to avoid CRAN note
+             p <- ggplot2::ggplot() +
+               ggplot2::geom_line(data = df_miss, ggplot2::aes(x = index, y = value), col = color_imputed) +
+               ggplot2::geom_line(data = df_obs, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
+               ggplot2::geom_point(data = df_all[index_miss_isolated, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8) +
+               #ggplot2::geom_point(data = df_all[index_miss, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8) +
+               #ggplot2::scale_x_date(date_breaks = "6 months", date_labels = "%b %Y") +
+               ggplot2::labs(title = title, x = NULL, y = NULL)
+             
+             # p <- ggplot2::ggplot() +
+             #   ggplot2::geom_line(data = df_all, ggplot2::aes_string(x = "index", y = "value"), col = "black") +
+             #   ggplot2::labs(title = title, x = NULL, y = NULL)
+             #   #ggplot2::scale_x_date(date_breaks = "6 months", date_labels = "%b %Y")
+             # if (any_index_miss) {
+             #   p <- p + ggplot2::geom_point(data = df_all[index_miss_isolated, ], ggplot2::aes(x = index, y = value), col = color_imputed, size = 0.8)
+             #   if (!is.null(index_miss_nonisolated)) {
+             #     df_all$value[-index_miss_nonisolated] <- NA
+             #     p <- p + ggplot2::geom_line(data = df_all, ggplot2::aes(x = index, y = value), col = color_imputed)
+             #   }
+             # }
+             
+             suppressWarnings(p)
+           }
          },
          stop("Plot type unknown"))
 }

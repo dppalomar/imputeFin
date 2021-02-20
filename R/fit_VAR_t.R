@@ -52,10 +52,12 @@
 #' 
 #' @seealso \code{\link{fit_AR1_t}}
 #' 
-#' @examples 
+#' @examples
+#' \donttest{
 #' library(imputeFin)
-#' data(ts_VAR_t) 
-#' fitted <- fit_VAR_t(Y = ts_VAR_t$Y, p = 2)
+#' data(ts_VAR_t)
+#' fitted <- fit_VAR_t(Y = ts_VAR_t$Y, p = 2, parallel_max_cores = 2)
+#' }
 #' 
 #' @importFrom mvtnorm dmvt
 #' @importFrom magrittr %>% add
@@ -73,6 +75,7 @@ fit_VAR_t <- function(Y, p = 1, omit_missing = FALSE, parallel_max_cores = max(1
   if (p <= 0) stop("\"p\" must be a positive integer.")
   if (!is.logical(omit_missing)) stop("\"omit_missing\" must be a logical value.")
   if (parallel_max_cores <= 0) stop("\"parallel_max_cores\" must be a positive integer.")
+  #if (parallel_max_cores > parallel::detectCores()) stop("\"parallel_max_cores\" cannot be larger that the cores in your computer.")
   if (!is.logical(verbose)) stop("\"verbose\" must be a logical value.")
   if (!is.logical(return_iterates)) stop("\"return_iterates\" must be a logical value.")
   if (L <= 0) stop("\"L\" must be a positive integer.")
